@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Cortexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body class="register-page">
+<div class="container">
+  <form class="login-box" onsubmit="event.preventDefault(); loginUser();">
+    <h2>Login to Cortexa</h2>
+    
+    <input type="email" id="loginEmail" placeholder="Email" required>
+    <input type="password" id="loginPassword" placeholder="Password" required>
+    
+    <button type="submit">Login</button>
+    <p>Don't have an account? <a href="register.html">Register</a></p>
+  </form>
+</div>
+
+<script>
+function loginUser() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        alert('Please enter email and password!');
+        return;
+    }
+    
+    const registeredUser = JSON.parse(localStorage.getItem('registeredUser'));
+    
+    if (!registeredUser) {
+        alert('No account found. Please register first!');
+        window.location.href = 'register.html';
+        return;
+    }
+    
+    if (registeredUser.email === email && registeredUser.password === password) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('currentUser', JSON.stringify({
+            email: email,
+            name: registeredUser.firstName + ' ' + registeredUser.lastName
+        }));
+        alert('✅ Login successful! Redirecting to dashboard...');
+        window.location.href = 'dashboard.html';
+    } else {
+        alert('❌ Invalid email or password!');
+    }
+}
+</script>
+</body>
+</html>

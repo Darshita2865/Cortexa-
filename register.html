@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register - Cortexa</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body class="register-page">
+
+<div class="container">
+  <form class="register-box" onsubmit="event.preventDefault(); registerUser();">
+    <h2>Register to Cortexa</h2>
+
+    <input type="text" id="regFirstName" placeholder="First Name" required>
+    <input type="text" id="regLastName" placeholder="Last Name" required>
+    <input type="email" id="regEmail" placeholder="Email" required>
+    <input type="tel" id="regPhone" placeholder="Phone Number" required>
+    <input type="date" id="regDob" required>
+    <input type="password" id="regPassword" placeholder="Password" required>
+    <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required>
+
+    <button type="submit">Register</button>
+
+    <p>Already have an account? <a href="login.html">Login</a></p>
+  </form>
+</div>
+
+<script>
+function registerUser() {
+    const firstName = document.getElementById('regFirstName').value;
+    const lastName = document.getElementById('regLastName').value;
+    const email = document.getElementById('regEmail').value;
+    const phone = document.getElementById('regPhone').value;
+    const dob = document.getElementById('regDob').value;
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    
+    if (!firstName || !lastName || !email || !phone || !dob || !password) {
+        alert('Please fill all fields!');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+    
+    const userData = {
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        dob: dob,
+        password: password
+    };
+    
+    localStorage.setItem('registeredUser', JSON.stringify(userData));
+    alert('Registration successful! Please login.');
+    window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>
