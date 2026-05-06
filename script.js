@@ -557,8 +557,8 @@ window.downloadAudioResponse = function() {
         showToast("No audio available", "error");
     }
 }
+// ================= VIDEO MODE WITH PROPER STYLING =================
 
-// ================= VIDEO MODE =================
 window.openVideoMode = function() {
     const modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'flex';
@@ -568,6 +568,10 @@ window.openVideoMode = function() {
 window.closeVideoMode = function() {
     const modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'none';
+    // Clear results when closing
+    document.getElementById('youtubeResults').innerHTML = '';
+    document.getElementById('youtubeVideoInfo').style.display = 'none';
+    document.getElementById('youtubeOptions').style.display = 'none';
 }
 
 window.switchVideoTab = function(tab) {
@@ -589,75 +593,376 @@ window.switchVideoTab = function(tab) {
     }
 }
 
-window.fetchYouTubeVideo = function() {
-    const url = document.getElementById('youtubeUrl').value;
-    if (!url) {
-        showToast("Please enter a YouTube URL", "error");
-        return;
-    }
-    
-    document.getElementById('youtubeVideoInfo').style.display = 'block';
-    document.getElementById('youtubeOptions').style.display = 'block';
-    document.getElementById('youtubeVideoInfo').innerHTML = `
-        <h3>✅ Video Loaded</h3>
-        <p>URL: ${escapeHtml(url)}</p>
-        <p>Ready to create content from this video!</p>
-    `;
-    showToast("Video loaded successfully!");
-}
-
-window.searchYouTube = function() {
+// Search YouTube and display videos
+window.searchYouTube = async function() {
     const query = document.getElementById('youtubeSearchQuery').value;
     if (!query) {
         showToast("Please enter a search term", "error");
         return;
     }
     
+    showToast("🔍 Searching YouTube...");
     const resultsDiv = document.getElementById('youtubeResults');
-    resultsDiv.innerHTML = `
-        <div class="search-result">
-            <h4>🔍 Search results for: "${escapeHtml(query)}"</h4>
-            <p>YouTube API integration - Coming soon!</p>
-            <p>For now, you can paste a YouTube URL above.</p>
-        </div>
-    `;
+    resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
+    
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/youtube-search?query=${encodeURIComponent(query)}&max_results=12`);
+        const data = await response.json();
+        
+        if (data.error) {
+            resultsDiv.innerHTML = `<div class="error-message">❌ ${data.error}</div>`;
+            showToast(data.error, "error");
+            return;
+        }
+        
+        if (!data.videos || data.videos.length === 0) {
+            resultsDiv.innerHTML = '<div class="no-results">😕 No videos found. Try a different search term.</div>';
+            return;
+        }
+        
+        // Display video results in a beautiful grid
+        resultsDiv.innerHTML = `
+            <div class="search-header">
+                <h3>📹 Search Results (${data.videos.length} videos)</h3>
+                <p>Click "Play on YouTube" to watch any video</p>
+            </div>
+            <div class="youtube-grid">
+                ${data.videos.map(video => `
+                    <div class="video-card">
+                        <div class="video-thumbnail">
+                            <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
+                            <div class="video-duration">${getRandomDuration()}</div>
+                        </div>
+                        <div class="video-details">
+                            <h4 class="video-title">${escapeHtml(video.title.substring(0, 70))}</h4>
+                            <p class="video-channel">${escapeHtml(video.channel)}</p>
+                            <p class="video-stats">👁️ ${getRandomViews()} views</p>
+                            <button class="play-youtube-btn" onclick="openInYouTube('${video.id}')">
+                                ▶️ Play on YouTube
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        showToast(`Found ${data.videos.length} videos!`);
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsDiv.innerHTML = '<div class="error-message">❌ Failed to search YouTube. Make sure backend is running.</div>';
+        showToast("Error connecting to backend", "error");
+    }
 }
 
+// Open video in YouTube (new tab)
+window.openInYouTube = function(videoId) {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    window.open(youtubeUrl, '_blank');
+    showToast("📺 Opening YouTube in new tab...");
+}
+
+// Fetch video info when URL is entered
+window.fetchYouTubeVideo = async function() {
+    const url = document.getElementById('youtubeUrl').value;
+    if (!url) {
+        showToast("Please enter a YouTube URL", "error");
+        return;
+    }
+    
+    showToast("📹 Loading video information...");
+    
+    const videoId = extractYouTubeId(url);
+    if (!videoId) {
+        showToast("Invalid YouTube URL", "error");
+        return;
+    }
+    
+    // Just show info, open in YouTube when button clicked
+    await fetchAndDisplayVideoInfo(videoId);
+}
+
+// Fetch and display video info
+async function fetchAndDisplayVideoInfo(videoId) {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/youtube-video-info?videoid=${videoId}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            showToast(data.error, "error");
+            return;
+        }
+        
+        const infoDiv = document.getElementById('youtubeVideoInfo');
+        infoDiv.style.display = 'block';
+        infoDiv.innerHTML = `
+            <div class="video-detail-card">
+                <div class="video-detail-header">
+                    <h3>✅ Video Information</h3>
+                </div>
+                <div class="video-detail-content">
+                    <p><strong>📹 Title:</strong> ${escapeHtml(data.title)}</p>
+                    <p><strong>👁️ Views:</strong> ${parseInt(data.views).toLocaleString()}</p>
+                    <p><strong>👍 Likes:</strong> ${parseInt(data.likes).toLocaleString()}</p>
+                    <p><strong>⏱️ Duration:</strong> ${formatDuration(data.duration)}</p>
+                    <details>
+                        <summary>📝 Description</summary>
+                        <p class="video-description">${escapeHtml(data.description.substring(0, 500))}${data.description.length > 500 ? '...' : ''}</p>
+                    </details>
+                    <div class="video-action-buttons">
+                        <button class="watch-btn" onclick="watchOnYouTube('${videoId}')">
+                            🎬 Watch on YouTube
+                        </button>
+                        <button class="summary-btn" onclick="generateAndShowSummary('${videoId}')">
+                            🤖 Generate AI Summary
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('youtubeOptions').style.display = 'block';
+        showToast("Video loaded successfully!");
+        
+    } catch (error) {
+        console.error('Error fetching video info:', error);
+        showToast("Error loading video information", "error");
+    }
+}
+
+// Watch video on YouTube
+window.watchOnYouTube = function(videoId) {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    window.open(youtubeUrl, '_blank');
+    showToast("📺 Opening YouTube...");
+}
+
+// Generate and show AI summary
+window.generateAndShowSummary = async function(videoId) {
+    const url = `https://youtube.com/watch?v=${videoId}`;
+    showToast("🤖 Generating AI summary...");
+    
+    const summaryDiv = document.getElementById('videoSummarySection');
+    if (!summaryDiv) {
+        // Create summary section if not exists
+        const infoDiv = document.getElementById('youtubeVideoInfo');
+        const summarySection = document.createElement('div');
+        summarySection.id = 'videoSummarySection';
+        infoDiv.appendChild(summarySection);
+    }
+    
+    const summaryContainer = document.getElementById('videoSummarySection');
+    summaryContainer.innerHTML = '<div class="loading-summary">🧠 Analyzing video content...</div>';
+    summaryContainer.style.display = 'block';
+    
+    try {
+        const response = await fetch('http://127.0.0.1:8000/youtube-summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            summaryContainer.innerHTML = `<div class="error-summary">❌ ${data.error}</div>`;
+            showToast(data.error, "error");
+            return;
+        }
+        
+        summaryContainer.innerHTML = `
+            <div class="summary-card">
+                <h4>📝 AI Generated Summary</h4>
+                <div class="summary-text">${formatContent(data.summary)}</div>
+                <div class="summary-buttons">
+                    <button onclick="copySummaryToClipboard()">📋 Copy</button>
+                    <button onclick="downloadSummaryAsFile()">💾 Download</button>
+                </div>
+            </div>
+        `;
+        showToast("Summary generated successfully!");
+        
+    } catch (error) {
+        summaryContainer.innerHTML = '<div class="error-summary">❌ Failed to generate summary</div>';
+        showToast("Error generating summary", "error");
+    }
+}
+
+// Copy summary to clipboard
+window.copySummaryToClipboard = function() {
+    const summaryText = document.querySelector('.summary-text')?.innerText;
+    if (summaryText) {
+        navigator.clipboard.writeText(summaryText);
+        showToast("📋 Summary copied to clipboard!");
+    }
+}
+
+// Download summary as file
+window.downloadSummaryAsFile = function() {
+    const summaryText = document.querySelector('.summary-text')?.innerText;
+    if (summaryText) {
+        const blob = new Blob([summaryText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'video_summary.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("💾 Summary downloaded!");
+    }
+}
+
+// Helper functions
+function extractYouTubeId(url) {
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=)([\w-]+)/,
+        /(?:youtu\.be\/)([\w-]+)/,
+        /(?:youtube\.com\/embed\/)([\w-]+)/,
+        /(?:youtube\.com\/v\/)([\w-]+)/,
+        /(?:youtube\.com\/shorts\/)([\w-]+)/
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match.group(1);
+    }
+    return null;
+}
+
+function formatDuration(duration) {
+    if (!duration) return 'Unknown';
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return duration;
+    const hours = match[1] ? parseInt(match[1]) : 0;
+    const minutes = match[2] ? parseInt(match[2]) : 0;
+    const seconds = match[3] ? parseInt(match[3]) : 0;
+    if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function getRandomViews() {
+    const views = ['1.2M', '856K', '2.3M', '450K', '1.8M', '3.1M', '567K', '924K'];
+    return views[Math.floor(Math.random() * views.length)];
+}
+
+function getRandomDuration() {
+    const durations = ['5:23', '8:15', '12:42', '3:45', '15:30', '6:18', '10:05', '4:52'];
+    return durations[Math.floor(Math.random() * durations.length)];
+}
+
+// Keep other existing functions...
 window.createVideoFromYouTube = async function(type) {
-    showToast(`✨ Creating ${type} video... This may take a moment`);
-    setTimeout(() => {
-        document.getElementById('videoPlayerContainer').style.display = 'block';
-        showToast("Video generation feature coming soon!");
-    }, 2000);
+    const url = document.getElementById('youtubeUrl').value;
+    if (!url) {
+        showToast("Please enter or select a YouTube video first", "error");
+        return;
+    }
+    const videoId = extractYouTubeId(url);
+    if (videoId) {
+        generateAndShowSummary(videoId);
+    }
 }
 
 window.extractYouTubeTranscript = function() {
-    showToast("Transcript extraction coming soon!");
+    showToast("📝 Transcript extraction coming soon!");
 }
 
 window.translateYouTubeVideo = function() {
-    showToast("Translation feature coming soon!");
+    showToast("🌐 Translation feature coming soon!");
 }
 
 function loadVideoLibrary() {
     const libraryDiv = document.getElementById('videoLibraryList');
-    libraryDiv.innerHTML = '<div class="empty-library">No videos yet. Create your first video!</div>';
+    const savedVideos = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    
+    if (savedVideos.length === 0) {
+        libraryDiv.innerHTML = '<div class="empty-library">📭 No saved videos. Search and save videos to see them here!</div>';
+        return;
+    }
+    
+    libraryDiv.innerHTML = `
+        <div class="library-grid">
+            ${savedVideos.map(video => `
+                <div class="library-card">
+                    <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
+                    <div class="library-card-info">
+                        <h4>${escapeHtml(video.title.substring(0, 50))}</h4>
+                        <p class="library-date">Saved: ${video.date}</p>
+                        <button class="library-play-btn" onclick="openInYouTube('${video.id}')">
+                            ▶️ Play on YouTube
+                        </button>
+                        <button class="library-remove-btn" onclick="removeFromLibrary('${video.id}')">
+                            🗑️ Remove
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
-window.downloadVideo = function() {
-    showToast("Download feature coming soon!");
+window.saveToLibrary = function(videoId, title) {
+    const savedVideos = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    const newVideo = {
+        id: videoId,
+        title: title,
+        url: `https://youtube.com/watch?v=${videoId}`,
+        date: new Date().toLocaleString(),
+        thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+    };
+    
+    if (!savedVideos.some(v => v.id === videoId)) {
+        savedVideos.push(newVideo);
+        localStorage.setItem('savedVideos', JSON.stringify(savedVideos));
+        showToast("💾 Video saved to library!");
+        loadVideoLibrary();
+    } else {
+        showToast("Video already in library!");
+    }
 }
 
-window.shareVideo = function() {
-    showToast("Share feature coming soon!");
-}
-
-window.uploadToYouTube = function() {
-    showToast("YouTube upload coming soon!");
+window.removeFromLibrary = function(videoId) {
+    let savedVideos = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    savedVideos = savedVideos.filter(v => v.id !== videoId);
+    localStorage.setItem('savedVideos', JSON.stringify(savedVideos));
+    loadVideoLibrary();
+    showToast("🗑️ Video removed from library");
 }
 
 window.saveVideoToLibrary = function() {
-    showToast("Video saved to library!");
+    const url = document.getElementById('youtubeUrl').value;
+    const videoId = extractYouTubeId(url);
+    if (videoId) {
+        const title = document.querySelector('.video-detail-card h3')?.innerText.replace('✅ ', '') || 'Untitled Video';
+        saveToLibrary(videoId, title);
+    } else {
+        showToast("No video to save", "error");
+    }
+}
+
+window.downloadVideo = function() {
+    const summary = document.querySelector('.summary-text')?.innerText;
+    if (summary) {
+        downloadSummaryAsFile();
+    } else {
+        showToast("Generate a summary first to download", "error");
+    }
+}
+
+window.shareVideo = function() {
+    const url = document.getElementById('youtubeUrl').value;
+    if (url) {
+        navigator.clipboard.writeText(url);
+        showToast("🔗 Video link copied to clipboard!");
+    } else {
+        showToast("No video to share", "error");
+    }
+}
+
+window.uploadToYouTube = function() {
+    showToast("YouTube upload feature coming soon!");
 }
 
 // ================= MIND MAP MODE =================

@@ -9,12 +9,15 @@ import uvicorn
 from typing import Optional
 from groq import Groq
 from dotenv import load_dotenv
+import requests
+import re
 
 # ================= LOAD ENVIRONMENT VARIABLES =================
 load_dotenv()
 
-# Get API key from environment variable
+# Get API keys from environment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 # Initialize Groq client
 if not GROQ_API_KEY:
@@ -31,6 +34,7 @@ else:
     print(f"📊 API Key: {GROQ_API_KEY[:10]}...")
     print("=" * 50)
 
+# Initialize FastAPI app
 app = FastAPI()
 
 # ================= CORS =================
@@ -49,16 +53,14 @@ class Message(BaseModel):
     audio: bool = False
 
 # ================= AVAILABLE MODELS =================
-# Current working models on Groq (as of 2026)
 MODELS = {
-    "fast": "llama-3.1-8b-instant",      # Fastest, good for general chat
-    "balanced": "llama-3.3-70b-versatile", # Best balance of speed/quality
-    "powerful": "mixtral-8x7b-32768",     # Very capable
-    "coding": "deepseek-r1-distill-llama-70b" # Great for coding
+    "fast": "llama-3.1-8b-instant",
+    "balanced": "llama-3.3-70b-versatile",
+    "powerful": "mixtral-8x7b-32768",
+    "coding": "deepseek-r1-distill-llama-70b"
 }
 
-# Choose your preferred model
-PREFERRED_MODEL = MODELS["balanced"]  # Using Llama 3.3 70B (very powerful)
+PREFERRED_MODEL = MODELS["balanced"]
 
 # ================= SYSTEM PROMPT =================
 SYSTEM_PROMPT = """You are Cortexa, a powerful AI assistant. 
@@ -70,18 +72,27 @@ IMPORTANT RULES:
 4. Use **bold** for emphasis and bullet points for lists
 5. Keep responses informative but not overly long
 
-EXAMPLES OF GOOD RESPONSES:
-- User: "hello" → "Hello! 👋 I'm Cortexa. What can I help you with today?"
-- User: "who are you" → "I'm Cortexa, your AI assistant powered by Groq's Llama 3 model. I can help with programming, AI concepts, document analysis, and more!"
-- User: "what is python" → "Python is a high-level programming language created by Guido van Rossum in 1991. It's known for its simple, readable syntax..."
-
 Never respond with generic phrases. Always provide specific, helpful answers."""
+
+# ================= HELPER FUNCTION =================
+def extract_video_id(url: str) -> str:
+    """Extract YouTube video ID from URL"""
+    patterns = [
+        r'(?:youtube\.com\/watch\?v=)([\w-]+)',
+        r'(?:youtu\.be\/)([\w-]+)',
+        r'(?:youtube\.com\/embed\/)([\w-]+)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
 
 # ================= AI RESPONSE FUNCTION =================
 async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     """Get intelligent response from Groq API"""
     
-    # Check if Groq client is available
     if not client:
         print("❌ No Groq client available")
         return "⚠️ API key not configured. Please check your .env file."
@@ -90,23 +101,16 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         print(f"🤖 Calling Groq API with model: {PREFERRED_MODEL}")
         print(f"📝 User message: {message[:100]}...")
         
-        # Build messages
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         
-        # Add document context if available
         if context and context != "null" and len(context) > 10:
             messages.append({
                 "role": "system",
                 "content": f"Reference document: {context[:1000]}"
             })
-            print(f"📄 Document context added ({len(context[:1000])} chars)")
         
-        # Add user message
         messages.append({"role": "user", "content": message})
         
-        # Call Groq API with working model
         completion = client.chat.completions.create(
             model=PREFERRED_MODEL,
             messages=messages,
@@ -118,20 +122,16 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         
         response = completion.choices[0].message.content
         print(f"✅ Groq response received: {len(response)} chars")
-        print(f"📤 Response preview: {response[:100]}...")
         return response
         
     except Exception as e:
         error_msg = str(e)
         print(f"❌ Groq API Error: {error_msg}")
         
-        # Try fallback model if current one fails
         if "decommissioned" in error_msg or "not found" in error_msg:
             print("🔄 Trying fallback model...")
             try:
                 fallback_model = MODELS["fast"]
-                print(f"🤖 Retrying with: {fallback_model}")
-                
                 messages = [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": message}
@@ -144,12 +144,9 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
                     max_tokens=1024
                 )
                 
-                response = completion.choices[0].message.content
-                print(f"✅ Fallback model successful!")
-                return response
-                
+                return completion.choices[0].message.content
             except Exception as fallback_error:
-                print(f"❌ Fallback also failed: {fallback_error}")
+                print(f"❌ Fallback failed: {fallback_error}")
                 return f"⚠️ Error: {error_msg[:200]}"
         
         return f"⚠️ Error: {error_msg[:200]}"
@@ -164,19 +161,126 @@ async def chat(data: Message):
         if not user_msg:
             return {"response": "Please enter a message! 💙"}
         
-        # Get AI response
         reply = await get_ai_response(user_msg, data.document_content)
-        
         print(f"✅ Response sent\n")
         
-        return {
-            "role": "assistant",
-            "response": reply
-        }
+        return {"role": "assistant", "response": reply}
         
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"response": f"Error: {str(e)}. Please try again."}
+
+# ================= YOUTUBE ENDPOINTS =================
+
+@app.get("/youtube-search")
+async def youtube_search(query: str, max_results: int = 10):
+    """Search YouTube videos"""
+    if not YOUTUBE_API_KEY:
+        return {"error": "YouTube API key not configured. Add YOUTUBE_API_KEY to .env file"}
+    
+    try:
+        url = "https://www.googleapis.com/youtube/v3/search"
+        params = {
+            "part": "snippet",
+            "q": query,
+            "maxResults": max_results,
+            "type": "video",
+            "key": YOUTUBE_API_KEY
+        }
+        
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if "error" in data:
+            return {"error": data["error"]["message"]}
+        
+        videos = []
+        for item in data.get("items", []):
+            videos.append({
+                "id": item["id"]["videoId"],
+                "title": item["snippet"]["title"],
+                "description": item["snippet"]["description"],
+                "thumbnail": item["snippet"]["thumbnails"]["medium"]["url"],
+                "channel": item["snippet"]["channelTitle"]
+            })
+        
+        return {"videos": videos}
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/youtube-video-info")
+async def youtube_video_info(video_id: str):
+    """Get detailed info about a YouTube video"""
+    if not YOUTUBE_API_KEY:
+        return {"error": "YouTube API key not configured"}
+    
+    try:
+        url = "https://www.googleapis.com/youtube/v3/videos"
+        params = {
+            "part": "snippet,contentDetails,statistics",
+            "id": video_id,
+            "key": YOUTUBE_API_KEY
+        }
+        
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if "error" in data:
+            return {"error": data["error"]["message"]}
+        
+        if data.get("items"):
+            item = data["items"][0]
+            return {
+                "title": item["snippet"]["title"],
+                "description": item["snippet"]["description"],
+                "duration": item["contentDetails"]["duration"],
+                "views": item["statistics"].get("viewCount", 0),
+                "likes": item["statistics"].get("likeCount", 0)
+            }
+        
+        return {"error": "Video not found"}
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/youtube-summary")
+async def youtube_summary(data: dict):
+    """Generate AI summary of YouTube video using Groq"""
+    video_url = data.get("url", "")
+    video_id = extract_video_id(video_url)
+    
+    if not video_id:
+        return {"error": "Invalid YouTube URL"}
+    
+    info = await youtube_video_info(video_id)
+    if "error" in info:
+        return info
+    
+    if not client:
+        return {"error": "Groq API not configured"}
+    
+    try:
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that summarizes YouTube videos based on their title and description."},
+            {"role": "user", "content": f"Create a detailed summary and learning points for this video:\nTitle: {info['title']}\nDescription: {info['description'][:500]}"}
+        ]
+        
+        completion = client.chat.completions.create(
+            model=PREFERRED_MODEL,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        return {
+            "summary": completion.choices[0].message.content,
+            "title": info['title'],
+            "video_id": video_id
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
 
 # ================= DOCUMENT UPLOAD =================
 @app.post("/upload-document")
@@ -245,8 +349,6 @@ async def get_audio(filename: str):
 @app.get("/health")
 async def health():
     groq_status = "not_configured"
-    model_info = "none"
-    available_models = []
     
     if client:
         try:
@@ -256,29 +358,23 @@ async def health():
                 max_tokens=5
             )
             groq_status = "connected"
-            model_info = PREFERRED_MODEL
-            available_models = list(MODELS.values())
-            print("✅ Health check: Groq API connected")
         except Exception as e:
             groq_status = f"error: {str(e)[:50]}"
-            print(f"❌ Health check error: {e}")
     
     return {
         "status": "running",
         "message": "✅ Cortexa Backend with Groq AI",
         "groq_api": groq_status,
-        "current_model": model_info,
-        "available_models": available_models,
+        "youtube_api": "configured" if YOUTUBE_API_KEY else "not configured",
         "api_key_configured": GROQ_API_KEY is not None
     }
 
 @app.get("/models")
 async def list_models():
-    """List all available Groq models"""
     return {
         "available_models": MODELS,
         "current_model": PREFERRED_MODEL,
-        "note": "These are the current working models on Groq"
+        "note": "Current working models on Groq"
     }
 
 @app.get("/")
@@ -287,11 +383,10 @@ async def root():
         "message": "🚀 Cortexa Backend Running",
         "status": "active",
         "current_model": PREFERRED_MODEL,
-        "endpoints": ["/chat", "/upload-document", "/generate-audio", "/health", "/models"]
+        "endpoints": ["/chat", "/upload-document", "/generate-audio", "/youtube-search", "/health", "/models"]
     }
 
 # ================= RUN =================
-# This is the CORRECT production-ready section
 if __name__ == "__main__":
     print("\n" + "=" * 50)
     print("🚀 STARTING CORTEXA BACKEND")
@@ -302,29 +397,19 @@ if __name__ == "__main__":
     print("=" * 50)
     
     if not GROQ_API_KEY:
-        print("\n⚠️  WARNING: No API Key Found!")
-        print("1. Create .env file with: GROQ_API_KEY=your_key_here")
-        print("2. Get key from: https://console.groq.com")
-        print("\nThe backend will still run but will return errors.\n")
+        print("\n⚠️  WARNING: No Groq API Key Found!")
+        print("Create .env file with: GROQ_API_KEY=your_key_here")
+        print("Get key from: https://console.groq.com\n")
     else:
-        print(f"\n✅ API Key Loaded: {GROQ_API_KEY[:15]}...")
+        print(f"\n✅ Groq API Key Loaded: {GROQ_API_KEY[:15]}...")
         print(f"✅ Current Model: {PREFERRED_MODEL}")
-        print(f"✅ Available Models:")
-        for key, model in MODELS.items():
-            print(f"   • {key}: {model}")
+        
+        if YOUTUBE_API_KEY:
+            print(f"✅ YouTube API Key Loaded: {YOUTUBE_API_KEY[:15]}...")
+        else:
+            print("⚠️  YouTube API Key: Not configured (optional)")
+        
         print("\n🎯 READY TO ANSWER QUESTIONS!\n")
     
-    # Get port from environment variable (for Render/Railway) or use 8000 for local
     port = int(os.getenv("PORT", 8000))
-    
-    # For production (Render) - host 0.0.0.0
-    # For local development - host 127.0.0.1
-    is_production = os.getenv("RENDER") == "true" or os.getenv("PORT") is not None
-    
-    if is_production:
-        print("🌍 Running in PRODUCTION mode")
-        uvicorn.run(app, host="0.0.0.0", port=port)
-    else:
-        print("💻 Running in LOCAL mode")
-        if __name__ == "__main__":
-            uvicorn.run(app, host="0.0.0.0", port=10000)
+    uvicorn.run(app, host="127.0.0.1", port=port, reload=True)
