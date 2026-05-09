@@ -3463,7 +3463,7 @@ function showScrambleResults(container) {
     `;
 }
 
-// ================= TRUE OR FALSE GAME =================
+ //================= TRUE OR FALSE GAME =================
 function loadTrueFalseGame(container) {
     tfIndex = 0;
     tfScore = 0;

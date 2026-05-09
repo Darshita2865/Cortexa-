@@ -4796,6 +4796,7 @@ body::after {
 .youtube-grid::-webkit-scrollbar-thumb:hover {
     background: #667eea;
 }
+<<<<<<< HEAD
 
 /* ================= GAMES MODAL STYLES ================= */
 .games-modal-overlay {
@@ -5402,3 +5403,5 @@ body::after {
 .quiz-header p {
     color: #6b7280 !important;
 }
+=======
+>>>>>>> 8e02ad8fc668171c2fc6dedd8f3ef0edbcfda965
