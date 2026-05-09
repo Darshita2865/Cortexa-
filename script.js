@@ -3544,3 +3544,29 @@ window.startGame = function(gameType) {
     window.openGamesModal();
     setTimeout(() => window.selectGame(gameType), 100);
 }
+// ================= LOGOUT - FIXED VERSION =================
+window.logout = function() {
+    console.log("Logout function called");
+    
+    // Clear all user data from localStorage
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("email");
+    localStorage.removeItem("userName");
+    
+    // Clear chat-specific data
+    localStorage.removeItem("chats_guest");
+    localStorage.removeItem("projects_guest");
+    localStorage.removeItem("mindMaps");
+    localStorage.removeItem("reports_guest");
+    localStorage.removeItem("quizzes_guest");
+    localStorage.removeItem("notes_guest");
+    localStorage.removeItem("videos_guest");
+    
+    // Show toast message
+    showToast("👋 Logged out successfully!");
+    
+    // Redirect to login page after a short delay
+    setTimeout(function() {
+        window.location.href = "login.html";
+    }, 500);
+}
