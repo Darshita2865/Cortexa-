@@ -5403,66 +5403,501 @@ body::after {
 .quiz-header p {
     color: #6b7280 !important;
 }
-/* ================= MOBILE RESPONSIVE ================= */
-@media screen and (max-width: 768px) {
+/* ================= MOBILE RESPONSIVENESS FIXES ================= */
 
+/* Mobile Viewport Fix */
+@viewport {
+    width: device-width;
+    initial-scale: 1;
+    maximum-scale: 1;
+    user-scalable: yes;
+}
+
+/* Hamburger Menu Button - Add to your HTML */
+.mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 100001;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    color: white;
+    font-size: 20px;
+}
+
+/* Responsive Styles for Mobile */
+@media (max-width: 768px) {
+    
+    /* Body and Container */
     body {
         overflow-x: hidden;
+        position: relative;
     }
-
-    .container,
-    .main-container,
-    .app-container {
+    
+    /* Sidebar - Hidden by default, slide-out menu */
+    .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        width: 260px;
+        height: 100%;
+        z-index: 100000;
+        transition: left 0.3s ease;
+        background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%);
+        overflow-y: auto;
+        padding: 20px 15px;
+    }
+    
+    .sidebar.open {
+        left: 0;
+        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+    }
+    
+    /* Show hamburger menu on mobile */
+    .mobile-menu-btn {
+        display: block;
+    }
+    
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
-        flex-direction: column;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 99999;
+        display: none;
     }
-
-    .sidebar,
-    .left-sidebar,
+    
+    .sidebar-overlay.active {
+        display: block;
+    }
+    
+    /* Main content area */
+    .main {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 10px !important;
+        width: 100% !important;
+    }
+    
+    /* Right Sidebar - move to bottom or hide */
     .right-sidebar {
-        width: 100% !important;
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        top: auto;
+        width: 100%;
         height: auto;
+        max-height: 40vh;
+        background: rgba(10, 7, 23, 0.98);
+        backdrop-filter: blur(10px);
+        border-left: none;
+        border-top: 1px solid rgba(168, 85, 247, 0.2);
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        overflow-y: auto;
+        border-radius: 20px 20px 0 0;
     }
-
-    .chat-container,
-    .main-content,
-    .content-area {
-        width: 100% !important;
+    
+    .right-sidebar.open {
+        transform: translateY(0);
+    }
+    
+    /* Toggle button for right sidebar */
+    .right-sidebar-toggle {
+        display: block;
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background: linear-gradient(90deg, #a855f7, #6366f1);
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        color: white;
+        cursor: pointer;
+        z-index: 1001;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+    }
+    
+    /* Chat Area */
+    #searchResults {
+        position: relative;
+        top: auto;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
         padding: 10px;
-    }
-
-    input,
-    textarea,
-    button {
-        width: 100%;
-        font-size: 16px;
-    }
-
-    .youtube-grid,
-    .library-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    .video-card,
-    .library-card,
-    .report-card,
-    .quiz-card {
-        width: 100%;
-    }
-
-    canvas {
-        width: 100% !important;
-        height: auto !important;
-    }
-
-    .modal-content {
-        width: 95%;
-        max-height: 90vh;
+        margin-bottom: 70px;
+        height: calc(100vh - 80px);
         overflow-y: auto;
     }
+    
+    /* Chat Bubbles */
+    .user-bubble, .ai-bubble {
+        max-width: 85%;
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+    
+    .chat-title {
+        font-size: 10px;
+    }
+    
+    .chat-content {
+        font-size: 13px;
+    }
+    
+    /* Search Box */
+    .search-box {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: none;
+        transform: none;
+        z-index: 100;
+    }
+    
+    .chat-input-box {
+        padding: 8px 12px;
+        background: #1a162b;
+        border-radius: 30px;
+    }
+    
+    .chat-input-box input {
+        font-size: 14px;
+        padding: 8px;
+    }
+    
+    .send-btn {
+        padding: 8px;
+    }
+    
+    /* Modals - Full screen on mobile */
+    .audio-modal,
+    .video-modal,
+    .mindmap-modal,
+    .report-modal,
+    .learning-modal,
+    .games-modal {
+        width: 95% !important;
+        max-width: 95% !important;
+        height: auto !important;
+        max-height: 90vh !important;
+        padding: 15px !important;
+        margin: 10px auto !important;
+    }
+    
+    /* Mind Map Canvas */
+    .mindmap-canvas-container {
+        overflow-x: auto;
+        overflow-y: auto;
+    }
+    
+    #mindmapCanvas {
+        width: 800px;
+        height: auto;
+        min-height: 500px;
+    }
+    
+    /* Games Grid - Single column on mobile */
+    .games-grid-container {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+    
+    .game-card-large {
+        padding: 20px !important;
+    }
+    
+    .game-card-large h3 {
+        font-size: 20px !important;
+    }
+    
+    .game-card-icon {
+        font-size: 40px !important;
+    }
+    
+    /* Memory Game Grid */
+    .memory-grid-large {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    /* Quiz Options */
+    .game-options-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .game-option-btn {
+        padding: 12px !important;
+        font-size: 14px !important;
+    }
+    
+    /* Typing Word */
+    .typing-word-large {
+        font-size: 28px !important;
+        padding: 20px !important;
+    }
+    
+    /* Scrambled Word */
+    .scrambled-word-large {
+        font-size: 24px !important;
+        letter-spacing: 5px !important;
+        padding: 20px !important;
+    }
+    
+    /* True False Buttons */
+    .truefalse-buttons-large {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .true-btn-large, .false-btn-large {
+        padding: 12px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Game Header */
+    .game-header-bar {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .current-game-title {
+        font-size: 18px;
+    }
+    
+    .back-to-games-btn {
+        align-self: center;
+    }
+    
+    /* Game Progress Info */
+    .game-header-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+    
+    /* Game Results */
+    .game-results-large {
+        padding: 30px 20px;
+    }
+    
+    .final-score-large {
+        font-size: 28px;
+    }
+    
+    .results-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .play-again-btn, .back-to-games-btn {
+        width: 100%;
+    }
+    
+    /* Report Toolbar */
+    .report-toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .report-toolbar button {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+    
+    /* Learning Tools */
+    .learning-options {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .learning-actions {
+        flex-direction: column;
+    }
+    
+    /* Quiz Actions */
+    .quiz-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .quiz-action-btn {
+        width: 100%;
+    }
+    
+    /* Mind Map Toolbar */
+    .mindmap-toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+    }
+    
+    .mindmap-toolbar button {
+        font-size: 10px !important;
+        padding: 6px !important;
+    }
+    
+    /* Video Modal */
+    .youtube-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .video-action-buttons {
+        flex-direction: column;
+    }
+    
+    .video-tabs {
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        width: 100%;
+    }
+    
+    /* Audio Modal */
+    .modes {
+        flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+    
+    .mic-button {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .mic-icon {
+        font-size: 36px;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .send-audio-btn {
+        width: 100%;
+    }
+    
+    /* Toast Messages */
+    #customToast {
+        font-size: 12px;
+        padding: 8px 15px;
+        bottom: 80px;
+    }
+    
+    /* Navbar adjustments */
+    .navbar {
+        padding: 10px 15px !important;
+    }
+    
+    .navbar nav {
+        gap: 12px !important;
+    }
+    
+    .navbar nav a {
+        font-size: 12px !important;
+    }
+    
+    .logo img {
+        width: 100px !important;
+    }
+}
 
-    h1, h2, h3 {
-        font-size: 90%;
+/* Additional fixes for very small screens (phones) */
+@media (max-width: 480px) {
+    .sidebar {
+        width: 240px;
+    }
+    
+    .user-bubble, .ai-bubble {
+        max-width: 90%;
+        font-size: 12px;
+    }
+    
+    .chat-title {
+        font-size: 9px;
+    }
+    
+    .chat-content {
+        font-size: 12px;
+    }
+    
+    .game-question-large {
+        font-size: 16px !important;
+        padding: 15px !important;
+    }
+    
+    .quiz-question-text {
+        font-size: 13px !important;
+    }
+    
+    .quiz-option {
+        padding: 8px 12px !important;
+    }
+    
+    .quiz-option span {
+        font-size: 12px !important;
+    }
+    
+    .mindmap-toolbar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .progress-info {
+        font-size: 12px;
+    }
+    
+    .game-score, .game-progress, .game-timer {
+        font-size: 12px;
+    }
+}
+
+/* Landscape mode fixes */
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        width: 220px;
+    }
+    
+    .right-sidebar {
+        max-height: 50vh;
+    }
+    
+    #searchResults {
+        height: calc(100vh - 60px);
+        margin-bottom: 60px;
+    }
+    
+    .search-box {
+        bottom: 5px;
+    }
+    
+    .game-question-large {
+        font-size: 18px;
+        padding: 10px;
+    }
+    
+    .memory-grid-large {
+        grid-template-columns: repeat(4, 1fr);
     }
 }
 =======

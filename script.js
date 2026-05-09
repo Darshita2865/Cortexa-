@@ -3570,3 +3570,60 @@ window.logout = function() {
         window.location.href = "login.html";
     }, 500);
 }
+// ================= MOBILE FUNCTIONS =================
+
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+}
+
+function toggleRightSidebar() {
+    const rightSidebar = document.querySelector('.right-sidebar');
+    rightSidebar.classList.toggle('open');
+}
+
+// Close sidebars when clicking outside on mobile
+document.addEventListener('click', function(e) {
+    if (window.innerWidth <= 768) {
+        const sidebar = document.querySelector('.sidebar');
+        const rightSidebar = document.querySelector('.right-sidebar');
+        const mobileBtn = document.querySelector('.mobile-menu-btn');
+        const rightToggle = document.querySelector('.right-sidebar-toggle');
+        
+        // Close left sidebar if clicking outside
+        if (sidebar && sidebar.classList.contains('open')) {
+            if (!sidebar.contains(e.target) && !mobileBtn.contains(e.target)) {
+                sidebar.classList.remove('open');
+                document.querySelector('.sidebar-overlay').classList.remove('active');
+            }
+        }
+        
+        // Auto-close right sidebar after 5 seconds (optional)
+        if (rightSidebar && rightSidebar.classList.contains('open')) {
+            setTimeout(() => {
+                rightSidebar.classList.remove('open');
+            }, 5000);
+        }
+    }
+});
+
+// Adjust viewport for mobile
+if (window.innerWidth <= 768) {
+    // Add meta viewport if not present
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+        viewport = document.createElement('meta');
+        viewport.name = 'viewport';
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes';
+        document.head.appendChild(viewport);
+    }
+}
