@@ -5403,5 +5403,67 @@ body::after {
 .quiz-header p {
     color: #6b7280 !important;
 }
+/* ================= MOBILE RESPONSIVE ================= */
+@media screen and (max-width: 768px) {
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .container,
+    .main-container,
+    .app-container {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .sidebar,
+    .left-sidebar,
+    .right-sidebar {
+        width: 100% !important;
+        height: auto;
+    }
+
+    .chat-container,
+    .main-content,
+    .content-area {
+        width: 100% !important;
+        padding: 10px;
+    }
+
+    input,
+    textarea,
+    button {
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .youtube-grid,
+    .library-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .video-card,
+    .library-card,
+    .report-card,
+    .quiz-card {
+        width: 100%;
+    }
+
+    canvas {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    h1, h2, h3 {
+        font-size: 90%;
+    }
+}
 =======
 >>>>>>> 8e02ad8fc668171c2fc6dedd8f3ef0edbcfda965
