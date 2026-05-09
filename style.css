@@ -5586,34 +5586,188 @@ body::after {
         padding: 8px;
     }
     
-    /* Modals - Full screen on mobile */
-    .audio-modal,
-    .video-modal,
-    .mindmap-modal,
-    .report-modal,
-    .learning-modal,
-    .games-modal {
+   /* ================= NETLIFY MOBILE FIX ================= */
+
+/* Force proper viewport on all devices */
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    overflow-x: hidden !important;
+    width: 100%;
+    position: relative;
+}
+
+/* Mobile Styles (max-width: 768px) */
+@media only screen and (max-width: 768px) {
+    
+    body {
+        overflow-x: hidden !important;
+    }
+    
+    /* Sidebar - Hidden by default */
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        top: 0 !important;
+        width: 260px !important;
+        height: 100% !important;
+        z-index: 100000 !important;
+        transition: left 0.3s ease !important;
+        background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+        overflow-y: auto !important;
+        padding: 20px 15px !important;
+    }
+    
+    .sidebar.open {
+        left: 0 !important;
+        box-shadow: 5px 0 25px rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Main content - Full width */
+    .main {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        padding: 10px !important;
+    }
+    
+    /* Chat results - Full width */
+    #searchResults {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 10px !important;
+        margin-bottom: 80px !important;
+    }
+    
+    /* Chat bubbles */
+    .user-bubble, .ai-bubble {
+        max-width: 90% !important;
+        font-size: 14px !important;
+        padding: 10px 14px !important;
+    }
+    
+    /* Search box - Fixed at bottom */
+    .search-box {
+        position: fixed !important;
+        bottom: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        z-index: 100 !important;
+    }
+    
+    .chat-input-box {
+        padding: 8px 12px !important;
+        background: #1a162b !important;
+        border-radius: 30px !important;
+    }
+    
+    .chat-input-box input {
+        font-size: 16px !important;
+        padding: 8px !important;
+    }
+    
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+        display: flex !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 100001 !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        width: 45px !important;
+        height: 45px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        color: white !important;
+        font-size: 24px !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* Sidebar Overlay */
+    .sidebar-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(0,0,0,0.7) !important;
+        z-index: 99999 !important;
+        display: none !important;
+    }
+    
+    .sidebar-overlay.active {
+        display: block !important;
+    }
+    
+    /* Right Sidebar Toggle */
+    .right-sidebar-toggle {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 80px !important;
+        right: 15px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        color: white !important;
+        font-size: 24px !important;
+        z-index: 1001 !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* Right Sidebar - Bottom drawer */
+    .right-sidebar {
+        position: fixed !important;
+        bottom: 0 !important;
+        top: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 40vh !important;
+        transform: translateY(100%) !important;
+        transition: transform 0.3s ease !important;
+        z-index: 1000 !important;
+        background: rgba(10, 7, 23, 0.98) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 20px 20px 0 0 !important;
+        overflow-y: auto !important;
+    }
+    
+    .right-sidebar.open {
+        transform: translateY(0) !important;
+    }
+    
+    /* Modals - Full width on mobile */
+    .audio-modal, .video-modal, .mindmap-modal, 
+    .report-modal, .learning-modal, .games-modal {
         width: 95% !important;
         max-width: 95% !important;
         height: auto !important;
         max-height: 90vh !important;
         padding: 15px !important;
         margin: 10px auto !important;
+        overflow-y: auto !important;
     }
     
-    /* Mind Map Canvas */
-    .mindmap-canvas-container {
-        overflow-x: auto;
-        overflow-y: auto;
-    }
-    
-    #mindmapCanvas {
-        width: 800px;
-        height: auto;
-        min-height: 500px;
-    }
-    
-    /* Games Grid - Single column on mobile */
+    /* Games - Single column */
     .games-grid-container {
         grid-template-columns: 1fr !important;
         gap: 15px !important;
@@ -5627,277 +5781,130 @@ body::after {
         font-size: 20px !important;
     }
     
-    .game-card-icon {
-        font-size: 40px !important;
-    }
-    
-    /* Memory Game Grid */
+    /* Memory game - 2 columns */
     .memory-grid-large {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
     }
     
-    /* Quiz Options */
+    /* Quiz options - Full width */
     .game-options-grid {
         grid-template-columns: 1fr !important;
     }
     
-    .game-option-btn {
-        padding: 12px !important;
+    /* True/False buttons - Stack */
+    .truefalse-buttons-large {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    
+    /* Login/Register pages */
+    .login-box, .register-box {
+        width: 90% !important;
+        padding: 25px 20px !important;
+        margin: 20px auto !important;
+    }
+    
+    /* Home page hero */
+    .hero h1 {
+        font-size: 32px !important;
+    }
+    
+    .hero p {
         font-size: 14px !important;
     }
     
-    /* Typing Word */
-    .typing-word-large {
-        font-size: 28px !important;
-        padding: 20px !important;
+    /* Features grid */
+    .features-grid, .about-grid, .blog-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+        padding: 0 15px !important;
     }
     
-    /* Scrambled Word */
-    .scrambled-word-large {
-        font-size: 24px !important;
-        letter-spacing: 5px !important;
-        padding: 20px !important;
+    /* Navbar */
+    .navbar {
+        flex-direction: column !important;
+        padding: 10px !important;
+        gap: 10px !important;
     }
     
-    /* True False Buttons */
-    .truefalse-buttons-large {
-        flex-direction: column;
-        gap: 10px;
+    .navbar nav {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 10px !important;
     }
     
-    .true-btn-large, .false-btn-large {
-        padding: 12px !important;
-        font-size: 16px !important;
+    /* Toast message */
+    #customToast {
+        font-size: 12px !important;
+        padding: 8px 15px !important;
+        bottom: 80px !important;
+        right: 10px !important;
+        left: auto !important;
     }
     
-    /* Game Header */
-    .game-header-bar {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
+    /* Mind map canvas */
+    .mindmap-canvas-container {
+        overflow-x: auto !important;
     }
     
-    .current-game-title {
-        font-size: 18px;
+    #mindmapCanvas {
+        width: 800px !important;
+        height: auto !important;
     }
     
-    .back-to-games-btn {
-        align-self: center;
-    }
-    
-    /* Game Progress Info */
-    .game-header-info {
-        flex-direction: column;
-        text-align: center;
-        gap: 8px;
-    }
-    
-    /* Game Results */
-    .game-results-large {
-        padding: 30px 20px;
-    }
-    
-    .final-score-large {
-        font-size: 28px;
-    }
-    
-    .results-buttons {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .play-again-btn, .back-to-games-btn {
-        width: 100%;
-    }
-    
-    /* Report Toolbar */
+    /* Report toolbar */
     .report-toolbar {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
     }
     
-    .report-toolbar button {
-        font-size: 11px;
-        padding: 6px 8px;
-    }
-    
-    /* Learning Tools */
+    /* Learning tools */
     .learning-options {
         grid-template-columns: 1fr !important;
     }
     
     .learning-actions {
-        flex-direction: column;
-    }
-    
-    /* Quiz Actions */
-    .quiz-actions {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .quiz-action-btn {
-        width: 100%;
-    }
-    
-    /* Mind Map Toolbar */
-    .mindmap-toolbar {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 5px;
-    }
-    
-    .mindmap-toolbar button {
-        font-size: 10px !important;
-        padding: 6px !important;
-    }
-    
-    /* Video Modal */
-    .youtube-grid {
-        grid-template-columns: 1fr !important;
-    }
-    
-    .video-action-buttons {
-        flex-direction: column;
-    }
-    
-    .video-tabs {
-        flex-direction: column;
-    }
-    
-    .tab-btn {
-        width: 100%;
-    }
-    
-    /* Audio Modal */
-    .modes {
-        flex-wrap: wrap;
-    }
-    
-    .mode-btn {
-        padding: 8px 15px;
-        font-size: 12px;
-    }
-    
-    .mic-button {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .mic-icon {
-        font-size: 36px;
-    }
-    
-    .input-group {
-        flex-direction: column;
-    }
-    
-    .send-audio-btn {
-        width: 100%;
-    }
-    
-    /* Toast Messages */
-    #customToast {
-        font-size: 12px;
-        padding: 8px 15px;
-        bottom: 80px;
-    }
-    
-    /* Navbar adjustments */
-    .navbar {
-        padding: 10px 15px !important;
-    }
-    
-    .navbar nav {
-        gap: 12px !important;
-    }
-    
-    .navbar nav a {
-        font-size: 12px !important;
-    }
-    
-    .logo img {
-        width: 100px !important;
+        flex-direction: column !important;
     }
 }
 
-/* Additional fixes for very small screens (phones) */
-@media (max-width: 480px) {
-    .sidebar {
-        width: 240px;
-    }
-    
-    .user-bubble, .ai-bubble {
-        max-width: 90%;
-        font-size: 12px;
-    }
-    
-    .chat-title {
-        font-size: 9px;
-    }
-    
-    .chat-content {
-        font-size: 12px;
-    }
-    
+/* Very small devices */
+@media only screen and (max-width: 480px) {
     .game-question-large {
         font-size: 16px !important;
         padding: 15px !important;
     }
     
-    .quiz-question-text {
-        font-size: 13px !important;
+    .final-score-large {
+        font-size: 24px !important;
     }
     
-    .quiz-option {
-        padding: 8px 12px !important;
+    .typing-word-large {
+        font-size: 24px !important;
+        padding: 15px !important;
     }
     
-    .quiz-option span {
-        font-size: 12px !important;
-    }
-    
-    .mindmap-toolbar {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .progress-info {
-        font-size: 12px;
-    }
-    
-    .game-score, .game-progress, .game-timer {
-        font-size: 12px;
+    .scrambled-word-large {
+        font-size: 20px !important;
+        letter-spacing: 3px !important;
     }
 }
 
-/* Landscape mode fixes */
-@media (max-width: 768px) and (orientation: landscape) {
-    .sidebar {
-        width: 220px;
-    }
-    
+/* Landscape mode fix */
+@media only screen and (max-width: 768px) and (orientation: landscape) {
     .right-sidebar {
-        max-height: 50vh;
-    }
-    
-    #searchResults {
-        height: calc(100vh - 60px);
-        margin-bottom: 60px;
-    }
-    
-    .search-box {
-        bottom: 5px;
-    }
-    
-    .game-question-large {
-        font-size: 18px;
-        padding: 10px;
+        max-height: 70vh !important;
     }
     
     .memory-grid-large {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    
+    .game-question-large {
+        font-size: 18px !important;
+        padding: 10px !important;
     }
 }
 =======
