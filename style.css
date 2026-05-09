@@ -660,137 +660,6 @@ body {
     color: transparent;
 }
 
-/* ================= SETTINGS STYLES ================= */
-.settings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2rem;
-}
-
-.settings-card {
-    background: rgba(20, 16, 32, 0.7);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(168, 85, 247, 0.2);
-    border-radius: 28px;
-    padding: 1.5rem;
-    transition: 0.2s;
-}
-
-.settings-card h3 {
-    font-size: 1.5rem;
-    margin-bottom: 1.2rem;
-    color: #e0c3ff;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.setting-item {
-    margin-bottom: 1.4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.setting-item label {
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: #b9b3d9;
-}
-
-.setting-item select,
-.setting-item input {
-    background: #0e0b18;
-    border: 1px solid #2d2742;
-    border-radius: 16px;
-    padding: 12px 16px;
-    color: white;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.9rem;
-    transition: 0.2s;
-}
-
-.setting-item select:focus,
-.setting-item input:focus {
-    outline: none;
-    border-color: #a855f7;
-    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
-}
-
-.toggle-switch {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-direction: row;
-}
-
-.toggle-label {
-    font-weight: 500;
-}
-
-.toggle {
-    position: relative;
-    display: inline-block;
-    width: 52px;
-    height: 28px;
-}
-
-.toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #2d2742;
-    transition: 0.3s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: #a855f7;
-}
-
-input:checked + .slider:before {
-    transform: translateX(24px);
-}
-
-.save-settings-btn {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    border: none;
-    padding: 12px 28px;
-    border-radius: 40px;
-    font-weight: 600;
-    color: white;
-    cursor: pointer;
-    margin-top: 2rem;
-    width: 100%;
-    font-size: 1rem;
-    transition: 0.2s;
-}
-
-.save-settings-btn:hover {
-    transform: scale(0.98);
-    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4);
-}
 
 /* ================= LEGAL PAGES STYLES ================= */
 .legal-content {
@@ -2427,7 +2296,7 @@ body::after {
     }
 }
 
-/* ================= MIND MAP MODAL STYLES (SIMPLIFIED) ================= */
+/* Mind Map Modal Styles */
 .mindmap-modal-overlay {
     position: fixed;
     top: 0;
@@ -2439,20 +2308,18 @@ body::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 35000;
-    animation: fadeIn 0.3s ease;
+    z-index: 100000;
 }
 
 .mindmap-modal {
     background: linear-gradient(135deg, #1a162b, #0A0717);
-    border-radius: 20px;
-    width: 1000px;
+    border-radius: 24px;
+    width: 1100px;
     max-width: 90%;
-    max-height: 90vh;
+    max-height: 85vh;
     overflow-y: auto;
     padding: 25px;
     border: 1px solid rgba(168, 85, 247, 0.3);
-    box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
 }
 
 .mindmap-modal-header {
@@ -2466,7 +2333,6 @@ body::after {
 
 .mindmap-modal-header h2 {
     color: #a855f7;
-    font-size: 24px;
     margin: 0;
 }
 
@@ -2476,89 +2342,31 @@ body::after {
     color: white;
     font-size: 28px;
     cursor: pointer;
-    padding: 0 8px;
-    transition: 0.3s;
 }
 
 .close-mindmap-modal:hover {
     color: #ef4444;
-    transform: scale(1.1);
 }
 
-/* Tabs */
 .mindmap-tabs {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 10px;
 }
 
 .mindmap-tab-btn {
-    background: transparent;
-    border: none;
-    color: #a1a1aa;
     padding: 8px 20px;
-    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
     border-radius: 8px;
-    transition: 0.3s;
-    font-size: 14px;
+    color: white;
+    cursor: pointer;
 }
 
 .mindmap-tab-btn.active {
     background: linear-gradient(90deg, #a855f7, #6366f1);
-    color: white;
 }
 
-.mindmap-tab-btn:hover:not(.active) {
-    background: rgba(168, 85, 247, 0.2);
-    color: white;
-}
-
-.mindmap-tab-content {
-    animation: fadeIn 0.3s ease;
-}
-
-/* Source Selector */
-.mindmap-source-selector {
-    margin-bottom: 20px;
-}
-
-.mindmap-source-selector label {
-    display: block;
-    margin-bottom: 8px;
-    color: #cbd5f5;
-    font-size: 14px;
-}
-
-.source-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-}
-
-.source-btn {
-    flex: 1;
-    padding: 10px;
-    background: rgba(168, 85, 247, 0.2);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: 0.3s;
-    font-size: 13px;
-}
-
-.source-btn.active {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    border-color: transparent;
-}
-
-.source-btn:hover {
-    background: rgba(168, 85, 247, 0.4);
-}
-
-/* Input Section */
 .mindmap-input-section {
     margin-bottom: 20px;
 }
@@ -2567,7 +2375,6 @@ body::after {
     display: block;
     margin-bottom: 8px;
     color: #cbd5f5;
-    font-size: 14px;
 }
 
 .mindmap-input-section textarea {
@@ -2581,131 +2388,117 @@ body::after {
     resize: vertical;
 }
 
-.mindmap-input-section textarea:focus {
-    outline: none;
-    border-color: #a855f7;
-}
-
-/* Document Upload */
-.mindmap-document-section {
-    margin-bottom: 20px;
-}
-
-.document-upload-area {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    border: 2px dashed rgba(168, 85, 247, 0.3);
-    transition: all 0.3s ease;
-}
-
-.document-upload-area:hover {
-    border-color: #a855f7;
-    background: rgba(168, 85, 247, 0.05);
-}
-
-.upload-label {
-    font-size: 16px;
-    font-weight: 500;
-    color: #a855f7;
-    display: block;
-    margin-bottom: 15px;
-}
-
-#mindmapDocumentInput {
-    margin: 15px 0;
-    padding: 10px;
-    background: #120d25;
-    border: 1px solid #2a2445;
-    border-radius: 8px;
-    color: white;
-    width: 100%;
-}
-
-.upload-info {
-    margin: 10px 0;
-    font-size: 12px;
-    color: #a1a1aa;
-}
-
-.upload-doc-btn {
-    padding: 10px 20px;
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: 0.3s;
-    margin-top: 10px;
-}
-
-.upload-doc-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(168, 85, 247, 0.3);
-}
-
-.document-status {
-    margin-top: 10px;
-    font-size: 12px;
-}
-
-/* Chat Section */
-.mindmap-chat-section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: rgba(168, 85, 247, 0.1);
-    border-radius: 10px;
-    text-align: center;
-}
-
-.chat-info p {
-    margin-bottom: 10px;
-    color: #cbd5f5;
-}
-
-.use-chat-btn {
-    padding: 8px 16px;
-    background: rgba(168, 85, 247, 0.3);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.use-chat-btn:hover {
-    background: rgba(168, 85, 247, 0.5);
-}
-
-/* Generate Button */
-.mindmap-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-}
-
 .generate-mindmap-btn {
-    flex: 1;
+    width: 100%;
     padding: 12px;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
     border: none;
     border-radius: 10px;
-    cursor: pointer;
-    transition: 0.3s;
-    font-weight: 500;
-    background: linear-gradient(90deg, #a855f7, #6366f1);
     color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .generate-mindmap-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 5px 15px rgba(168, 85, 247, 0.3);
 }
 
-/* Progress Bar */
-.mindmap-progress {
-    margin-top: 15px;
+.mindmap-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.mindmap-toolbar button {
+    padding: 6px 12px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.mindmap-toolbar button:hover {
+    background: rgba(168, 85, 247, 0.4);
+}
+
+.mindmap-canvas-container {
+    background: white;
+    border-radius: 12px;
+    overflow: auto;
+    min-height: 550px;
+    border: 1px solid #ddd;
+}
+
+#mindmapCanvas {
+    display: block;
+    background: white;
+    cursor: grab;
+}
+
+#mindmapCanvas:active {
+    cursor: grabbing;
+}
+
+.mindmap-library {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.mindmap-library-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin: 8px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.mindmap-library-item .library-info {
+    flex: 1;
+}
+
+.mindmap-library-item .library-info strong {
+    display: block;
+    color: white;
+}
+
+.mindmap-library-item .library-info small {
+    color: #a1a1aa;
+    font-size: 11px;
+}
+
+.mindmap-library-item .library-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.mindmap-library-item button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mindmap-library-item button:first-child {
+    background: rgba(168, 85, 247, 0.3);
+    color: white;
+}
+
+.mindmap-library-item button:last-child {
+    background: rgba(239, 68, 68, 0.3);
+    color: white;
+}
+
+.empty-library {
+    text-align: center;
+    padding: 40px;
+    color: #a1a1aa;
 }
 
 .progress-bar {
@@ -2720,139 +2513,227 @@ body::after {
     height: 100%;
     background: linear-gradient(90deg, #a855f7, #6366f1);
     width: 0%;
-    transition: width 0.3s ease;
-    border-radius: 4px;
+    transition: width 0.3s;
 }
 
 .progress-status {
     margin-top: 10px;
-    font-size: 12px;
-    color: #a1a1aa;
     text-align: center;
+    color: #a1a1aa;
+    font-size: 13px;
+}
+.mindmap-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100000;
 }
 
-/* Mind Map Display */
-.mindmap-display {
-    margin-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 20px;
+.mindmap-modal {
+    background: linear-gradient(135deg, #1a162b, #0A0717);
+    border-radius: 24px;
+    width: 1100px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 25px;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.mindmap-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mindmap-modal-header h2 {
+    color: #a855f7;
+    margin: 0;
+}
+
+.close-mindmap-modal {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.mindmap-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mindmap-tab-btn {
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+}
+
+.mindmap-tab-btn.active {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+}
+
+.mindmap-input-section {
+    margin-bottom: 20px;
+}
+
+.mindmap-input-section label {
+    display: block;
+    margin-bottom: 8px;
+    color: #cbd5f5;
+}
+
+.mindmap-input-section textarea {
+    width: 100%;
+    padding: 12px;
+    background: #120d25;
+    border: 1px solid #2a2445;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.generate-mindmap-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.generate-mindmap-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(168, 85, 247, 0.3);
 }
 
 .mindmap-toolbar {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 15px;
     flex-wrap: wrap;
-    justify-content: center;
 }
 
 .mindmap-toolbar button {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: rgba(168, 85, 247, 0.2);
     border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 8px;
+    border-radius: 6px;
     color: white;
     cursor: pointer;
-    transition: 0.3s;
     font-size: 12px;
 }
 
 .mindmap-toolbar button:hover {
     background: rgba(168, 85, 247, 0.4);
-    transform: translateY(-1px);
 }
 
 .mindmap-canvas-container {
-    background: #FFFFFF;
+    background: white;
     border-radius: 12px;
     overflow: auto;
     min-height: 550px;
-    max-height: 70vh;
-    position: relative;
     border: 1px solid #ddd;
 }
 
 #mindmapCanvas {
     display: block;
-    background: #FFFFFF;
+    background: white;
     cursor: grab;
 }
 
-#mindmapCanvas:active {
-    cursor: grabbing;
-}
-/* Library */
 .mindmap-library {
     max-height: 500px;
     overflow-y: auto;
-}
-
-.empty-library {
-    text-align: center;
-    padding: 60px 20px;
-    color: #a1a1aa;
-    font-size: 14px;
 }
 
 .mindmap-library-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    margin: 10px 0;
+    padding: 12px;
+    margin: 8px 0;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
-    transition: 0.3s;
 }
 
-.mindmap-library-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.mindmap-library-item strong {
+.mindmap-library-item .library-info strong {
+    display: block;
     color: white;
-    font-size: 14px;
 }
 
-.mindmap-library-item small {
+.mindmap-library-item .library-info small {
     color: #a1a1aa;
     font-size: 11px;
 }
 
+.mindmap-library-item .library-buttons {
+    display: flex;
+    gap: 8px;
+}
+
 .mindmap-library-item button {
-    padding: 6px 12px;
-    margin-left: 8px;
+    padding: 5px 12px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: 0.3s;
-    font-size: 12px;
 }
 
-.mindmap-library-item button:first-of-type {
+.mindmap-library-item button:first-child {
     background: rgba(168, 85, 247, 0.3);
     color: white;
 }
 
-.mindmap-library-item button:last-of-type {
+.mindmap-library-item button:last-child {
     background: rgba(239, 68, 68, 0.3);
     color: white;
 }
-#manualPasteArea {
-    width: 100%;
-    margin-top: 10px;
-    padding: 10px;
-    background: #120d25;
-    border: 1px solid #2a2445;
-    border-radius: 8px;
-    color: white;
-    font-size: 13px;
-    resize: vertical;
+
+.empty-library {
+    text-align: center;
+    padding: 40px;
+    color: #a1a1aa;
 }
 
-#manualPasteArea:focus {
-    outline: none;
-    border-color: #a855f7;
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.progress-status {
+    margin-top: 10px;
+    text-align: center;
+    color: #a1a1aa;
+    font-size: 13px;
 }
 /* ================= REPORT MODAL STYLES ================= */
 .report-modal-overlay {
@@ -4087,515 +3968,6 @@ body::after {
     margin-bottom: 0;
 }
 
-/* ================= GAMES MODAL STYLES ================= */
-.games-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 60000;
-    animation: fadeIn 0.3s ease;
-}
-
-.games-modal {
-    background: linear-gradient(135deg, #1a162b, #0A0717);
-    border-radius: 24px;
-    width: 850px;
-    max-width: 90%;
-    max-height: 85vh;
-    overflow-y: auto;
-    padding: 30px;
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    box-shadow: 0 0 50px rgba(168, 85, 247, 0.25);
-}
-
-.games-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.games-modal-header h2 {
-    color: #a855f7;
-    font-size: 28px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.close-games-modal {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    transition: 0.3s;
-    padding: 0 8px;
-}
-
-.close-games-modal:hover {
-    color: #ef4444;
-    transform: scale(1.1);
-}
-
-.games-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-}
-
-.game-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 20px;
-    padding: 25px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(168, 85, 247, 0.2);
-    position: relative;
-    overflow: hidden;
-}
-
-.game-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.1), transparent);
-    transition: left 0.5s ease;
-}
-
-.game-card:hover::before {
-    left: 100%;
-}
-
-.game-card:hover {
-    transform: translateY(-8px);
-    background: rgba(168, 85, 247, 0.12);
-    border-color: rgba(168, 85, 247, 0.6);
-    box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
-}
-
-.game-icon {
-    font-size: 52px;
-    margin-bottom: 15px;
-}
-
-.game-card h3 {
-    color: #a855f7;
-    margin-bottom: 10px;
-    font-size: 20px;
-    font-weight: 600;
-}
-
-.game-card p {
-    color: #a1a1aa;
-    font-size: 13px;
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.play-btn {
-    display: inline-block;
-    color: #a855f7;
-    font-size: 13px;
-    font-weight: 600;
-    transition: 0.3s;
-    padding: 5px 10px;
-    border-radius: 20px;
-    background: rgba(168, 85, 247, 0.15);
-}
-
-.game-card:hover .play-btn {
-    transform: translateX(5px);
-    color: #c084fc;
-    background: rgba(168, 85, 247, 0.3);
-}
-
-/* Scrollbar for games modal */
-.games-modal::-webkit-scrollbar {
-    width: 6px;
-}
-
-.games-modal::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-}
-
-.games-modal::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.5);
-    border-radius: 3px;
-}
-
-.games-modal::-webkit-scrollbar-thumb:hover {
-    background: rgba(168, 85, 247, 0.8);
-}
-
-/* Game message styling in chat */
-.game-message {
-    border-left: 3px solid #a855f7;
-    background: rgba(168, 85, 247, 0.05);
-    padding: 12px;
-    border-radius: 12px;
-}
-
-.game-score {
-    font-size: 16px;
-    font-weight: bold;
-    color: #a855f7;
-}
-
-.game-correct {
-    color: #22c55e;
-    font-weight: bold;
-}
-
-.game-wrong {
-    color: #ef4444;
-    font-weight: bold;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .games-modal {
-        width: 95%;
-        padding: 20px;
-    }
-    
-    .games-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .game-card {
-        padding: 18px;
-    }
-    
-    .game-icon {
-        font-size: 40px;
-    }
-    
-    .game-card h3 {
-        font-size: 18px;
-    }
-}
-/* Game response styling */
-.ai-bubble .chat-content strong {
-    color: #c084fc;
-}
-
-.ai-bubble .chat-content .game-score {
-    display: inline-block;
-    background: rgba(168, 85, 247, 0.2);
-    padding: 2px 8px;
-    border-radius: 20px;
-    margin: 2px 0;
-}
-
-.ai-bubble .chat-content ul, 
-.ai-bubble .chat-content ol {
-    margin-left: 20px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-}
-
-.ai-bubble .chat-content li {
-    margin: 4px 0;
-}
-
-/* Typing animation for games */
-@keyframes gamePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-.game-active {
-    animation: gamePulse 2s infinite;
-}
-
-/* Game instruction highlight */
-.game-instruction {
-    background: rgba(168, 85, 247, 0.15);
-    padding: 12px;
-    border-radius: 12px;
-    margin: 10px 0;
-    border-left: 3px solid #a855f7;
-}
-/* Document upload status */
-#learningDocStatus {
-    margin-top: 10px;
-    font-size: 12px;
-    padding: 8px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.flashcard-stats {
-    font-size: 12px;
-    color: #a1a1aa;
-    text-align: center;
-    margin-top: 10px;
-}
-
-.outline-item {
-    margin: 8px 0;
-    padding-left: 20px;
-    border-left: 2px solid #a855f7;
-}
-/* Chat styles */
-.user-bubble, .ai-bubble {
-    margin: 10px 0;
-    padding: 12px 16px;
-    border-radius: 12px;
-    max-width: 80%;
-}
-
-.user-bubble {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    color: white;
-    margin-left: auto;
-}
-
-.ai-bubble {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    margin-right: auto;
-}
-
-.chat-title {
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 4px;
-    opacity: 0.7;
-}
-
-.chat-content {
-    line-height: 1.4;
-}
-
-/* Chat list styles */
-.chat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    margin: 5px 0;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.chat-item.active {
-    background: rgba(168, 85, 247, 0.2);
-    border-left: 3px solid #a855f7;
-}
-
-.chat-item span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.delete-chat {
-    background: none;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 0 8px;
-}
-
-.delete-chat:hover {
-    opacity: 0.8;
-}
-
-.empty-message {
-    text-align: center;
-    color: #a1a1aa;
-    padding: 20px;
-}
-
-
-/* Dynamic Game Area */
-.dynamic-game-area {
-    margin-top: 20px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 16px;
-    animation: fadeIn 0.3s ease;
-}
-
-.game-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.back-btn {
-    background: rgba(168, 85, 247, 0.2);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    padding: 8px 16px;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.back-btn:hover {
-    background: rgba(168, 85, 247, 0.4);
-}
-
-.quiz-topic-input, .typing-input {
-    width: 100%;
-    padding: 12px;
-    background: #120d25;
-    border: 1px solid #2a2445;
-    border-radius: 8px;
-    color: white;
-    margin: 10px 0;
-}
-
-.typing-word {
-    font-size: 28px;
-    text-align: center;
-    padding: 20px;
-    background: rgba(168, 85, 247, 0.1);
-    border-radius: 12px;
-    margin: 15px 0;
-    font-family: monospace;
-    letter-spacing: 2px;
-}
-
-.letter-buttons {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    margin: 20px 0;
-}
-
-.letter-btn {
-    padding: 10px;
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.letter-btn:hover:not(:disabled) {
-    transform: scale(1.05);
-}
-
-.letter-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.word-display {
-    font-size: 32px;
-    text-align: center;
-    letter-spacing: 8px;
-    font-family: monospace;
-    margin: 20px 0;
-}
-
-.attempts-left {
-    text-align: center;
-    margin: 10px 0;
-    font-size: 16px;
-    color: #fbbf24;
-}
-/* Quiz Styles */
-.quiz-header {
-    text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.quiz-question-card {
-    transition: all 0.3s ease;
-}
-
-.quiz-question-card:hover {
-    background: rgba(168,85,247,0.1) !important;
-}
-
-.quiz-options-list label {
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.quiz-options-list label:hover {
-    color: #a855f7;
-}
-
-.quiz-action-btn {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.quiz-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(168,85,247,0.3);
-}
-
-.error-message {
-    text-align: center;
-    padding: 40px;
-    color: #ef4444;
-}
-
-
-
-.learning-display {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.learning-progress {
-    margin: 20px 0;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
 
 /* ================= PERFECT AUDIO MODAL STYLES ================= */
 .audio-modal-overlay {
@@ -5423,4 +4795,610 @@ body::after {
 
 .youtube-grid::-webkit-scrollbar-thumb:hover {
     background: #667eea;
+}
+
+/* ================= GAMES MODAL STYLES ================= */
+.games-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200000;
+}
+
+.games-modal {
+    background: linear-gradient(135deg, #1a162b, #0A0717);
+    border-radius: 24px;
+    width: 900px;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 25px;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.games-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.games-modal-header h2 {
+    color: #a855f7;
+    margin: 0;
+}
+
+.close-games-modal {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.close-games-modal:hover {
+    color: #ef4444;
+}
+
+.game-types-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.game-type-btn {
+    padding: 10px 20px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 40px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.game-type-btn:hover {
+    background: rgba(168, 85, 247, 0.4);
+    transform: translateY(-2px);
+}
+
+.game-container {
+    min-height: 400px;
+    padding: 20px;
+}
+/* ================= QUIZ REVIEW TEXT - BLACK COLOR FOR READABILITY ================= */
+
+/* Quiz result text - make it black/dark for readability */
+.result-item p,
+.result-item strong,
+.result-item .your-answer,
+.result-item .correct-answer,
+.result-item .explanation,
+.detailed-results p,
+.detailed-results strong,
+.results-card p,
+.results-card .grade-message,
+.score-display,
+.score-number,
+.score-percentage {
+    color: #1f2937 !important;
+}
+
+/* Result items background and text */
+.result-item {
+    background: #f9fafb !important;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.result-item.correct-result {
+    border-left: 4px solid #10b981;
+    background: #f0fdf4 !important;
+}
+
+.result-item.wrong-result {
+    border-left: 4px solid #ef4444;
+    background: #fef2f2 !important;
+}
+
+.result-item strong {
+    color: #1f2937 !important;
+    font-weight: 600;
+}
+
+.result-item .your-answer {
+    color: #d97706 !important;
+    font-weight: 500;
+}
+
+.result-item .correct-answer {
+    color: #10b981 !important;
+    font-weight: 500;
+}
+
+.result-item .explanation {
+    color: #6b7280 !important;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+/* Results card styling */
+.results-card {
+    background: white !important;
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.results-header h3 {
+    color: #1f2937 !important;
+}
+
+.score-number {
+    font-size: 48px;
+    font-weight: bold;
+    color: #a855f7 !important;
+}
+
+.score-percentage {
+    font-size: 24px;
+    color: #6b7280 !important;
+}
+
+.grade-message {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1f2937 !important;
+    margin: 15px 0;
+}
+
+/* Quiz feedback text */
+.correct-feedback, .wrong-feedback {
+    color: #1f2937 !important;
+    font-weight: 500;
+}
+
+/* Quiz question text */
+.quiz-question-text {
+    color: #1f2937 !important;
+}
+
+.quiz-option span {
+    color: #1f2937 !important;
+}
+
+/* ================= BIG GAME BOXES STYLES ================= */
+
+.games-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    padding: 20px;
+}
+
+.game-card-large {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(99, 102, 241, 0.1));
+    border: 2px solid rgba(168, 85, 247, 0.3);
+    border-radius: 24px;
+    padding: 35px 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.game-card-large:hover {
+    transform: translateY(-8px);
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.2));
+    border-color: rgba(168, 85, 247, 0.6);
+    box-shadow: 0 15px 40px rgba(168, 85, 247, 0.3);
+}
+
+.game-card-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.game-card-large h3 {
+    font-size: 28px;
+    color: #a855f7;
+    margin-bottom: 15px;
+}
+
+.game-card-large p {
+    color: #cbd5f5;
+    font-size: 15px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.play-now-btn {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 40px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.play-now-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
+}
+
+/* Game Header */
+.game-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.current-game-title {
+    font-size: 24px;
+    color: #a855f7;
+}
+
+.back-to-games-btn {
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    padding: 8px 16px;
+    border-radius: 30px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.back-to-games-btn:hover {
+    background: rgba(168, 85, 247, 0.4);
+    transform: translateX(-3px);
+}
+
+/* Game Header Info */
+.game-header-info {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.08);
+    padding: 15px 20px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+}
+
+.game-progress, .game-score, .game-timer {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.game-question-large {
+    font-size: 28px;
+    text-align: center;
+    padding: 40px;
+    background: rgba(168, 85, 247, 0.1);
+    border-radius: 20px;
+    margin: 25px 0;
+    line-height: 1.4;
+}
+
+.game-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.game-option-btn {
+    padding: 18px 24px;
+    font-size: 16px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.game-option-btn:hover:not(:disabled) {
+    background: rgba(168, 85, 247, 0.3);
+    transform: translateX(5px);
+}
+
+/* Memory Grid Large */
+.memory-grid-large {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.memory-card-large {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 16px;
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.4s;
+}
+
+.memory-card-large.flipped {
+    transform: rotateY(180deg);
+}
+
+.memory-card-large .card-front,
+.memory-card-large .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.memory-card-large .card-front {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-size: 32px;
+}
+
+.memory-card-large .card-back {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    transform: rotateY(180deg);
+    text-align: center;
+}
+
+.memory-card-large.matched {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Typing Word Large */
+.typing-word-large {
+    font-size: 56px;
+    text-align: center;
+    padding: 40px;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(99, 102, 241, 0.1));
+    border-radius: 20px;
+    margin: 25px 0;
+    font-family: monospace;
+    letter-spacing: 4px;
+    font-weight: bold;
+}
+
+.game-input-large {
+    width: 100%;
+    padding: 18px 24px;
+    font-size: 18px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 14px;
+    color: white;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.game-submit-btn-large {
+    padding: 14px 28px;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border: none;
+    border-radius: 40px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Scrambled Word */
+.scrambled-word-large {
+    font-size: 48px;
+    text-align: center;
+    letter-spacing: 16px;
+    padding: 40px;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(99, 102, 241, 0.1));
+    border-radius: 20px;
+    margin: 25px 0;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.game-hint-large {
+    text-align: center;
+    font-size: 16px;
+    color: #fbbf24;
+    margin: 15px 0;
+}
+
+/* True False Buttons */
+.truefalse-buttons-large {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.true-btn-large, .false-btn-large {
+    flex: 1;
+    padding: 18px 30px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 60px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.true-btn-large {
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: white;
+}
+
+.false-btn-large {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.true-btn-large:hover, .false-btn-large:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.1);
+}
+
+/* Game Results Large */
+.game-results-large {
+    text-align: center;
+    padding: 50px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 24px;
+}
+
+.game-results-large .results-emoji {
+    font-size: 72px;
+}
+
+.game-results-large h2 {
+    font-size: 32px;
+    color: #a855f7;
+    margin: 20px 0;
+}
+
+.final-score-large {
+    font-size: 36px;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+.score-percentage-large {
+    font-size: 28px;
+    color: #fbbf24;
+    margin: 10px 0;
+}
+
+.results-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.play-again-btn {
+    padding: 12px 24px;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border: none;
+    border-radius: 40px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.game-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .games-grid-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .game-card-large {
+        padding: 25px 20px;
+    }
+    
+    .game-card-large h3 {
+        font-size: 22px;
+    }
+    
+    .game-question-large {
+        font-size: 20px;
+        padding: 25px;
+    }
+    
+    .typing-word-large {
+        font-size: 32px;
+    }
+    
+    .scrambled-word-large {
+        font-size: 28px;
+        letter-spacing: 8px;
+    }
+    
+    .memory-grid-large {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    
+    .game-header-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+/* ================= FORCE QUIZ TEXT TO BE BLACK ================= */
+#quizContent,
+#quizContent *,
+.quiz-content,
+.quiz-content *,
+.quiz-header,
+.quiz-header *,
+.quiz-question-card,
+.quiz-question-card *,
+.quiz-results-container,
+.quiz-results-container *,
+.results-card,
+.results-card *,
+.detailed-results,
+.detailed-results *,
+.result-item,
+.result-item * {
+    color: #1f2937 !important;
+}
+
+/* Keep buttons and interactive elements white text */
+.quiz-action-btn,
+.quiz-action-btn *,
+.submit-quiz-btn,
+.reset-quiz-btn,
+.results-btn {
+    color: white !important;
+}
+
+/* Keep links and interactive elements purple */
+.results-btn {
+    background: #a855f7;
+    color: white !important;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Quiz header special */
+.quiz-header h3 {
+    color: #a855f7 !important;
+}
+
+.quiz-header p {
+    color: #6b7280 !important;
 }

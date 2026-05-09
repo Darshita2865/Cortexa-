@@ -142,47 +142,6 @@
   
 </div>
 
-<!-- ===== GAMES MODAL ===== -->
-<div id="gamesModal" class="games-modal-overlay" style="display: none;">
-    <div class="games-modal">
-        <div class="games-modal-header">
-            <h2>🎮 Game Zone</h2>
-            <button class="close-games-modal" onclick="closeGamesModal()">×</button>
-        </div>
-        <div class="games-container">
-            <div class="game-card" onclick="startGame('quiz')">
-                <div class="game-icon">📝</div>
-                <h3>Quiz Race</h3>
-                <p>Test your knowledge with timed quizzes</p>
-                <span class="play-btn">Play Now →</span>
-            </div>
-            <div class="game-card" onclick="startGame('memory')">
-                <div class="game-icon">🧠</div>
-                <h3>Memory Match</h3>
-                <p>Match terms with definitions</p>
-                <span class="play-btn">Play Now →</span>
-            </div>
-            <div class="game-card" onclick="startGame('typing')">
-                <div class="game-icon">⌨️</div>
-                <h3>Typing Speed</h3>
-                <p>Improve your typing speed</p>
-                <span class="play-btn">Play Now →</span>
-            </div>
-            <div class="game-card" onclick="startGame('trivia')">
-                <div class="game-icon">🎲</div>
-                <h3>Trivia Challenge</h3>
-                <p>Answer random knowledge questions</p>
-                <span class="play-btn">Play Now →</span>
-            </div>
-            <div class="game-card" onclick="startGame('wordguess')">
-                <div class="game-icon">🔤</div>
-                <h3>Word Guessing</h3>
-                <p>Guess the word letter by letter</p>
-                <span class="play-btn">Play Now →</span>
-            </div>
-        </div>
-    </div>
-</div>
 
 
 <!-- ===== AUDIO EXPLANATION MODAL ===== -->
@@ -246,7 +205,7 @@
         </div>
         
         <div class="video-tabs">
-            <button class="tab-btn" onclick="switchVideoTab('youtube')">YouTube Integration</button>
+            <button class="tab-btn" onclick="switchVideoTab('youtube')">YouTube Videos</button>
             <button class="tab-btn" onclick="switchVideoTab('library')">My Videos</button>
         </div>
         
@@ -294,86 +253,75 @@
     </div>
 </div>
 
-<!-- ===== MIND MAP MODAL ===== -->
+<!-- Mind Map Modal -->
 <div id="mindMapModal" class="mindmap-modal-overlay" style="display: none;">
     <div class="mindmap-modal">
         <div class="mindmap-modal-header">
             <h2>🧠 Mind Map Generator</h2>
-            <button class="close-mindmap-modal" onclick="closeMindMapMode()">×</button>
+            <button class="close-mindmap-modal" onclick="closeMindMapMode()">&times;</button>
         </div>
+        
         <div class="mindmap-tabs">
             <button class="mindmap-tab-btn active" onclick="switchMindMapTab('create')">Create</button>
             <button class="mindmap-tab-btn" onclick="switchMindMapTab('library')">My Mind Maps</button>
         </div>
         
-        <div id="mindmapCreateTab" class="mindmap-tab-content active">
-            <div class="mindmap-source-selector">
-                <label>📂 Content Source:</label>
-                <div class="source-buttons">
-                    <button class="source-btn active" data-source="text" onclick="selectMindMapSource('text')">✏️ Type/Paste</button>
-                    <button class="source-btn" data-source="document" onclick="selectMindMapSource('document')">📄 Upload Document</button>
-                    <button class="source-btn" data-source="chat" onclick="selectMindMapSource('chat')">💬 Use Current Chat</button>
+        <div id="mindmapCreateTab" class="mindmap-tab-content">
+            <div class="mindmap-input-section">
+                <label>Enter your content / topic:</label>
+                <textarea id="mindmapTopicInput" rows="4" placeholder="Example: Artificial Intelligence, Machine Learning, Python, Turing Machine..."></textarea>
+            </div>
+            
+            <button class="generate-mindmap-btn" onclick="generateAndDrawMindMap()">✨ Generate Mind Map</button>
+            
+            <div id="mindmapProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="mindmapProgressFill" class="progress-fill"></div>
                 </div>
+                <p id="mindmapProgressStatus" class="progress-status">Generating mind map...</p>
             </div>
             
-            <div id="mindmapTextPanel" class="mindmap-input-section">
-                <label>📝 Enter your topic or content:</label>
-                <textarea id="mindmapTopicInput" rows="4" placeholder="Example: Machine Learning, Python Programming, Digital Marketing..."></textarea>
-            </div>
-            
-            <div id="mindmapDocumentPanel" class="mindmap-document-section" style="display: none;">
-                <div class="document-upload-area">
-                    <label class="upload-label">📄 Upload Document</label>
-                    <input type="file" id="mindmapDocumentInput" accept=".pdf,.docx,.txt,.md">
-                    <div class="upload-info">
-                        <p>Supported formats: PDF, DOCX, TXT, MD</p>
-                        <p>Maximum file size: 10MB</p>
-                    </div>
-                    <button class="upload-doc-btn" onclick="uploadMindMapDocument()">📤 Upload & Process</button>
-                    <div id="mindmapDocumentStatus" class="document-status"></div>
+            <div id="mindmapDisplay" style="display: none;">
+                <div class="mindmap-toolbar">
+                    <button onclick="zoomMindMap('in')">🔍 Zoom In</button>
+                    <button onclick="zoomMindMap('out')">🔍 Zoom Out</button>
+                    <button onclick="resetMindMapView()">🔄 Reset View</button>
+                    <button onclick="exportMindMapAsPNG()">📸 Export PNG</button>
+                    <button onclick="exportMindMapAsJSON()">📋 Export JSON</button>
+                    <button onclick="saveMindMapToLibrary()">💾 Save to Library</button>
+                    <button onclick="shareMindMap()">📤 Share</button>
                 </div>
-            </div>
-            
-            <div id="mindmapChatPanel" class="mindmap-chat-section" style="display: none;">
-                <div class="chat-info">
-                    <p>💬 Using current chat conversation as source</p>
-                    <button class="use-chat-btn" onclick="loadChatForMindMap()">Load Chat Content</button>
+                <div class="mindmap-canvas-container">
+                    <canvas id="mindmapCanvas" width="1000" height="650"></canvas>
                 </div>
-            </div>
-            
-            <div class="mindmap-actions">
-                <button class="generate-mindmap-btn" onclick="generateMindMap()">✨ Generate Mind Map</button>
-            </div>
-            
-            <div id="mindmapProgress" class="mindmap-progress" style="display: none;">
-                <div class="progress-bar"><div class="progress-fill" id="mindmapProgressFill"></div></div>
-                <div id="mindmapProgressStatus" class="progress-status">Analyzing content...</div>
             </div>
         </div>
         
         <div id="mindmapLibraryTab" class="mindmap-tab-content" style="display: none;">
-            <div id="mindmapLibraryList" class="mindmap-library">
-                <div class="empty-library">No mind maps yet. Create your first mind map!</div>
-            </div>
-        </div>
-        
-        <div id="mindmapDisplay" class="mindmap-display" style="display: none;">
-            <div class="mindmap-toolbar">
-                <button onclick="zoomMindMap('in')">🔍 Zoom In</button>
-                <button onclick="zoomMindMap('out')">🔍 Zoom Out</button>
-                <button onclick="resetMindMapView()">⟳ Reset View</button>
-                <button onclick="exportMindMapAsPNG()">📷 Export PNG</button>
-                <button onclick="exportMindMapAsJSON()">📋 Export JSON</button>
-                <button onclick="saveMindMapToLibrary()">💾 Save to Library</button>
-                <button onclick="shareMindMap()">🔗 Share</button>
-            </div>
-            <div class="mindmap-canvas-container">
-                <canvas id="mindmapCanvas" width="900" height="600"></canvas>
-            </div>
+            <div id="mindmapLibraryList" class="mindmap-library"></div>
         </div>
     </div>
 </div>
-
+<!-- ===== GAMES MODAL ===== -->
+<div id="gamesModal" class="games-modal-overlay" style="display: none;">
+    <div class="games-modal">
+        <div class="games-modal-header">
+            <h2>🎮 Game Zone</h2>
+            <button class="close-games-modal" onclick="closeGamesModal()">&times;</button>
+        </div>
+        
+        <div class="game-types-container">
+            <button class="game-type-btn" onclick="selectGame('quiz-race')">🏆 Quiz Race</button>
+            <button class="game-type-btn" onclick="selectGame('memory-match')">🎴 Memory Match</button>
+            <button class="game-type-btn" onclick="selectGame('typing-speed')">⌨️ Typing Speed</button>
+            <button class="game-type-btn" onclick="selectGame('trivia-challenge')">❓ Trivia Challenge</button>
+            <button class="game-type-btn" onclick="selectGame('word-scramble')">🔤 Word Scramble</button>
+            <button class="game-type-btn" onclick="selectGame('true-false')">✓✗ True or False</button>
+        </div>
+        
+        <div id="gameContent" class="game-container"></div>
+    </div>
+</div>
 <!-- ===== REPORT MODAL ===== -->
 <div id="reportModal" class="report-modal-overlay" style="display: none;">
     <div class="report-modal">
@@ -495,7 +443,6 @@
             <div id="quizDisplay" class="learning-display" style="display: none;">
                 <div class="learning-toolbar">
                     <h3>📝 Generated Quiz</h3>
-                    <button onclick="startQuiz()">▶️ Start Quiz</button>
                     <button onclick="resetQuiz()">🔄 Reset</button>
                     <button onclick="exportQuizAsPDF()">📥 Export PDF</button>
                     <button onclick="copyQuizToClipboard()">📋 Copy</button>
@@ -510,7 +457,7 @@
         <!-- STUDY NOTES TAB -->
         <div id="notesTab" class="learning-tab-content" style="display: none;">
             <div class="learning-input-section">
-                <label>📚 Topic or Content:</label>
+                <label>📚 Enter your Content:</label>
                 <textarea id="notesTopicInput" rows="3" placeholder="Enter a topic to generate study notes..."></textarea>
             </div>
             

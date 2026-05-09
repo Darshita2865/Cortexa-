@@ -11,6 +11,10 @@ from groq import Groq
 from dotenv import load_dotenv
 import requests
 import re
+from typing import Optional
+
+app = FastAPI()
+
 
 # ================= LOAD ENVIRONMENT VARIABLES =================
 load_dotenv()
@@ -34,8 +38,6 @@ else:
     print(f"📊 API Key: {GROQ_API_KEY[:10]}...")
     print("=" * 50)
 
-# Initialize FastAPI app
-app = FastAPI()
 
 # ================= CORS =================
 app.add_middleware(
@@ -386,30 +388,3 @@ async def root():
         "endpoints": ["/chat", "/upload-document", "/generate-audio", "/youtube-search", "/health", "/models"]
     }
 
-# ================= RUN =================
-if __name__ == "__main__":
-    print("\n" + "=" * 50)
-    print("🚀 STARTING CORTEXA BACKEND")
-    print("=" * 50)
-    print(f"📍 Local: http://127.0.0.1:8000")
-    print(f"📝 Health check: http://127.0.0.1:8000/health")
-    print(f"📋 Models: http://127.0.0.1:8000/models")
-    print("=" * 50)
-    
-    if not GROQ_API_KEY:
-        print("\n⚠️  WARNING: No Groq API Key Found!")
-        print("Create .env file with: GROQ_API_KEY=your_key_here")
-        print("Get key from: https://console.groq.com\n")
-    else:
-        print(f"\n✅ Groq API Key Loaded: {GROQ_API_KEY[:15]}...")
-        print(f"✅ Current Model: {PREFERRED_MODEL}")
-        
-        if YOUTUBE_API_KEY:
-            print(f"✅ YouTube API Key Loaded: {YOUTUBE_API_KEY[:15]}...")
-        else:
-            print("⚠️  YouTube API Key: Not configured (optional)")
-        
-        print("\n🎯 READY TO ANSWER QUESTIONS!\n")
-    
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="127.0.0.1", port=port, reload=True)
