@@ -5141,8 +5141,12 @@ html, body {
 /* Quiz question text */
 .quiz-question-text {
     color: #ffffff !important;
-    font-weight: 600 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+    font-weight: 700 !important;
+    font-size: 1.4rem !important;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
 }
 
 .quiz-option span {
@@ -6592,6 +6596,51 @@ img {
         text-shadow: none !important;
         background: transparent !important;
         background-color: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Force dark backgrounds for ALL elements */
+    html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+        color: #ffffff !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Specific overrides for main containers */
+    .dashboard-page,
+    .main,
+    .sidebar,
+    .right-sidebar,
+    #searchResults,
+    .chat-container,
+    .content-area,
+    .search-box,
+    .chat-input-box,
+    .chat-bubble,
+    .user-bubble,
+    .ai-bubble,
+    .quiz-question-card,
+    .quiz-options,
+    .quiz-header,
+    .quiz-results-container,
+    .results-card,
+    .feature-card,
+    .game-card,
+    .video-modal,
+    .report-modal,
+    .learning-modal,
+    .audio-modal,
+    .games-modal,
+    .modal-overlay {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 
     /* Force dark backgrounds for all main containers */
