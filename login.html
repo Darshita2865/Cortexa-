@@ -21,6 +21,7 @@
   </form>
 </div>
 
+
 <script>
 function loginUser() {
     const email = document.getElementById('loginEmail').value;
@@ -45,10 +46,9 @@ function loginUser() {
             email: email,
             name: registeredUser.firstName + ' ' + registeredUser.lastName
         }));
-        alert('✅ Login successful! Redirecting to dashboard...');
         window.location.href = 'dashboard.html';
     } else {
-        alert('❌ Invalid email or password!');
+        alert('Invalid email or password!');
     }
 }
 </script>
