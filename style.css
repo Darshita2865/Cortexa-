@@ -5554,52 +5554,89 @@ html, body {
         gap: 10px;
     }
 }
-/* ================= FORCE QUIZ TEXT TO BE BLACK ================= */
+/* ================= QUIZ TEXT COLORS - WHITE FOR DARK BACKGROUND ================= */
 #quizContent,
-#quizContent *,
 .quiz-content,
-.quiz-content *,
-.quiz-header,
-.quiz-header *,
 .quiz-question-card,
-.quiz-question-card *,
+.quiz-options,
+.quiz-header,
 .quiz-results-container,
-.quiz-results-container *,
 .results-card,
-.results-card *,
 .detailed-results,
-.detailed-results *,
-.result-item,
-.result-item * {
-    color: #1f2937 !important;
+.result-item {
+    color: #ffffff !important;
 }
 
-/* Keep buttons and interactive elements white text */
-.quiz-action-btn,
-.quiz-action-btn *,
-.submit-quiz-btn,
-.reset-quiz-btn,
-.results-btn {
-    color: white !important;
+/* Quiz question text */
+.quiz-question-text {
+    color: #ffffff !important;
+    font-weight: 600 !important;
 }
 
-/* Keep links and interactive elements purple */
-.results-btn {
-    background: #a855f7;
-    color: white !important;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
+/* Quiz option text */
+.quiz-option span,
+.quiz-option label {
+    color: #e0e0e0 !important;
+    font-weight: 500 !important;
 }
 
-/* Quiz header special */
+/* Quiz header */
 .quiz-header h3 {
     color: #a855f7 !important;
 }
 
 .quiz-header p {
-    color: #6b7280 !important;
+    color: #cbd5f5 !important;
+}
+
+/* Results card text (keep white) */
+.results-card .score-number,
+.results-card .score-percentage,
+.results-card .grade-message {
+    color: #ffffff !important;
+}
+
+/* Result items - make them readable on dark background */
+.result-item {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.result-item.correct-result {
+    border-left: 4px solid #10b981;
+    background: rgba(16, 185, 129, 0.15) !important;
+}
+
+.result-item.wrong-result {
+    border-left: 4px solid #ef4444;
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+.result-item strong,
+.result-item p {
+    color: #ffffff !important;
+}
+
+.result-item .your-answer {
+    color: #fbbf24 !important;
+}
+
+.result-item .correct-answer {
+    color: #4ade80 !important;
+}
+
+.result-item .explanation {
+    color: #a1a1aa !important;
+}
+
+/* Keep buttons white */
+.quiz-action-btn,
+.submit-quiz-btn,
+.reset-quiz-btn,
+.results-btn {
+    color: white !important;
 }
 /* ================= MOBILE RESPONSIVENESS FIXES ================= */
 
