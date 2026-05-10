@@ -6620,7 +6620,7 @@ img {
 /* Remove ALL borders from EVERYTHING - desktop specific */
 @media (min-width: 769px) {
     /* Nuclear reset - remove ALL possible white line sources */
-    * {
+    *, *::before, *::after {
         border: none !important;
         border-color: transparent !important;
         border-style: none !important;
@@ -6630,16 +6630,47 @@ img {
         text-shadow: none !important;
         background: #0A0717 !important;
         background-color: #0A0717 !important;
+        background-image: none !important;
+        background-color: #0A0717 !important;
     }
 
     /* Force dark backgrounds for ALL elements */
-    html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article {
+    html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article, aside, figure, figcaption, hr, br, img, svg, canvas {
         background: #0A0717 !important;
         background-color: #0A0717 !important;
         color: #ffffff !important;
         border: none !important;
         outline: none !important;
         box-shadow: none !important;
+        background-image: none !important;
+    }
+
+    /* Specific overrides for problematic elements */
+    .dashboard-page, .main, .sidebar, .right-sidebar, .content-area, .chat-container, .search-box, .chat-input-box, .quiz-question-card, .quiz-options, .modal-overlay, .video-modal, .audio-modal, .quiz-modal, .report-modal, .learning-modal, .games-modal {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background-image: none !important;
+    }
+
+    /* Remove any remaining white backgrounds */
+    [style*="background: white"], [style*="background:#fff"], [style*="background:#ffffff"], [style*="background-color: white"], [style*="background-color:#fff"], [style*="background-color:#ffffff"] {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+    }
+
+    /* Remove scrollbars completely */
+    ::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+    
+    * {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
     }
 
     /* Specific overrides for main containers */
