@@ -2381,8 +2381,23 @@ window.printReport = function() {
 
 // ================= LEARNING TOOLS MODE (QUIZ + NOTES) =================
 window.openLearningTools = function() {
+    console.log("Opening Learning Tools Modal");
     const modal = document.getElementById('learningToolsModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '100000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("learningToolsModal not found in DOM");
+        showToast("Modal not found! Please refresh the page.", "error");
+    }
     switchLearningTab('quiz');
 }
 
@@ -2409,7 +2424,7 @@ window.switchLearningTab = function(tab) {
     }
 }
 
-// =================  QUIZ FUNCTIONS =================
+// ================= QUIZ FUNCTIONS =================
 
 window.generateQuiz = async function() {
     const topic = document.getElementById('quizTopicInput').value;
@@ -2493,7 +2508,7 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
         if (displayDiv) displayDiv.style.display = 'block';
         
         window.currentQuizData = quizData;
-        window.quizAnswers = {}; // Store user answers
+        window.quizAnswers = {};
         
         let quizHTML = `
             <div class="quiz-header">
@@ -2551,19 +2566,16 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
     }
 }
 
-// Save individual answer when selected
 window.saveQuizAnswer = function(questionNum, answer) {
     if (!window.quizAnswers) window.quizAnswers = {};
     window.quizAnswers[questionNum] = answer;
     
-    // Visual feedback that answer is saved
     const questionCard = document.querySelector(`.quiz-question-card[data-question-id="${questionNum}"]`);
     if (questionCard) {
         questionCard.style.borderLeft = '4px solid #10b981';
     }
 }
 
-// Submit all answers and show results
 window.submitQuizAnswers = function() {
     if (!window.currentQuizData || !window.currentQuizData.questions) {
         showToast("No quiz loaded!", "error");
@@ -2574,15 +2586,12 @@ window.submitQuizAnswers = function() {
     const totalQuestions = window.currentQuizData.questions.length;
     const results = [];
     
-    // Calculate score and prepare results
     window.currentQuizData.questions.forEach((q, idx) => {
         const qNum = idx + 1;
         const userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
         const isCorrect = userAnswer === q.correctAnswer;
         
-        if (isCorrect) {
-            score++;
-        }
+        if (isCorrect) score++;
         
         results.push({
             id: qNum,
@@ -2593,36 +2602,18 @@ window.submitQuizAnswers = function() {
             explanation: q.explanation
         });
         
-        // Show feedback for this question
         const feedbackDiv = document.getElementById(`feedback-${qNum}`);
         if (feedbackDiv) {
             if (userAnswer) {
                 if (isCorrect) {
-                    feedbackDiv.innerHTML = `
-                        <div class="correct-feedback">
-                            ✅ <strong>Correct!</strong> ${q.explanation || 'Great job!'}
-                        </div>
-                    `;
+                    feedbackDiv.innerHTML = `<div class="correct-feedback">✅ <strong>Correct!</strong> ${q.explanation || 'Great job!'}</div>`;
                     feedbackDiv.style.backgroundColor = '#d1fae5';
                 } else {
-                    feedbackDiv.innerHTML = `
-                        <div class="wrong-feedback">
-                            ❌ <strong>Incorrect!</strong><br>
-                            Your answer: ${escapeHtml(userAnswer)}<br>
-                            Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
-                            ${q.explanation ? `📖 ${q.explanation}` : ''}
-                        </div>
-                    `;
+                    feedbackDiv.innerHTML = `<div class="wrong-feedback">❌ <strong>Incorrect!</strong><br>Your answer: ${escapeHtml(userAnswer)}<br>Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>${q.explanation ? `📖 ${q.explanation}` : ''}</div>`;
                     feedbackDiv.style.backgroundColor = '#fee2e2';
                 }
             } else {
-                feedbackDiv.innerHTML = `
-                    <div class="wrong-feedback">
-                        ⚠️ <strong>Not answered!</strong><br>
-                        Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
-                        ${q.explanation ? `📖 ${q.explanation}` : ''}
-                    </div>
-                `;
+                feedbackDiv.innerHTML = `<div class="wrong-feedback">⚠️ <strong>Not answered!</strong><br>Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>${q.explanation ? `📖 ${q.explanation}` : ''}</div>`;
                 feedbackDiv.style.backgroundColor = '#fffbeb';
             }
             feedbackDiv.style.display = 'block';
@@ -2650,7 +2641,6 @@ window.submitQuizAnswers = function() {
         gradeIcon = '⭐';
     }
     
-    // Display overall results
     const resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) {
         resultsContainer.style.display = 'block';
@@ -2689,40 +2679,32 @@ window.submitQuizAnswers = function() {
         `;
     }
     
-    // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     showToast(`Quiz completed! Score: ${score}/${totalQuestions} (${percentage}%)`);
 }
 
-// Reset all answers
 window.resetQuizAnswers = function() {
-    // Clear stored answers
     window.quizAnswers = {};
     
-    // Clear all radio inputs
     document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(radio => {
         radio.checked = false;
     });
     
-    // Clear all feedback
     document.querySelectorAll('.quiz-feedback').forEach(feedback => {
         feedback.style.display = 'none';
         feedback.innerHTML = '';
     });
     
-    // Reset question card borders
     document.querySelectorAll('.quiz-question-card').forEach(card => {
         card.style.borderLeft = '';
     });
     
-    // Hide results container
     const resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) resultsContainer.style.display = 'none';
     
     showToast("Quiz reset! You can try again.");
 }
 
-// Scroll to wrong answers only
 window.scrollToWrongAnswers = function() {
     const wrongFeedbacks = document.querySelectorAll('.wrong-feedback');
     if (wrongFeedbacks.length > 0) {
@@ -2733,7 +2715,6 @@ window.scrollToWrongAnswers = function() {
     }
 }
 
-// Export quiz results
 window.exportQuizResults = function() {
     if (!window.currentQuizData || !window.quizAnswers) {
         showToast("No quiz results to export!", "error");
@@ -2742,8 +2723,7 @@ window.exportQuizResults = function() {
     
     let exportText = `📝 ${window.currentQuizData.title}\n`;
     exportText += `📅 Date: ${new Date().toLocaleString()}\n`;
-    exportText += `📊 Total Questions: ${window.currentQuizData.questions.length}\n`;
-    exportText += `="\n\n`;
+    exportText += `📊 Total Questions: ${window.currentQuizData.questions.length}\n\n`;
     
     let score = 0;
     
@@ -2764,11 +2744,10 @@ window.exportQuizResults = function() {
     });
     
     const percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
-    exportText += `="\n`;
+    exportText += `\n`;
     exportText += `FINAL SCORE: ${score}/${window.currentQuizData.questions.length} (${percentage}%)\n`;
     exportText += `Grade: ${percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT'}\n`;
     
-    // Download as text file
     const blob = new Blob([exportText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2779,13 +2758,6 @@ window.exportQuizResults = function() {
     
     showToast("Quiz results exported!");
 }
-
-// Remove the old startQuiz function and replace with submitQuizAnswers
-window.startQuiz = function() {
-    // This function is deprecated - now using submitQuizAnswers
-    showToast("Please answer the questions and click 'Submit Quiz'", "info");
-}
-
 // Study Notes Generation
 window.generateStudyNotes = async function() {
     const topic = document.getElementById('notesTopicInput').value;
@@ -3739,4 +3711,164 @@ window.logout = function() {
     setTimeout(function() {
         window.location.href = "login.html";
     }, 500);
+}
+// ================= FIXED LOGOUT FUNCTION =================
+window.logout = function() {
+    console.log("Logout function called");
+    
+    // Clear all user data from localStorage
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("email");
+    localStorage.removeItem("userName");
+    
+    // Clear chat-specific data
+    localStorage.removeItem("chats_guest");
+    localStorage.removeItem("projects_guest");
+    localStorage.removeItem("mindMaps");
+    localStorage.removeItem("reports_guest");
+    localStorage.removeItem("quizzes_guest");
+    localStorage.removeItem("notes_guest");
+    localStorage.removeItem("videos_guest");
+    
+    // Show toast message
+    showToast("👋 Logged out successfully!");
+    
+    // Redirect to login page after a short delay
+    setTimeout(function() {
+        window.location.href = "login.html";
+    }, 500);
+}
+
+// ================= FIXED BUTTON CLICK HANDLERS =================
+// Make sure all modal opening functions are properly defined and not overwritten
+
+// Fix for Video Mode
+window.openVideoMode = function() {
+    console.log("Opening Video Mode");
+    const modal = document.getElementById('videoModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '30000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("videoModal not found");
+        showToast("Video modal not found", "error");
+    }
+    switchVideoTab('youtube');
+}
+
+// Fix for Audio Mode
+window.openAudioMode = function() {
+    console.log("Opening Audio Mode");
+    const modal = document.getElementById('audioModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '20000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("audioModal not found");
+        showToast("Audio modal not found", "error");
+    }
+}
+
+// Fix for Learning Tools
+window.openLearningTools = function() {
+    console.log("Opening Learning Tools Modal");
+    const modal = document.getElementById('learningToolsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '100000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("learningToolsModal not found");
+        showToast("Learning Tools modal not found", "error");
+    }
+    switchLearningTab('quiz');
+}
+
+// Fix for Report Mode
+window.openReportMode = function() {
+    console.log("Opening Report Mode");
+    const modal = document.getElementById('reportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '45000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("reportModal not found");
+        showToast("Report modal not found", "error");
+    }
+}
+
+// Fix for Mind Map Mode
+window.openMindMapMode = function() {
+    console.log("Opening Mind Map Modal");
+    const modal = document.getElementById('mindMapModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '100000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("mindMapModal not found");
+        showToast("Mind Map modal not found", "error");
+    }
+    switchMindMapTab('create');
+}
+
+// Fix for Games Modal
+window.openGamesModal = function() {
+    console.log("Opening Games Modal");
+    const modal = document.getElementById('gamesModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '200000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    } else {
+        console.error("gamesModal not found");
+        showToast("Games modal not found", "error");
+    }
+    // Show game selection by default
+    showGameSelectionScreen();
 }

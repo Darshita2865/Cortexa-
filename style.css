@@ -5862,6 +5862,7 @@ body::after {
 * {
     box-sizing: border-box;
 }
+
 /* ================= WHITE LINE FIX ================= */
 
 html,
