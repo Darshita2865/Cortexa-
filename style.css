@@ -192,30 +192,134 @@ body {
 
 /* ================= Responsive ================= */
 @media (max-width: 768px) {
+    /* Reset mobile viewport */
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        min-width: 320px !important;
+    }
+
     .navbar {
         flex-direction: column;
         padding: 15px 20px;
-        gap: 12px;
+        position: relative !important;
     }
-    
+
     .navbar nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 18px;
+        margin: 15px 0;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
     }
-    
+
+    .navbar nav a {
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+        margin: 2px !important;
+    }
+
+    .nav-right {
+        margin-top: 15px !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 10px !important;
+    }
+
     .hero h1 {
-        font-size: 40px;
+        font-size: 28px !important;
+        line-height: 1.2 !important;
+        margin-bottom: 15px !important;
     }
-    
+
     .hero p {
-        font-size: 16px;
-        padding: 0 15px;
+        font-size: 16px !important;
+        margin-bottom: 25px !important;
+        line-height: 1.5 !important;
     }
-    
+
+    .features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+        padding: 0 15px !important;
+    }
+
+    .feature-card {
+        padding: 20px !important;
+        margin-bottom: 15px !important;
+    }
+
+    /* Fix mobile button issues */
+    .hero-btn, .nav-btn, .profile-icon {
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        position: relative !important;
+        z-index: 10 !important;
+        display: inline-block !important;
+        text-decoration: none !important;
+    }
+
     .hero-btn {
-        padding: 12px 28px;
-        font-size: 14px;
+        min-height: 48px !important;
+        min-width: 140px !important;
+        font-size: 16px !important;
+        padding: 14px 28px !important;
+        border-radius: 25px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        color: white !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3) !important;
+        margin: 10px auto !important;
+        display: block !important;
+    }
+
+    .hero-btn:hover, .hero-btn:active {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4) !important;
+    }
+
+    /* Fix mobile navbar buttons */
+    .nav-btn, .profile-icon {
+        min-height: 44px !important;
+        padding: 12px 20px !important;
+        font-size: 14px !important;
+        border-radius: 22px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        color: white !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        display: inline-block !important;
+    }
+
+    /* Fix mobile layout issues */
+    .hero-content {
+        text-align: center !important;
+        padding: 30px 15px !important;
+        max-width: 100% !important;
+    }
+
+    .hero {
+        min-height: 70vh !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 60px 0 20px 0 !important;
+    }
+
+    section {
+        padding: 60px 20px !important;
+    }
+
+    .logo img {
+        width: 120px !important;
+        height: auto !important;
     }
 }
 
@@ -352,7 +456,6 @@ body {
 }
 
 /* ================= CONTACT ================= */
-/* ================= CONTACT FORM (DARK AI STYLE) ================= */
 
 #contact form {
     max-width: 500px;
@@ -405,6 +508,7 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 5px 20px rgba(168,85,247,0.3);
 }
+
 /* ================= BLOG ================= */
 .blog-grid {
     display: grid;
@@ -757,9 +861,8 @@ body {
         padding: 1rem;
     }
 }
-/* ================================================= */
+
 /* ================= REGISTER PAGE ================= */
-/* ================================================= */
 
 /* Background same as hero */
 .register-page {
@@ -1018,6 +1121,42 @@ body {
     height: 0 !important;
 }
 
+/* ================= WHITE BAR FIX FOR SIDEBAR ================= */
+.sidebar {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overflow: -moz-scrollbars-none !important;
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+/* Remove any possible white borders or shadows */
+.sidebar, .sidebar * {
+    border-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+/* Force sidebar background to be pure dark */
+.sidebar {
+    background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+}
+
+/* Remove any white content from sidebar */
+.sidebar::before,
+.sidebar::after {
+    display: none !important;
+    content: none !important;
+}
+
 /* ================= RIGHT SIDEBAR STYLES ================= */
 .right-sidebar {
     position: fixed;
@@ -1187,8 +1326,8 @@ body {
 .dropdown-item.delete:hover {
     background: rgba(239, 68, 68, 0.1);
 }
-/* ================= PROJECT ITEMS (Same as Chat Items) ================= */
-/* ================= FIX PROJECTS DISPLAY ================= */
+/* ================= PROJECT ITEMS  ================= */
+
 #projectListRight {
     display: block !important;
     width: 100% !important;
@@ -1398,7 +1537,7 @@ body {
     50% { opacity: 1; }
 }
 
-/* ================= FIX SCROLLING ================= */
+/* ================= SCROLLING ================= */
 .main {
     margin-left: 220px;
     margin-right: 280px;
@@ -1421,7 +1560,7 @@ body {
     flex-direction: column;
     gap: 12px;
 }
-/* ================= FIX WHITE SPACE ON SCROLL ================= */
+/* ================= SCROLL color ================= */
 html, body {
     margin: 0;
     padding: 0;
@@ -1609,6 +1748,7 @@ body {
 }
 
 /* ================= SCROLLBAR ================= */
+
 #searchResults {
     scrollbar-width: none;
 }
@@ -1617,42 +1757,69 @@ body {
     display: none;
 }
 
+/* ================= BACKGROUND GLOW EFFECTS FIXED ================= */
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background: #05010f;
+    position: relative;
+}
+
+/* Purple glow */
 body::before {
     content: "";
     position: fixed;
+    top: -250px;
+    left: -250px;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, #a855f7, transparent 60%);
-    top: -100px;
-    left: -100px;
+    background: radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%);
     filter: blur(120px);
-    opacity: 0.4;
-    animation: float1 12s infinite alternate;
+    z-index: -1;
+    pointer-events: none;
+    animation: floatGlow1 14s ease-in-out infinite alternate;
 }
 
+/* Blue glow */
 body::after {
     content: "";
     position: fixed;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, #6366f1, transparent 60%);
-    bottom: -100px;
-    right: -100px;
+    bottom: -250px;
+    right: -250px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%);
     filter: blur(120px);
-    opacity: 0.4;
-    animation: float2 15s infinite alternate;
+    z-index: -1;
+    pointer-events: none;
+    animation: floatGlow2 16s ease-in-out infinite alternate;
 }
 
-@keyframes float1 {
-    from { transform: translate(0,0); }
-    to { transform: translate(100px, 100px); }
+@keyframes floatGlow1 {
+    from {
+        transform: translate(0px, 0px);
+    }
+    to {
+        transform: translate(120px, 80px);
+    }
 }
 
-@keyframes float2 {
-    from { transform: translate(0,0); }
-    to { transform: translate(-100px, -80px); }
+@keyframes floatGlow2 {
+    from {
+        transform: translate(0px, 0px);
+    }
+    to {
+        transform: translate(-100px, -70px);
+    }
 }
 
+/* Hide horizontal white line issue */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
 /* ================= DOCUMENT CHAT STYLES ================= */
 .document-indicator {
     position: fixed;
@@ -3225,7 +3392,7 @@ body::after {
     display: flex;
     align-items: center;
     gap: 10px;
-    white-space: nowrap;
+    white-space: none;
 }
 /* ================= LEARNING ACTIONS BUTTONS (UNIFIED STYLE) ================= */
 .learning-actions {
@@ -4529,6 +4696,7 @@ body::after {
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -4796,7 +4964,6 @@ body::after {
 .youtube-grid::-webkit-scrollbar-thumb:hover {
     background: #667eea;
 }
-<<<<<<< HEAD
 
 /* ================= GAMES MODAL STYLES ================= */
 .games-modal-overlay {
@@ -4961,23 +5128,26 @@ body::after {
 .grade-message {
     font-size: 18px;
     font-weight: 500;
-    color: #1f2937 !important;
+    color: #ffffff !important;
     margin: 15px 0;
 }
 
 /* Quiz feedback text */
 .correct-feedback, .wrong-feedback {
-    color: #1f2937 !important;
+    color: #ffffff !important;
     font-weight: 500;
 }
 
 /* Quiz question text */
 .quiz-question-text {
-    color: #1f2937 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
 
 .quiz-option span {
-    color: #1f2937 !important;
+    color: #e0e0e0 !important;
+    font-weight: 500 !important;
 }
 
 /* ================= BIG GAME BOXES STYLES ================= */
@@ -5585,6 +5755,757 @@ body::after {
     .send-btn {
         padding: 8px;
     }
+/* ===== COMPLETE WHITE LINE FIX ===== */
 
-=======
->>>>>>> 8e02ad8fc668171c2fc6dedd8f3ef0edbcfda965
+/* Force remove ALL scrollbars everywhere */
+html, body, .dashboard-page, .main, .sidebar, .right-sidebar, #searchResults, .video-modal, .report-modal, .learning-modal, .audio-modal, .games-modal, .mindmap-modal {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overflow: -moz-scrollbars-none !important;
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar, 
+.dashboard-page::-webkit-scrollbar, 
+.main::-webkit-scrollbar, 
+.sidebar::-webkit-scrollbar, 
+.right-sidebar::-webkit-scrollbar, 
+#searchResults::-webkit-scrollbar,
+.video-modal::-webkit-scrollbar,
+.report-modal::-webkit-scrollbar,
+.learning-modal::-webkit-scrollbar,
+.audio-modal::-webkit-scrollbar,
+.games-modal::-webkit-scrollbar,
+.mindmap-modal::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+/* Remove ALL borders that might appear white */
+.sidebar, .right-sidebar, .main, .chat-input-box, .plus-dropdown, .chat-dropdown, .project-dropdown {
+    border: none !important;
+}
+
+/* If white lines are from the page background pattern */
+body::before, body::after {
+    display: none !important;
+}
+
+/* Ensure all modal backgrounds are pure dark */
+.video-modal, .report-modal, .learning-modal, .audio-modal, .games-modal, .mindmap-modal {
+    background: #0A0717 !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Remove white from any card backgrounds */
+.game-card-large, .project-item, .chat-item, .feature-card, .blog-card {
+    border: 1px solid rgba(168, 85, 247, 0.15) !important;
+}
+
+/* Force dark background on everything */
+* {
+    border-color: rgba(168, 85, 247, 0.15) !important;
+}
+/* FIX WHITE GLOW / OVERFLOW */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background: #070114;
+}
+
+/* Prevent glowing elements from overflowing */
+.container,
+.sidebar,
+.main-content,
+.right-sidebar {
+    overflow: hidden;
+}
+
+/* Fix random white blur effects */
+body::before,
+body::after {
+    display: none !important;
+}
+
+/* Remove accidental shadows */
+* {
+    box-sizing: border-box;
+}
+/* ================= WHITE LINE FIX ================= */
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden !important;
+    background: #05010f;
+}
+
+/* Remove accidental borders/shadows */
+* {
+    box-sizing: border-box;
+}
+
+/* Main app container */
+.dashboard-page {
+    min-height: 100vh;
+    background: #0A0717;
+    overflow-x: hidden;
+}
+
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 768px) {
+    
+    /* Login and Register Pages */
+    .login-box, .register-box {
+        width: 95% !important;
+        max-width: 400px;
+        margin: 20px auto !important;
+        padding: 30px 20px !important;
+    }
+    
+    .login-box h2, .register-box h2 {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+    
+    .login-box input, .register-box input {
+        width: 100% !important;
+        padding: 15px !important;
+        margin-bottom: 15px !important;
+        font-size: 16px !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        background: rgba(26, 22, 43, 0.8) !important;
+        color: white !important;
+    }
+    
+    .login-box button, .register-box button {
+        width: 100% !important;
+        padding: 15px !important;
+        font-size: 16px !important;
+        border-radius: 10px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        color: white !important;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    
+    .login-box button:hover, .register-box button:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Dashboard Header */
+    .dashboard-header {
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(10, 7, 23, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    
+    .user-display {
+        color: #a855f7;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+        display: block !important;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 100001;
+        background: linear-gradient(90deg, #a855f7, #6366f1);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+    }
+    
+    /* Sidebar Enhancements */
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        top: 0 !important;
+        width: 260px !important;
+        height: 100% !important;
+        z-index: 100000 !important;
+        transition: left 0.3s ease !important;
+        background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+        overflow-y: auto !important;
+        padding: 70px 15px 20px !important;
+        box-shadow: 5px 0 25px rgba(0,0,0,0.5) !important;
+    }
+    
+    .sidebar.open {
+        left: 0 !important;
+    }
+    
+    .sidebar .logo {
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .sidebar .logo img {
+        width: 120px !important;
+        height: auto;
+    }
+    
+    .sidebar nav a {
+        display: flex !important;
+        align-items: center !important;
+        padding: 15px 20px !important;
+        margin-bottom: 10px !important;
+        border-radius: 12px !important;
+        color: #e0e0e0 !important;
+        text-decoration: none !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        background: rgba(168, 85, 247, 0.1) !important;
+        border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    }
+    
+    .sidebar nav a:hover {
+        background: rgba(168, 85, 247, 0.2) !important;
+        transform: translateX(5px) !important;
+    }
+    
+    .sidebar nav a svg {
+        margin-right: 12px !important;
+        min-width: 18px !important;
+        height: 18px !important;
+    }
+    
+    /* Main Content Area */
+    .main {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        min-height: 100vh;
+        background: #0A0717 !important;
+    }
+    
+    /* Chat Area */
+    #searchResults {
+        position: relative !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 80px 15px 80px !important;
+        margin: 0 !important;
+        height: calc(100vh - 160px) !important;
+        overflow-y: auto !important;
+        background: transparent !important;
+    }
+    
+    /* Chat Bubbles */
+    .user-bubble, .ai-bubble {
+        max-width: 85% !important;
+        font-size: 14px !important;
+        padding: 12px 16px !important;
+        margin-bottom: 15px !important;
+        border-radius: 18px !important;
+        word-wrap: break-word !important;
+    }
+    
+    .user-bubble {
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        color: white !important;
+        margin-left: auto !important;
+        border-bottom-right-radius: 4px !important;
+    }
+    
+    .ai-bubble {
+        background: rgba(26, 22, 43, 0.8) !important;
+        color: #e0e0e0 !important;
+        border: 1px solid rgba(168, 85, 247, 0.2) !important;
+        border-bottom-left-radius: 4px !important;
+    }
+    
+    /* Search Box */
+    .search-box {
+        position: fixed !important;
+        bottom: 15px !important;
+        left: 15px !important;
+        right: 15px !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        z-index: 999 !important;
+        background: rgba(26, 22, 43, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 25px !important;
+        padding: 15px !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .chat-input-box {
+        padding: 0 !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+    
+    .chat-input-box input {
+        flex: 1 !important;
+        font-size: 16px !important;
+        padding: 12px 15px !important;
+        background: rgba(168, 85, 247, 0.1) !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        border-radius: 20px !important;
+        color: white !important;
+        outline: none !important;
+    }
+    
+    .chat-input-box input::placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    .send-btn {
+        padding: 12px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        color: white !important;
+        cursor: pointer !important;
+        font-size: 16px !important;
+        min-width: 45px !important;
+        height: 45px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: transform 0.2s ease !important;
+    }
+    
+    .send-btn:hover {
+        transform: scale(1.1) !important;
+    }
+    
+    /* Right Sidebar */
+    .right-sidebar {
+        display: none !important;
+    }
+    
+    .right-sidebar.open {
+        display: block !important;
+    }
+    
+    .right-sidebar-toggle {
+        display: block !important;
+        position: fixed !important;
+        bottom: 80px !important;
+        right: 15px !important;
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 20px !important;
+        color: white !important;
+        cursor: pointer !important;
+        z-index: 1001 !important;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
+    }
+    
+    /* Modal Improvements */
+    .video-modal, .report-modal, .learning-modal, .audio-modal, .games-modal, .mindmap-modal {
+        width: 95% !important;
+        max-width: 400px !important;
+        margin: 20px auto !important;
+        padding: 20px !important;
+        border-radius: 20px !important;
+        background: rgba(10, 7, 23, 0.98) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    }
+    
+    /* Button Improvements */
+    button {
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    /* Input Improvements */
+    input, textarea, select {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        border-radius: 10px !important;
+    }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+    .login-box, .register-box {
+        width: 98% !important;
+        margin: 10px auto !important;
+        padding: 20px 15px !important;
+    }
+    
+    .sidebar {
+        width: 240px !important;
+        left: -260px !important;
+    }
+    
+    .search-box {
+        bottom: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
+        padding: 10px !important;
+    }
+    
+    .chat-input-box input {
+        font-size: 14px !important;
+        padding: 10px 12px !important;
+    }
+    
+    .send-btn {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* Main app container */
+.container,
+.dashboard-container,
+.main-container,
+.sidebar,
+.right-sidebar,
+.chat-container,
+.content-area {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Prevent glow overflow */
+body::before,
+body::after {
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Fix random rendering lines */
+.sidebar,
+.right-sidebar {
+    background: rgba(10, 10, 25, 0.95);
+    backdrop-filter: blur(20px);
+}
+
+/* Canvas rendering fix */
+body {
+    transform: translateZ(0);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ================= FINAL WHITE BAR ELIMINATION ================= */
+/* Comprehensive fix for white vertical bar on sidebar */
+
+/* Force remove any possible scrollbar from sidebar */
+.sidebar {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overflow: -moz-scrollbars-none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+/* Remove any borders, outlines, or shadows that could cause white lines */
+.sidebar, .sidebar * {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+/* Force pure dark background */
+.sidebar {
+    background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+    border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Remove any pseudo-elements that could create white lines */
+.sidebar::before,
+.sidebar::after,
+.sidebar *::before,
+.sidebar *::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Ensure no white margins or padding */
+.sidebar {
+    margin: 0 !important;
+    padding: 30px 20px !important;
+    left: 0 !important;
+    top: 0 !important;
+}
+
+/* Fix any potential overflow issues */
+.sidebar {
+    overflow: hidden !important;
+}
+
+/* Remove any text shadows that could appear white */
+.sidebar * {
+    text-shadow: none !important;
+}
+
+/* Force all sidebar content to have proper colors */
+.sidebar nav a {
+    color: #d1d1e0 !important;
+    background: transparent !important;
+}
+
+.sidebar nav a:hover {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.15)) !important;
+    color: white !important;
+}
+
+/* Ensure logo has no white background */
+.sidebar .logo img {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* ================= COMPLETE WHITE LINE ELIMINATION ================= */
+/* Ultimate fix for ALL white lines on dashboard */
+
+/* Remove ALL borders from EVERYTHING */
+* {
+    border: none !important;
+    border-color: transparent !important;
+    border-style: none !important;
+    border-width: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+/* Force dark backgrounds for all main containers */
+.dashboard-page,
+.main,
+.sidebar,
+.right-sidebar,
+#searchResults,
+.chat-container,
+.content-area {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+}
+
+/* Remove ALL scrollbars globally */
+html, body, * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overflow: -moz-scrollbars-none !important;
+}
+
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+/* Remove ALL pseudo-elements */
+*::before,
+*::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Force proper colors for all text */
+* {
+    color: #e0e0e0 !important;
+    text-shadow: none !important;
+}
+
+/* Override specific element colors */
+.sidebar {
+    background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+    border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+.sidebar nav a {
+    color: #d1d1e0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.sidebar nav a:hover {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.15)) !important;
+    color: white !important;
+    border: none !important;
+}
+
+/* Remove all margins and padding that could cause white gaps */
+.dashboard-page,
+.main,
+.sidebar,
+.right-sidebar {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Fix sidebar padding specifically */
+.sidebar {
+    padding: 30px 20px !important;
+}
+
+/* Remove any white from inputs and buttons */
+input, button, textarea, select {
+    background: rgba(26, 22, 43, 0.8) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    color: white !important;
+}
+
+/* Remove white from chat bubbles */
+.user-bubble, .ai-bubble {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.user-bubble {
+    background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+    color: white !important;
+}
+
+.ai-bubble {
+    background: rgba(26, 22, 43, 0.8) !important;
+    color: #e0e0e0 !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Remove white from search box */
+.search-box, .chat-input-box {
+    background: rgba(26, 22, 43, 0.95) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Force all modals to be dark */
+.video-modal, .report-modal, .learning-modal, .audio-modal, .games-modal, .mindmap-modal {
+    background: rgba(10, 7, 23, 0.98) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Remove any white from images */
+img {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Override any remaining white backgrounds */
+[style*="background: white"], 
+[style*="background:#fff"], 
+[style*="background:#ffffff"], 
+[style*="background-color: white"], 
+[style*="background-color:#fff"], 
+[style*="background-color:#ffffff"] {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+}
+
+/* ================= TARGETED WHITE LINE FIX ================= */
+/* More specific fixes without breaking layout */
+
+/* Remove borders from specific containers */
+.dashboard-page,
+.main,
+.sidebar,
+.right-sidebar,
+#searchResults,
+.chat-container,
+.content-area,
+.search-box,
+.chat-input-box {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove scrollbars from specific elements */
+.dashboard-page,
+.main,
+.sidebar,
+.right-sidebar,
+#searchResults {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.dashboard-page::-webkit-scrollbar,
+.main::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+.right-sidebar::-webkit-scrollbar,
+#searchResults::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Remove pseudo-elements from main containers */
+.dashboard-page::before,
+.dashboard-page::after,
+.main::before,
+.main::after,
+.sidebar::before,
+.sidebar::after,
+.right-sidebar::before,
+.right-sidebar::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Force dark backgrounds for main containers */
+.dashboard-page {
+    background: radial-gradient(circle at center, #1a162b, #0A0717) !important;
+}
+
+.main {
+    background: transparent !important;
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+    border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+.right-sidebar {
+    background: rgba(20, 17, 34, 0.95) !important;
+    border-left: 1px solid rgba(168, 85, 247, 0.15) !important;
+}
+
+#searchResults {
+    background: transparent !important;
+}

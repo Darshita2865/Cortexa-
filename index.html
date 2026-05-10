@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover"><title>Cortexa Home</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"><title>Cortexa Home</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -122,5 +122,67 @@
 </section>
 
 <script src="script.js"></script>
+<script>
+// Mobile button fix
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix mobile click events for all buttons
+    const buttons = document.querySelectorAll('.hero-btn, .nav-btn, .profile-icon');
+    
+    buttons.forEach(button => {
+        // Add both click and touch events for mobile compatibility
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const href = this.getAttribute('onclick') || this.getAttribute('data-href');
+            if (href && href.includes('window.location.href')) {
+                const match = href.match(/window\.location\.href='([^']+)'/);
+                if (match && match[1]) {
+                    window.location.href = match[1];
+                }
+            }
+        });
+        
+        // Add touch events for mobile
+        button.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, {passive: false});
+        
+        button.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            this.click();
+        }, {passive: false});
+    });
+    
+    // Fix Get Started button specifically
+    const heroBtn = document.querySelector('.hero-btn');
+    if (heroBtn) {
+        heroBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'register.html';
+        });
+        
+        heroBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            window.location.href = 'register.html';
+        }, {passive: false});
+    }
+    
+    // Fix navbar buttons
+    const navBtn = document.querySelector('.nav-btn');
+    if (navBtn) {
+        navBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'register.html';
+        });
+    }
+    
+    const profileBtn = document.querySelector('.profile-icon');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'profile.html';
+        });
+    }
+});
+</script>
 </body>
 </html>

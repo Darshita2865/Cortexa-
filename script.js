@@ -14,6 +14,60 @@ let currentAudioText = null;
 // API URL - CHANGE THIS FOR PRODUCTION
 const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
 
+// ================= MOBILE MENU FUNCTIONS =================
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    }
+}
+
+function toggleRightSidebar() {
+    const rightSidebar = document.querySelector('.right-sidebar');
+    
+    if (rightSidebar) {
+        rightSidebar.classList.toggle('open');
+    }
+}
+
+// Close sidebar when clicking outside
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    
+    if (sidebar && overlay && mobileMenuBtn) {
+        if (!sidebar.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
+            closeMobileSidebar();
+        }
+    }
+});
+
+// Close sidebar on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeMobileSidebar();
+        
+        const rightSidebar = document.querySelector('.right-sidebar');
+        if (rightSidebar && rightSidebar.classList.contains('open')) {
+            rightSidebar.classList.remove('open');
+        }
+    }
+});
+
 // ================= USER-SPECIFIC STORAGE =================
 function getCurrentUser() {
     return localStorage.getItem("email") || "guest";

@@ -478,6 +478,28 @@
     }
   });
   
+  // Check if user is logged in
+  document.addEventListener('DOMContentLoaded', function() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (!isLoggedIn || isLoggedIn !== 'true') {
+      alert('Please login to access your profile!');
+      window.location.href = 'login.html';
+      return;
+    }
+    
+    // Load profile data only if logged in
+    loadProfileData();
+    setupAvatarUpload();
+    injectLogoutButton();  // Adds visible logout button that removes all details
+    
+    // Small tweak: show visual hint that profile is empty until saved.
+    if (!localStorage.getItem('cortexa_user_profile')) {
+      // optional gentle reminder
+      console.log("Fresh profile: all fields empty, ready for new user input.");
+    }
+  });
+  
   // Expose functions globally for inline onclick usage
   window.saveProfile = saveProfile;
   window.goToHomepage = goToHomepage;

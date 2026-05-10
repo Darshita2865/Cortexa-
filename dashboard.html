@@ -513,6 +513,37 @@
         </div>
     </div>
 </div>
+<script>
+// Check if user is logged in - SINGLE AUTHENTICATION CHECK
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard loaded, checking authentication...');
+    
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    console.log('Login status:', isLoggedIn);
+    
+    if (!isLoggedIn || isLoggedIn !== 'true') {
+        console.log('User not logged in, redirecting to login...');
+        alert('Please login to access the dashboard!');
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    // Display current user info
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser) {
+        console.log('Welcome back:', currentUser.name);
+        // Optionally display user name on dashboard
+        const userDisplay = document.querySelector('.user-display') || document.createElement('div');
+        userDisplay.className = 'user-display';
+        userDisplay.textContent = `Welcome, ${currentUser.name}!`;
+        if (!document.querySelector('.user-display')) {
+            document.querySelector('.dashboard-header').prepend(userDisplay);
+        }
+    }
+    
+    console.log('Authentication successful, loading dashboard...');
+});
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="script.js"></script>
 </body>
