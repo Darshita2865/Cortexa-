@@ -6538,11 +6538,12 @@ img {
     background: transparent !important;
 }
 
-/* ================= ULTIMATE WHITE LINE ELIMINATION ================= */
-/* Most aggressive fix for all white lines on desktop */
+/* ================= FINAL WHITE LINE ELIMINATION ================= */
+/* Ultimate fix for ALL white lines on desktop */
 
 /* Remove ALL borders from EVERYTHING - desktop specific */
 @media (min-width: 769px) {
+    /* Nuclear reset - remove ALL possible white line sources */
     * {
         border: none !important;
         border-color: transparent !important;

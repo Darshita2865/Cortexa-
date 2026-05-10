@@ -2,11 +2,11 @@ services:
   - type: web
     name: cortexa-backend
     runtime: python
-    repo: https://github.com/yourusername/cortexa
+    repo: https://github.com/Darshita2865/Cortexa
     plan: free
     branch: main
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn backend:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GROQ_API_KEY
         sync: false
