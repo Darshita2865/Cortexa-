@@ -1234,17 +1234,130 @@ function drawSimpleMindMap(data) {
     
     const ctx = canvas.getContext('2d');
     
-    // Calculate canvas size based on node count
-    const rootNode = { expanded: true, children: data.children };
-    const totalNodes = countNodes(rootNode);
-    const maxDepth = getMaxDepth(rootNode);
-    
-    canvas.width = Math.max(1200, totalNodes * 100);
-    canvas.height = Math.max(800, (maxDepth + 1) * 85);
-    
+    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#FFFFFF';
+    
+    // Set background
+    ctx.fillStyle = '#0A0717';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Reset zoom and offset
+    mindMapZoom = 1;
+    mindMapOffsetX = 0;
+    mindMapOffsetY = 0;
+    
+    // Create hierarchical tree structure
+    const nodes = [];
+    const nodeSpacing = 80;
+    const levelSpacing = 150;
+    const startX = canvas.width / 2;
+    const startY = 50;
+    
+    // Add root node
+    nodes.push({
+        id: 'root',
+        name: data.main,
+        x: startX,
+        y: startY,
+        level: 0,
+        expanded: true,
+        children: data.children || [],
+        parent: null
+    });
+    
+    // Add child nodes in vertical tree structure
+    function addChildren(parentNode, children, level) {
+        if (!children || !parentNode.expanded) return;
+        
+        const childCount = children.length;
+        const totalHeight = (childCount - 1) * nodeSpacing;
+        const startY = parentNode.y + levelSpacing - totalHeight / 2;
+        
+        children.forEach((child, index) => {
+            const childNode = {
+                id: `node-${level}-${index}`,
+                name: child.name || child.main,
+                x: parentNode.x,
+                y: startY + index * nodeSpacing,
+                level: level,
+                expanded: level < 2, // Auto-expand first 2 levels
+                children: child.children || [],
+                parent: parentNode
+            };
+            
+            nodes.push(childNode);
+            
+            // Recursively add grandchildren
+            if (child.children && child.children.length > 0) {
+                addChildren(childNode, child.children, level + 1);
+            }
+        });
+    }
+    
+    // Build the tree
+    addChildren(nodes[0], data.children, 1);
+    
+    // Draw connections
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    
+    nodes.forEach(node => {
+        if (node.parent) {
+            ctx.beginPath();
+            ctx.moveTo(node.parent.x, node.parent.y + 20);
+            ctx.lineTo(node.x, node.y - 20);
+            ctx.stroke();
+        }
+    });
+    
+    // Draw nodes
+    nodes.forEach(node => {
+        // Draw node background
+        const ctx = canvas.getContext('2d');
+        ctx.font = node.level === 0 ? 'bold 16px Arial' : '14px Arial';
+        const textWidth = ctx.measureText(node.name).width;
+        const padding = 15;
+        const nodeWidth = textWidth + padding * 2;
+        const nodeHeight = 40;
+        
+        // Node background
+        ctx.fillStyle = node.level === 0 ? '#a855f7' : 'rgba(168, 85, 247, 0.2)';
+        ctx.fillRect(node.x - nodeWidth/2, node.y - nodeHeight/2, nodeWidth, nodeHeight);
+        
+        // Node border
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(node.x - nodeWidth/2, node.y - nodeHeight/2, nodeWidth, nodeHeight);
+        
+        // Node text
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.name, node.x, node.y);
+        
+        // Draw expand/collapse button if has children
+        if (node.children && node.children.length > 0) {
+            const buttonSize = 20;
+            const buttonX = node.x + nodeWidth/2 + 10;
+            const buttonY = node.y - buttonSize/2;
+            
+            ctx.fillStyle = '#6366f1';
+            ctx.fillRect(buttonX, buttonY, buttonSize, buttonSize);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(node.expanded ? '-' : '+', buttonX + buttonSize/2, buttonY + buttonSize/2);
+        }
+    });
+    
+    // Store nodes for click handling
+    window.mindMapNodes = nodes;
+    
+    // Initialize click handler
+    initializeMindMapInteractions();
+}
     
     // Draw light grid
     ctx.strokeStyle = '#e8e8e8';
@@ -1369,24 +1482,27 @@ function setupCanvasClick() {
         if (window.mindMapNodes) {
             for (const node of window.mindMapNodes) {
                 const ctx = canvas.getContext('2d');
-                ctx.font = node.level === 0 ? 'bold 15px Arial' : '13px Arial';
+                ctx.font = node.level === 0 ? 'bold 16px Arial' : '14px Arial';
                 const textWidth = ctx.measureText(node.name).width;
-                const boxWidth = Math.min(Math.max(170, textWidth + 60), 280);
-                const boxHeight = node.level === 0 ? 48 : 42;
+                const padding = 15;
+                const nodeWidth = textWidth + padding * 2;
+                const nodeHeight = 40;
                 
-                const left = node.x - boxWidth/2;
-                const right = node.x + boxWidth/2;
-                const top = node.y - boxHeight/2;
-                const bottom = node.y + boxHeight/2;
-                
-                if (mouseX >= left && mouseX <= right && mouseY >= top && mouseY <= bottom) {
-                    if (node.children && node.children.length > 0) {
-                        const btnX = node.x + boxWidth/2 - 18;
-                        const btnY = node.y;
-                        const isOnButton = Math.hypot(mouseX - btnX, mouseY - btnY) <= 12;
+                // Check if click is on expand/collapse button
+                if (node.children && node.children.length > 0) {
+                    const buttonSize = 20;
+                    const buttonX = node.x + nodeWidth/2 + 10;
+                    const buttonY = node.y - buttonSize/2;
+                    
+                    if (mouseX >= buttonX && mouseX <= buttonX + buttonSize &&
+                        mouseY >= buttonY && mouseY <= buttonY + buttonSize) {
                         
-                        if (isOnButton) {
-                            node.expanded = !node.expanded;
+                        // Toggle expand/collapse
+                        node.expanded = !node.expanded;
+                        
+                        // Redraw the mindmap
+                        if (currentMindMapData && currentMindMapData.data) {
+                            drawSimpleMindMap(currentMindMapData.data);
                             if (currentMindMapData) {
                                 drawSimpleMindMap(currentMindMapData.data);
                             }

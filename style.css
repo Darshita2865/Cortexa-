@@ -5122,7 +5122,7 @@ html, body {
 
 .score-percentage {
     font-size: 24px;
-    color: #6b7280 !important;
+    color: #ffffff !important;
 }
 
 .grade-message {
@@ -5148,6 +5148,34 @@ html, body {
 .quiz-option span {
     color: #e0e0e0 !important;
     font-weight: 500 !important;
+}
+
+/* Comprehensive quiz text visibility fixes */
+.quiz-question-card,
+.quiz-question-card *,
+.quiz-options,
+.quiz-options *,
+.quiz-header,
+.quiz-header *,
+.quiz-results-container,
+.quiz-results-container *,
+.results-card,
+.results-card * {
+    color: #ffffff !important;
+}
+
+.quiz-question-card strong {
+    color: #a855f7 !important;
+    font-weight: 700 !important;
+}
+
+.quiz-option label {
+    color: #e0e0e0 !important;
+    font-weight: 500 !important;
+}
+
+.quiz-option input[type="radio"] {
+    accent-color: #a855f7 !important;
 }
 
 /* ================= BIG GAME BOXES STYLES ================= */
