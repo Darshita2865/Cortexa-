@@ -5141,12 +5141,46 @@ html, body {
 /* Quiz question text */
 .quiz-question-text {
     color: #ffffff !important;
-    font-weight: 700 !important;
-    font-size: 1.4rem !important;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9) !important;
-    background: rgba(0, 0, 0, 0.3) !important;
-    padding: 10px !important;
+    font-weight: 800 !important;
+    font-size: 1.5rem !important;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 1) !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    padding: 15px !important;
+    border-radius: 10px !important;
+    border: 2px solid #a855f7 !important;
+    display: block !important;
+    margin: 10px 0 !important;
+    line-height: 1.6 !important;
+}
+
+/* Quiz options text */
+.quiz-option {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+    background: rgba(168, 85, 247, 0.2) !important;
+    border: 1px solid #a855f7 !important;
+    padding: 12px !important;
+    margin: 8px 0 !important;
     border-radius: 8px !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+
+.quiz-option span {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Quiz container */
+.quiz-question-card {
+    background: #0A0717 !important;
+    border: 2px solid #a855f7 !important;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3) !important;
+}
+
+.quiz-options {
+    background: #0A0717 !important;
+    border: none !important;
 }
 
 .quiz-option span {
@@ -6594,14 +6628,12 @@ img {
         outline: none !important;
         box-shadow: none !important;
         text-shadow: none !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
     }
 
     /* Force dark backgrounds for ALL elements */
-    html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th {
+    html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article {
         background: #0A0717 !important;
         background-color: #0A0717 !important;
         color: #ffffff !important;
