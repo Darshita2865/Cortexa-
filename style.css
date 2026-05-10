@@ -6537,3 +6537,196 @@ img {
 #searchResults {
     background: transparent !important;
 }
+
+/* ================= ULTIMATE WHITE LINE ELIMINATION ================= */
+/* Most aggressive fix for all white lines on desktop */
+
+/* Remove ALL borders from EVERYTHING - desktop specific */
+@media (min-width: 769px) {
+    * {
+        border: none !important;
+        border-color: transparent !important;
+        border-style: none !important;
+        border-width: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
+    }
+
+    /* Force dark backgrounds for all main containers */
+    .dashboard-page,
+    .main,
+    .sidebar,
+    .right-sidebar,
+    #searchResults,
+    .chat-container,
+    .content-area,
+    .search-box,
+    .chat-input-box,
+    .chat-bubble,
+    .user-bubble,
+    .ai-bubble,
+    .quiz-question-card,
+    .quiz-options,
+    .quiz-header,
+    .quiz-results-container,
+    .results-card,
+    .feature-card,
+    .game-card,
+    .video-modal,
+    .report-modal,
+    .learning-modal,
+    .audio-modal,
+    .games-modal,
+    .mindmap-modal,
+    .modal-overlay {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Specific overrides for sidebar */
+    .sidebar {
+        background: linear-gradient(180deg, #0f0a1a 0%, #0a0717 100%) !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+    }
+
+    /* Remove ALL scrollbars on desktop */
+    html, body, * {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        overflow: -moz-scrollbars-none !important;
+    }
+
+    *::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+    }
+
+    /* Remove ALL pseudo-elements */
+    *::before,
+    *::after {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* Force proper colors */
+    * {
+        color: #e0e0e0 !important;
+    }
+
+    /* Override any remaining white backgrounds */
+    [style*="background: white"], 
+    [style*="background:#fff"], 
+    [style*="background:#ffffff"], 
+    [style*="background-color: white"], 
+    [style*="background-color:#fff"], 
+    [style*="background-color:#ffffff"] {
+        background: #0A0717 !important;
+        background-color: #0A0717 !important;
+    }
+
+    /* Remove any white borders that might appear */
+    .navbar,
+    .navbar *,
+    .sidebar,
+    .sidebar *,
+    .main,
+    .main *,
+    .right-sidebar,
+    .right-sidebar *,
+    .chat-container,
+    .chat-container *,
+    .search-box,
+    .search-box *,
+    .chat-input-box,
+    .chat-input-box * {
+        border: none !important;
+        border-color: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Fix specific elements that might have white */
+    img, svg, canvas {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+    }
+
+    /* Remove any margin/padding that might cause white gaps */
+    .dashboard-page,
+    .main,
+    .sidebar,
+    .right-sidebar {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Fix sidebar padding specifically */
+    .sidebar {
+        padding: 30px 20px !important;
+    }
+
+    .main {
+        padding: 20px !important;
+    }
+
+    /* Remove any white from inputs and buttons */
+    input, button, textarea, select {
+        background: rgba(26, 22, 43, 0.8) !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        color: white !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Remove white from chat bubbles */
+    .user-bubble, .ai-bubble {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .user-bubble {
+        background: linear-gradient(90deg, #a855f7, #6366f1) !important;
+        color: white !important;
+    }
+
+    .ai-bubble {
+        background: rgba(26, 22, 43, 0.8) !important;
+        color: #e0e0e0 !important;
+        border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    }
+
+    /* Remove white from search box */
+    .search-box, .chat-input-box {
+        background: rgba(26, 22, 43, 0.95) !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* Force all modals to be dark */
+    .video-modal, .report-modal, .learning-modal, .audio-modal, .games-modal, .mindmap-modal {
+        background: rgba(10, 7, 23, 0.98) !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        box-shadow: none !important;
+    }
+
+    /* Remove any white from images */
+    img {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+    }
+}
