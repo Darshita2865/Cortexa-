@@ -12,7 +12,6 @@ let currentProjectId = null;
 let currentAudioText = "";
 
 const API_URL = "http://127.0.0.1:8000/chat";
-
 // ================= HELPER FUNCTIONS =================
 function escapeHtml(text) {
     if (!text) return '';
