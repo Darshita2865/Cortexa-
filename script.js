@@ -851,7 +851,7 @@ let audioChunks = [];
 let isVoiceRecording = false;
 
 // 🔑 YouTube API Key (replace with your actual key)
-const YOUTUBE_API_KEY = 'AIzaSyBxQaS-Ievpkeg1X9ewDbc5NjgS5mwNie4';
+const YOUTUBE_API_KEY = '';
 
 window.openVideoMode = function() {
     const modal = document.getElementById('videoModal');
