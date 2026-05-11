@@ -5188,33 +5188,6 @@ html, body {
     font-weight: 500 !important;
 }
 
-/* Comprehensive quiz text visibility fixes */
-.quiz-question-card,
-.quiz-question-card *,
-.quiz-options,
-.quiz-options *,
-.quiz-header,
-.quiz-header *,
-.quiz-results-container,
-.quiz-results-container *,
-.results-card,
-.results-card * {
-    color: #ffffff !important;
-}
-
-.quiz-question-card strong {
-    color: #a855f7 !important;
-    font-weight: 700 !important;
-}
-
-.quiz-option label {
-    color: #e0e0e0 !important;
-    font-weight: 500 !important;
-}
-
-.quiz-option input[type="radio"] {
-    accent-color: #a855f7 !important;
-}
 
 /* ================= BIG GAME BOXES STYLES ================= */
 
@@ -6604,25 +6577,72 @@ img {
     background: transparent !important;
 }
 
-/* ================= FINAL WHITE LINE ELIMINATION ================= */
-/* Ultimate fix for ALL white lines on desktop */
+/* ================= NUCLEAR WHITE ELIMINATION ================= */
+/* Complete removal of ALL white effects for LinkedIn */
 
-/* Remove ALL borders from EVERYTHING - desktop specific */
-@media (min-width: 769px) {
-    /* Nuclear reset - remove ALL possible white line sources */
-    *, *::before, *::after {
-        border: none !important;
-        border-color: transparent !important;
-        border-style: none !important;
-        border-width: 0 !important;
-        outline: none !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
-        background: #0A0717 !important;
-        background-color: #0A0717 !important;
-        background-image: none !important;
-        background-color: #0A0717 !important;
-    }
+/* Global nuclear reset - ALL screen sizes */
+*, *::before, *::after {
+    border: none !important;
+    border-color: transparent !important;
+    border-style: none !important;
+    border-width: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    background-image: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Force dark backgrounds on ALL elements */
+html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article, aside, figure, figcaption, hr, br, img, svg, canvas, video, audio, iframe, embed, object, form, fieldset, legend, label, option, optgroup, datalist, keygen, output, progress, meter, details, summary, dialog, template, script, style, link, meta, head, title, base, noscript, track, wbr, area, map, param, source, picture, col, colgroup, tbody, thead, tfoot, caption, address, blockquote, center, del, dir, div, dl, dt, dd, em, font, i, ins, kbd, pre, s, samp, small, strike, strong, sub, sup, tt, u, var, bdo, big, cite, code, dfn, em, i, kbd, samp, small, strike, strong, sub, sup, tt, u, var {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+/* Remove ALL white backgrounds */
+[style*="background: white"], [style*="background:#fff"], [style*="background:#ffffff"], [style*="background-color: white"], [style*="background-color:#fff"], [style*="background-color:#ffffff"], [style*="background:rgb(255,255,255)"], [style*="background-color:rgb(255,255,255)"] {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+}
+
+/* Remove ALL scrollbars */
+::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+/* Force dark on all containers */
+.dashboard-page, .main, .sidebar, .right-sidebar, .content-area, .chat-container, .search-box, .chat-input-box, .quiz-question-card, .quiz-options, .modal-overlay, .video-modal, .audio-modal, .quiz-modal, .report-modal, .learning-modal, .games-modal, .feature-card, .game-card, .video-modal, .report-modal, .learning-modal, .games-modal {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+/* Remove ALL pseudo-elements that could create white lines */
+*:before, *:after {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
 
     /* Force dark backgrounds for ALL elements */
     html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article, aside, figure, figcaption, hr, br, img, svg, canvas {
