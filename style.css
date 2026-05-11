@@ -6362,7 +6362,6 @@ body {
 .sidebar::after,
 .sidebar *::before,
 .sidebar *::after {
-    display: none !important;
     content: none !important;
 }
 
@@ -6374,10 +6373,7 @@ body {
     top: 0 !important;
 }
 
-/* Fix any potential overflow issues */
-.sidebar {
-    overflow: hidden !important;
-}
+
 
 /* Remove any text shadows that could appear white */
 .sidebar * {
@@ -6441,12 +6437,6 @@ html, body, * {
     background: transparent !important;
 }
 
-/* Remove ALL pseudo-elements */
-*::before,
-*::after {
-    display: none !important;
-    content: none !important;
-}
 
 /* Force proper colors for all text */
 * {
@@ -6536,7 +6526,7 @@ img {
 [style*="background-color: white"], 
 [style*="background-color:#fff"], 
 [style*="background-color:#ffffff"] {
-    background: #0A0717 !important;
+    
     background-color: #0A0717 !important;
 }
 
@@ -6573,7 +6563,7 @@ img {
 .sidebar::-webkit-scrollbar,
 .right-sidebar::-webkit-scrollbar,
 #searchResults::-webkit-scrollbar {
-    display: none !important;
+    
     width: 0 !important;
     height: 0 !important;
 }
@@ -6587,7 +6577,7 @@ img {
 .sidebar::after,
 .right-sidebar::before,
 .right-sidebar::after {
-    display: none !important;
+   
     content: none !important;
 }
 
@@ -6763,12 +6753,6 @@ img {
         background: transparent !important;
     }
 
-    /* Remove ALL pseudo-elements */
-    *::before,
-    *::after {
-        display: none !important;
-        content: none !important;
-    }
 
     /* Force proper colors */
     * {
@@ -6782,7 +6766,6 @@ img {
     [style*="background-color: white"], 
     [style*="background-color:#fff"], 
     [style*="background-color:#ffffff"] {
-        background: #0A0717 !important;
         background-color: #0A0717 !important;
     }
 
@@ -6881,3 +6864,61 @@ img {
         outline: none !important;
     }
 }
+
+/* ===== CUSTOM OVERRIDES FOR FIXES ===== */
+html, body {
+    background: #0A0717 !important;
+    box-shadow: none !important;
+}
+.dashboard-page {
+    background: #0A0717 !important;
+    box-shadow: none !important;
+}
+.sidebar {
+    background: #0f0a1a !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+.sidebar::before, .sidebar::after, .dashboard-page::before, .dashboard-page::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Fix Quiz Colors */
+.quiz-question-text, .quiz-question-card h3 {
+    color: #ffffff !important;
+}
+.quiz-option, .quiz-option span {
+    color: #ffffff !important;
+}
+.quiz-question-card {
+    background: #1a162b !important;
+    border: 1px solid rgba(168, 85, 247, 0.5) !important;
+    color: #ffffff !important;
+}
+
+
+/* ===== OVERRIDE GLOW EFFECTS CAUSING UI BUGS ===== */
+body::before,
+body::after {
+    display: none !important;
+    content: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    animation: none !important;
+    filter: none !important;
+}
+
+.dashboard-page::before,
+.dashboard-page::after,
+.sidebar::before,
+.sidebar::after {
+    display: none !important;
+    content: none !important;
+    opacity: 0 !important;
+}
+

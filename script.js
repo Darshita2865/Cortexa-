@@ -337,3 +337,256 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+window.openMindMapMode = function() {
+    console.log("Opening Mind Map Modal");
+    const modal = document.getElementById("mindMapModal");
+    if (modal) {
+        modal.style.display = "flex";
+    }
+    if (typeof switchMindMapTab === "function") switchMindMapTab("create");
+}
+
+window.closeMindMapMode = function() {
+    const modal = document.getElementById("mindMapModal");
+    if (modal) modal.style.display = "none";
+}
+
+window.switchMindMapTab = function(tabName) {
+    document.querySelectorAll(".mindmap-tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".mindmap-tab-content").forEach(content => content.style.display = "none");
+    
+    if (tabName === "create") {
+        const createBtn = document.querySelector(".mindmap-tab-btn[onclick*=\"create\"]");
+        if(createBtn) createBtn.classList.add("active");
+        const createTab = document.getElementById("mindmapCreateTab");
+        if(createTab) createTab.style.display = "block";
+    } else {
+        const libBtn = document.querySelector(".mindmap-tab-btn[onclick*=\"library\"]");
+        if(libBtn) libBtn.classList.add("active");
+        const libTab = document.getElementById("mindmapLibraryTab");
+        if(libTab) libTab.style.display = "block";
+    }
+}
+
+let mindMapScale = 1;
+let currentMindMapData = null;
+
+function calculateSubtreeWidths(node) {
+    if (!node.children || node.children.length === 0 || !node.expanded) {
+        node.width = 180;
+        return node.width;
+    }
+    let totalWidth = 0;
+    for (let child of node.children) {
+        totalWidth += calculateSubtreeWidths(child);
+    }
+    node.width = Math.max(180, totalWidth);
+    return node.width;
+}
+
+function assignNodePositions(node, x, y, level, nodes) {
+    node.x = x;
+    node.y = y;
+    node.level = level;
+    nodes.push(node);
+
+    if (!node.children || node.children.length === 0 || !node.expanded) return;
+
+    let currentX = x - (node.width / 2);
+    const childY = y + 100;
+
+    for (let child of node.children) {
+        let childX = currentX + (child.width / 2);
+        assignNodePositions(child, childX, childY, level + 1, nodes);
+        currentX += child.width;
+    }
+}
+
+window.generateAndDrawMindMap = function() {
+    const topic = document.getElementById("mindmapTopicInput").value;
+    if (!topic) {
+        if(typeof showToast === "function") showToast("Please enter a topic", "error");
+        else alert("Please enter a topic");
+        return;
+    }
+    
+    if(typeof showToast === "function") showToast("Generating mind map...");
+    
+    currentMindMapData = {
+        title: topic,
+        root: {
+            id: "root", label: topic, expanded: true,
+            children: [
+                { id: "sub1", label: "Introduction", expanded: true, children: [{id: "sub1_1", label: "Basic concepts", expanded: true}] },
+                { id: "sub2", label: "Key Concepts", expanded: true, children: [{id: "sub2_1", label: "Main ideas", expanded: true}] },
+                { id: "sub3", label: "Applications", expanded: true, children: [{id: "sub3_1", label: "Real-world uses", expanded: true}] },
+                { id: "sub4", label: "Conclusion", expanded: true, children: [] }
+            ]
+        }
+    };
+    drawMindMap();
+}
+
+window.drawMindMap = function() {
+    if (!currentMindMapData) return;
+    const canvas = document.getElementById("mindmapCanvas");
+    if(!canvas) return;
+    const ctx = canvas.getContext("2d");
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < canvas.width; i += 50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for (let i = 0; i < canvas.height; i += 50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+    
+    ctx.save();
+    ctx.translate(canvas.width/2, 50);
+    ctx.scale(mindMapScale, mindMapScale);
+    
+    const nodes = [];
+    calculateSubtreeWidths(currentMindMapData.root);
+    assignNodePositions(currentMindMapData.root, 0, 0, 0, nodes);
+    
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 2;
+    nodes.forEach(node => {
+        if (node.children && node.expanded) {
+            node.children.forEach(child => {
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y + 20);
+                ctx.lineTo(node.x, node.y + 60);
+                ctx.lineTo(child.x, node.y + 60);
+                ctx.lineTo(child.x, child.y - 20);
+                ctx.stroke();
+            });
+        }
+    });
+    
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    
+    nodes.forEach(node => {
+        const isRoot = node.level === 0;
+        ctx.fillStyle = "white";
+        ctx.strokeStyle = isRoot ? "#a855f7" : "#555";
+        ctx.lineWidth = isRoot ? 3 : 2;
+        
+        const w = 140; const h = 40;
+        ctx.beginPath();
+        ctx.roundRect(node.x - w/2, node.y - h/2, w, h, 8);
+        ctx.fill(); ctx.stroke();
+        
+        ctx.fillStyle = "#333";
+        ctx.font = isRoot ? "bold 14px Arial" : "12px Arial";
+        let text = node.label;
+        if (text.length > 18) text = text.substring(0, 15) + "...";
+        ctx.fillText(text, node.x, node.y);
+        
+        if (node.children && node.children.length > 0) {
+            ctx.fillStyle = "#777";
+            ctx.beginPath(); ctx.arc(node.x + w/2 - 10, node.y, 8, 0, 2*Math.PI); ctx.fill();
+            ctx.fillStyle = "white"; ctx.font = "10px Arial";
+            ctx.fillText(node.expanded ? "-" : "+", node.x + w/2 - 10, node.y);
+        }
+    });
+    ctx.restore();
+}
+
+window.zoomMindMap = function(factor) { mindMapScale *= factor; drawMindMap(); }
+window.resetMindMapView = function() { mindMapScale = 1; drawMindMap(); }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const canvas = document.getElementById("mindmapCanvas");
+    if (canvas) {
+        canvas.addEventListener("click", (e) => {
+            if (!currentMindMapData) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left - canvas.width/2) / mindMapScale;
+            const clickY = (e.clientY - rect.top - 50) / mindMapScale;
+            
+            const nodes = [];
+            calculateSubtreeWidths(currentMindMapData.root);
+            assignNodePositions(currentMindMapData.root, 0, 0, 0, nodes);
+            
+            nodes.forEach(node => {
+                if (node.children && node.children.length > 0) {
+                    const w = 140; const btnX = node.x + w/2 - 10; const btnY = node.y;
+                    const dist = Math.sqrt(Math.pow(clickX - btnX, 2) + Math.pow(clickY - btnY, 2));
+                    if (dist < 10) { node.expanded = !node.expanded; drawMindMap(); }
+                }
+            });
+        });
+    }
+});
+
+window.startNewChat = function(e) {
+    if (e) e.preventDefault();
+    if(typeof showToast === "function") showToast("Starting new chat...");
+    else alert("Starting new chat...");
+}
+
+window.createProject = function() {
+    if(typeof showToast === "function") showToast("Creating new project...");
+    else alert("Creating new project...");
+}
+
+window.documentChat = function() {
+    if(typeof showToast === "function") showToast("Opening Document Chat...");
+    else alert("Opening Document Chat...");
+}
+
+localStorage.setItem('isLoggedIn', 'true'); localStorage.setItem('currentUser', JSON.stringify({name: 'Darshita'}));
+
+window.startNewChat = function(e) {
+    if (e) e.preventDefault();
+    const container = document.getElementById("searchResults");
+    if (container) {
+        container.innerHTML = "";
+    }
+    if(typeof showToast === "function") showToast("? New chat started!");
+    else alert("New chat started!");
+}
+
+window.createProject = function() {
+    const name = prompt("Enter project name:");
+    if (name && name.trim() !== "") {
+        if(typeof showToast === "function") showToast(`?? Project "${name}" created!`);
+        else alert(`Project "${name}" created!`);
+    }
+}
+
+window.documentChat = function() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt,.pdf,.docx";
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if(typeof showToast === "function") showToast(`?? Document "${file.name}" loaded!`);
+            else alert(`Document "${file.name}" loaded!`);
+        }
+    };
+    input.click();
+}
+
+
+window.openLearningTools = function() {
+    const modal = document.getElementById('learningToolsModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+window.closeLearningTools = function() {
+    const modal = document.getElementById('learningToolsModal');
+    if (modal) modal.style.display = 'none';
+}
+
+window.openVideoMode = function() {
+    const modal = document.getElementById('videoModal');
+    if (modal) modal.style.display = 'flex';
+}
+window.closeVideoMode = function() {
+    const modal = document.getElementById('videoModal');
+    if (modal) modal.style.display = 'none';
+}
+
