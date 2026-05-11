@@ -850,15 +850,13 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isVoiceRecording = false;
 
-// 🔑 YouTube API Key (replace with your actual key)
-const YOUTUBE_API_KEY = 'AIzaSyBxQaS-Ievpkeg1X9ewDbc5NjgS5mwNie4';
+// 🔐 YouTube API Key - Reads from .env file
+// In your .env file: YOUTUBE_API_KEY=your_actual_key
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
-window.openVideoMode = function() {
-    const modal = document.getElementById('videoModal');
-    if (modal) modal.style.display = 'flex';
-    loadVideoLibrary();
-    // Set default to text panel
-    handleVideoSourceChange();
+// Check if API key is configured
+function isYouTubeApiConfigured() {
+    return YOUTUBE_API_KEY && YOUTUBE_API_KEY !== '';
 }
 
 window.closeVideoMode = function() {
