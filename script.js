@@ -11,7 +11,7 @@ let currentChatId = null;
 let currentProjectId = null;
 let currentAudioText = "";
 
-const API_URL = "http://127.0.0.1:8000/chat";
+const API_URL = "https://your-backend.onrender.com/chat";
 
 // ================= HELPER FUNCTIONS =================
 function escapeHtml(text) {
@@ -420,7 +420,7 @@ window.uploadAndChat = async function() {
     statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
     
     try {
-        const response = await fetch("http://127.0.0.1:8000/upload-document", {
+        const response = await fetch("https://your-backend.onrender.com/upload-document", {
             method: "POST",
             body: formData
         });
@@ -784,7 +784,7 @@ window.uploadAndChat = async function() {
     statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
     
     try {
-        const response = await fetch("http://127.0.0.1:8000/upload-document", {
+        const response = await fetch("https://your-backend.onrender.com/upload-document", {
             method: "POST",
             body: formData
         });
@@ -1083,526 +1083,280 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ================= UPDATED YOUTUBE INTEGRATION (Opens on YouTube.com) =================
-window.fetchYouTubeVideo = async function() {
+// ================= SECURE YOUTUBE CONFIG =================
+
+// Never hardcode API keys in frontend code
+
+const API_BASE_URL =
+    window.location.hostname === "localhost"
+        ? "http://127.0.0.1:8000"
+        : "https://your-backend.onrender.com";
+
+// ================================================
+// FETCH YOUTUBE VIDEO INFO
+// ================================================
+
+window.fetchYouTubeVideo = async function () {
+
     const url = document.getElementById('youtubeUrl').value;
+
     if (!url) {
         showToast('Please enter a YouTube URL');
         return;
     }
-    
+
     const infoDiv = document.getElementById('youtubeVideoInfo');
-    infoDiv.innerHTML = '<div class="loading-spinner"></div> Fetching video info...';
+
+    infoDiv.innerHTML =
+        '<div class="loading-spinner"></div> Fetching video info...';
+
     infoDiv.style.display = 'block';
-    
+
     let videoId = '';
+
     const patterns = [
         /(?:youtube\.com\/watch\?v=)([^&]+)/,
         /(?:youtu\.be\/)([^?]+)/,
         /(?:youtube\.com\/embed\/)([^?]+)/
     ];
-    
+
     for (const pattern of patterns) {
         const match = url.match(pattern);
-        if (match) { 
-            videoId = match[1]; 
-            break; 
+
+        if (match) {
+            videoId = match[1];
+            break;
         }
     }
-    
+
     if (!videoId) {
-        infoDiv.innerHTML = '<span style="color: #ef4444;">❌ Invalid YouTube URL</span>';
+        infoDiv.innerHTML =
+            '<span style="color:#ef4444;">❌ Invalid YouTube URL</span>';
         return;
     }
-    
+
     try {
-        const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-        const response = await fetch(oembedUrl);
+
+        // Backend handles YouTube API securely
+        const response = await fetch(
+            `${API_BASE_URL}/youtube/video-info/${videoId}`
+        );
+
         const data = await response.json();
-        
+
+        if (data.error) {
+            infoDiv.innerHTML =
+                `<span style="color:#ef4444;">❌ ${data.error}</span>`;
+            return;
+        }
+
         youtubeVideoInfo = {
             id: videoId,
             title: data.title,
-            channel: data.author_name,
-            thumbnail: data.thumbnail_url,
+            channel: data.channel,
+            thumbnail: data.thumbnail,
             youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`
         };
-        
-        // Display video info with OPEN ON YOUTUBE button (not embedded player)
+
         infoDiv.innerHTML = `
-            <div style="background: rgba(168,85,247,0.1); padding: 15px; border-radius: 10px;">
-                <img src="${youtubeVideoInfo.thumbnail}" style="width: 100%; border-radius: 10px; margin-bottom: 10px;">
+            <div style="background: rgba(168,85,247,0.1);
+                        padding: 15px;
+                        border-radius: 10px;">
+
+                <img src="${youtubeVideoInfo.thumbnail}"
+                     style="width:100%;
+                            border-radius:10px;
+                            margin-bottom:10px;">
+
                 <h4>${escapeHtml(youtubeVideoInfo.title)}</h4>
+
                 <p>📺 ${escapeHtml(youtubeVideoInfo.channel)}</p>
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button onclick="openYouTubeVideo()" style="flex: 1; padding: 12px; background: linear-gradient(90deg,#ff0000,#cc0000); border: none; border-radius: 8px; color: white; cursor: pointer;">
-                        ▶️ Watch on YouTube.com
+
+                <div style="display:flex;
+                            gap:10px;
+                            margin-top:15px;">
+
+                    <button
+                        onclick="openYouTubeVideo()"
+                        style="flex:1;
+                               padding:12px;
+                               background:linear-gradient(90deg,#ff0000,#cc0000);
+                               border:none;
+                               border-radius:8px;
+                               color:white;
+                               cursor:pointer;">
+
+                        ▶️ Watch on YouTube
                     </button>
-                    <button onclick="copyYouTubeUrl()" style="flex: 1; padding: 12px; background: rgba(168,85,247,0.3); border: 1px solid rgba(168,85,247,0.5); border-radius: 8px; color: white; cursor: pointer;">
+
+                    <button
+                        onclick="copyYouTubeUrl()"
+                        style="flex:1;
+                               padding:12px;
+                               background:rgba(168,85,247,0.3);
+                               border:1px solid rgba(168,85,247,0.5);
+                               border-radius:8px;
+                               color:white;
+                               cursor:pointer;">
+
                         📋 Copy URL
                     </button>
+
                 </div>
             </div>
         `;
+
         document.getElementById('youtubeOptions').style.display = 'block';
-        
-    } catch (err) {
-        infoDiv.innerHTML = '<span style="color: #ef4444;">❌ Error fetching video info</span>';
-    }
-}
 
-// Open YouTube video directly on YouTube.com (not in Cortexa)
-window.openYouTubeVideo = function() {
-    if (youtubeVideoInfo && youtubeVideoInfo.youtubeUrl) {
-        window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        showToast('🎬 Opening YouTube video in new tab...');
-    } else {
-        showToast('❌ No video selected. Fetch a video first!');
     }
-}
+    catch (err) {
 
-window.copyYouTubeUrl = function() {
-    if (youtubeVideoInfo && youtubeVideoInfo.youtubeUrl) {
-        navigator.clipboard.writeText(youtubeVideoInfo.youtubeUrl);
-        showToast('✅ YouTube URL copied to clipboard!');
-    } else {
-        showToast('❌ No video URL to copy');
+        console.error(err);
+
+        infoDiv.innerHTML =
+            '<span style="color:#ef4444;">❌ Error fetching video info</span>';
     }
-}
+};
 
-window.searchYouTube = async function() {
-    const query = document.getElementById('youtubeSearchQuery').value;
+// ================================================
+// SEARCH YOUTUBE
+// ================================================
+
+window.searchYouTube = async function () {
+
+    const query =
+        document.getElementById('youtubeSearchQuery').value;
+
     if (!query) {
         showToast('Please enter a search query');
         return;
     }
-    
-    const resultsDiv = document.getElementById('youtubeResults');
-    resultsDiv.innerHTML = '<div class="loading-spinner"></div> Searching...';
-    
-    if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === 'AIzaSyD9Zw2nSmE7dkzNN5JtaiXKdQA9Rctu9LI') {
-        resultsDiv.innerHTML = `
-            <div style="background: rgba(168,85,247,0.1); padding: 20px; border-radius: 10px; text-align: center;">
-                <p>⚠️ YouTube API key not configured!</p>
-                <p style="font-size: 12px; margin-top: 10px;">Add your YouTube Data API v3 key to use search.</p>
-                <p style="font-size: 12px;">For now, you can still use direct YouTube URLs above.</p>
-            </div>
-        `;
-        return;
-    }
-    
+
+    const resultsDiv =
+        document.getElementById('youtubeResults');
+
+    resultsDiv.innerHTML =
+        '<div class="loading-spinner"></div> Searching...';
+
     try {
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
-        const response = await fetch(url);
+
+        // Backend handles API securely
+        const response = await fetch(
+            `${API_BASE_URL}/youtube/search?q=${encodeURIComponent(query)}`
+        );
+
         const data = await response.json();
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<div style="background: rgba(239,68,68,0.1); padding: 20px; border-radius: 10px; text-align: center;">
-                <p>❌ API Error: ${data.error.message}</p>
-            </div>`;
+
+        if (!data.items || data.items.length === 0) {
+
+            resultsDiv.innerHTML =
+                '<span style="color:#a1a1aa;">No results found</span>';
+
             return;
         }
-        
-        if (data.items && data.items.length > 0) {
-            resultsDiv.innerHTML = `<h3>📺 Search Results for "${escapeHtml(query)}":</h3>
-                <p style="font-size: 12px; color: #a1a1aa; margin-bottom: 10px;">💡 Click any video to open it on YouTube</p>`;
-            
-            data.items.forEach(item => {
-                const videoId = item.id.videoId;
-                const title = item.snippet.title;
-                const channel = item.snippet.channelTitle;
-                const thumbnail = item.snippet.thumbnails.medium.url;
-                
-                resultsDiv.innerHTML += `
-                    <div class="youtube-video-item" onclick="openYouTubeVideoById('${videoId}')" style="display: flex; gap: 15px; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; transition: 0.2s;">
-                        <img src="${thumbnail}" style="width: 120px; border-radius: 8px;">
-                        <div>
-                            <strong>${escapeHtml(title)}</strong><br>
-                            <span style="font-size: 12px; color: #a1a1aa;">${escapeHtml(channel)}</span>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            resultsDiv.innerHTML = '<span style="color: #a1a1aa;">No results found</span>';
-        }
-    } catch (err) {
-        console.error(err);
-        resultsDiv.innerHTML = '<span style="color: #ef4444;">❌ Error searching YouTube</span>';
-    }
-}
 
-// Open YouTube video by ID directly on YouTube
-window.openYouTubeVideoById = function(videoId) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    window.open(youtubeUrl, '_blank');
-    showToast('🎬 Opening video on YouTube...');
-}
+        resultsDiv.innerHTML = `
+            <h3>📺 Search Results</h3>
 
-window.selectYouTubeVideo = function(videoId) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    window.open(youtubeUrl, '_blank');
-    showToast('🎬 Opening video on YouTube...');
-}
+            <p style="font-size:12px;
+                      color:#a1a1aa;
+                      margin-bottom:10px;">
 
-window.createVideoFromYouTube = function(type) {
-    if (!youtubeVideoInfo) {
-        showToast('Please fetch a YouTube video first!');
-        return;
-    }
-    
-    // For summary/deepdive - use the content to generate educational video
-    if (type === 'summary' || type === 'deepdive') {
-        document.getElementById('videoProgress').style.display = 'block';
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            document.getElementById('videoProgressFill').style.width = progress + '%';
-            if (progress >= 100) {
-                clearInterval(interval);
-                document.getElementById('videoProgress').style.display = 'none';
-                document.getElementById('videoPlayerContainer').style.display = 'block';
-                
-                generateEducationalVideo(youtubeVideoInfo.title);
-                
-                document.getElementById('videoScriptDisplay').innerHTML = `
-                    <h4>✅ ${type === 'summary' ? 'Summary Video' : 'Educational Deep Dive'} Created!</h4>
-                    <p><strong>Source:</strong> ${escapeHtml(youtubeVideoInfo.title)}</p>
-                    <p><strong>Channel:</strong> ${escapeHtml(youtubeVideoInfo.channel)}</p>
-                    <hr>
-                    <p>💡 You can now watch the original video on YouTube by clicking the link above.</p>
-                    <p>📚 This educational content was generated based on the video's topic.</p>
-                `;
-                
-                currentVideoData = {
-                    title: `${type === 'summary' ? 'Summary' : 'Deep Dive'} - ${youtubeVideoInfo.title}`,
-                    video_url: 'canvas-stream',
-                    duration: '4 minutes',
-                    created_at: new Date().toISOString()
-                };
-                saveVideoToLibrary(currentVideoData);
-            }
-        }, 300);
-    } else if (type === 'shorts') {
-        showToast('📱 Opening YouTube to create Shorts...');
-        if (youtubeVideoInfo) {
-            window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        }
-    }
-}
-
-window.extractYouTubeTranscript = function() {
-    if (!youtubeVideoInfo) {
-        showToast('Please fetch a YouTube video first!');
-        return;
-    }
-    
-    document.getElementById('videoScriptDisplay').innerHTML = `
-        <h4>📝 Video Information</h4>
-        <p><strong>Title:</strong> ${escapeHtml(youtubeVideoInfo.title)}</p>
-        <p><strong>Channel:</strong> ${escapeHtml(youtubeVideoInfo.channel)}</p>
-        <hr>
-        <p>🔗 <strong>Watch the video on YouTube:</strong></p>
-        <a href="${youtubeVideoInfo.youtubeUrl}" target="_blank" style="color: #a855f7;">${youtubeVideoInfo.youtubeUrl}</a>
-        <hr>
-        <p>💡 For full transcript, you can use YouTube's built-in transcript feature on the video page.</p>
-    `;
-    document.getElementById('videoScriptDisplay').style.display = 'block';
-}
-
-window.translateYouTubeVideo = function() {
-    if (youtubeVideoInfo) {
-        window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        showToast('🌐 Open the video on YouTube and use captions/translation features there.');
-    } else {
-        showToast('❌ Please fetch a video first');
-    }
-}
-
-// ================= REST OF THE FUNCTIONS (keep your existing ones) =================
-window.uploadVideoDocument = function() {
-    const fileInput = document.getElementById('videoDocumentInput');
-    if (!fileInput.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        videoDocumentContent = e.target.result;
-        document.getElementById('documentStatus').innerHTML = '<span style="color: #22c55e;">✅ Document loaded!</span>';
-        showToast('✅ Document loaded! You can now generate a video.');
-    };
-    reader.readAsText(fileInput.files[0]);
-}
-
-function getVideoContent() {
-    const source = document.getElementById('videoContentSource').value;
-    if (source === 'text') return document.getElementById('videoTopicInput').value;
-    if (source === 'document' && videoDocumentContent) return videoDocumentContent;
-    if (source === 'chat') {
-        const topicInput = document.getElementById('videoTopicInput');
-        return topicInput ? topicInput.value : '';
-    }
-    if (source === 'voice') {
-        const topicInput = document.getElementById('videoTopicInput');
-        return topicInput ? topicInput.value : '';
-    }
-    return null;
-}
-
-window.previewVideoScript = async function() {
-    const topic = getVideoContent();
-    if (!topic) {
-        showToast('Please enter a topic or upload content!');
-        return;
-    }
-    
-    const scriptDisplay = document.getElementById('videoScriptDisplay');
-    scriptDisplay.innerHTML = '<div class="loading-spinner"></div> Generating educational script...';
-    scriptDisplay.style.display = 'block';
-    
-    const duration = document.getElementById('videoDuration').value;
-    const minutes = duration === 'short' ? 2 : duration === 'medium' ? 4 : 8;
-    
-    const script = generateEducationalScript(topic, minutes);
-    scriptDisplay.innerHTML = `<h4>📝 Educational Video Script: "${topic.substring(0, 100)}"</h4>
-        <pre style="white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">${script}</pre>`;
-}
-
-function generateEducationalScript(topic, minutes) {
-    return `🎓 EDUCATIONAL VIDEO: ${topic.substring(0, 50).toUpperCase()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[0:00 - Introduction]
-Welcome to this educational video about ${topic}!
-
-[0:30 - What is it?]
-Let's explore the fundamentals of ${topic} and why it matters.
-
-[1:30 - Key Concepts]
-• Core principles to understand
-• Important terminology explained
-• How it works in practice
-
-[2:30 - Examples & Applications]
-Real-world applications and practical examples.
-
-[3:30 - Summary & Takeaways]
-Key points to remember:
-1. Main concept summary
-2. Important facts
-3. Next steps for learning
-
-[4:30 - Conclusion]
-Thanks for watching! Continue your learning journey.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Estimated Duration: ${minutes} minutes`;
-}
-
-window.generateVideo = async function() {
-    const topic = getVideoContent();
-    if (!topic) {
-        showToast('Please enter a topic or content!');
-        return;
-    }
-    
-    document.getElementById('videoProgress').style.display = 'block';
-    document.getElementById('videoProgressFill').style.width = '0%';
-    
-    const steps = ['Analyzing topic...', 'Creating educational content...', 'Generating visuals...', 'Adding narration...', 'Rendering video...', 'Finalizing...'];
-    let stepIndex = 0;
-    let progress = 0;
-    
-    videoGenerationInterval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress > 100) progress = 100;
-        document.getElementById('videoProgressFill').style.width = progress + '%';
-        
-        if (progress > (stepIndex + 1) * 16 && stepIndex < steps.length - 1) {
-            stepIndex++;
-            document.getElementById('progressStatus').textContent = steps[stepIndex];
-        }
-        
-        if (progress >= 100) {
-            clearInterval(videoGenerationInterval);
-            finishVideoGeneration(topic);
-        }
-    }, 800);
-}
-
-function finishVideoGeneration(topic) {
-    document.getElementById('videoProgress').style.display = 'none';
-    document.getElementById('videoPlayerContainer').style.display = 'block';
-    
-    generateEducationalVideo(topic);
-    
-    const script = generateEducationalScript(topic, 4);
-    document.getElementById('videoScriptDisplay').innerHTML = `
-        <h4>✅ Video Generated Successfully!</h4>
-        <p><strong>Topic:</strong> ${topic.substring(0, 100)}</p>
-        <p><strong>Duration:</strong> ${document.getElementById('videoDuration').value}</p>
-        <p><strong>Style:</strong> ${document.getElementById('videoStyle').value}</p>
-        <hr>
-        <h4>📝 Video Script:</h4>
-        <pre style="white-space: pre-wrap;">${script}</pre>
-    `;
-    
-    currentVideoData = {
-        title: topic.substring(0, 50),
-        video_url: 'canvas-stream',
-        duration: document.getElementById('videoDuration').value,
-        created_at: new Date().toISOString()
-    };
-    
-    saveVideoToLibrary(currentVideoData);
-}
-
-function generateEducationalVideo(topic) {
-    const videoCanvas = document.getElementById('generatedVideo');
-    videoCanvas.style.display = 'block';
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = 854;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    
-    const contentSlides = [
-        { title: `📚 Learning: ${topic.substring(0, 40)}`, content: `Exploring the fascinating world of ${topic}`, duration: 3000 },
-        { title: `🎯 Key Concepts`, content: `• Core principles\n• Important terminology\n• Fundamental ideas`, duration: 4000 },
-        { title: `💡 Practical Applications`, content: `${topic} is used in:\n• Real-world scenarios\n• Industry solutions\n• Everyday technology`, duration: 4000 },
-        { title: `📊 Summary`, content: `You've learned key insights about ${topic}!\nContinue exploring to master this subject.`, duration: 3000 }
-    ];
-    
-    let currentSlide = 0;
-    let startTime = Date.now();
-    
-    function drawSlide() {
-        const slide = contentSlides[currentSlide];
-        ctx.fillStyle = '#0A0717';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#1a162b');
-        gradient.addColorStop(1, '#0A0717');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#a855f7';
-        ctx.font = 'bold 32px Poppins';
-        ctx.textAlign = 'center';
-        ctx.fillText(slide.title, canvas.width / 2, 80);
-        
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '20px Poppins';
-        const lines = slide.content.split('\n');
-        let y = 160;
-        lines.forEach(line => {
-            ctx.fillText(line, canvas.width / 2, y);
-            y += 45;
-        });
-        
-        ctx.fillStyle = '#6366f1';
-        ctx.fillRect(0, canvas.height - 5, (canvas.width / contentSlides.length) * (currentSlide + 1), 5);
-    }
-    
-    function animate() {
-        const elapsed = Date.now() - startTime;
-        
-        if (elapsed >= contentSlides[currentSlide].duration) {
-            currentSlide++;
-            startTime = Date.now();
-            if (currentSlide >= contentSlides.length) {
-                currentSlide = 0;
-                startTime = Date.now();
-            }
-        }
-        drawSlide();
-        requestAnimationFrame(animate);
-    }
-    
-    animate();
-    
-    const stream = canvas.captureStream(30);
-    videoCanvas.srcObject = stream;
-    videoCanvas.play().catch(e => console.log('Auto-play prevented'));
-    
-    window.activeVideoCanvas = canvas;
-    window.activeVideoStream = stream;
-}
-
-// Keep your existing library functions
-function saveVideoToLibrary(videoData) {
-    let videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    videos.unshift({
-        id: Date.now(),
-        title: videoData.title,
-        url: videoData.video_url,
-        duration: videoData.duration,
-        created_at: videoData.created_at
-    });
-    localStorage.setItem('generatedVideos', JSON.stringify(videos));
-    loadVideoLibrary();
-}
-
-function loadVideoLibrary() {
-    const videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    const libraryDiv = document.getElementById('videoLibraryList');
-    
-    if (videos.length === 0) {
-        libraryDiv.innerHTML = '<div class="empty-library">🎬 No videos yet. Create your first video!</div>';
-        return;
-    }
-    
-    libraryDiv.innerHTML = '';
-    videos.forEach(video => {
-        libraryDiv.innerHTML += `
-            <div class="video-library-item">
-                <div>
-                    <strong>📹 ${escapeHtml(video.title.substring(0, 50))}</strong><br>
-                    <small>📅 ${new Date(video.created_at).toLocaleString()}</small><br>
-                    <small>⏱️ ${video.duration}</small>
-                </div>
-                <div>
-                    <button onclick="replayVideoFromLibrary(${video.id})">▶️ Play</button>
-                    <button onclick="deleteVideoFromLibrary(${video.id})">🗑️ Delete</button>
-                </div>
-            </div>
+                💡 Click any video to open on YouTube
+            </p>
         `;
-    });
-}
 
-window.replayVideoFromLibrary = function(id) {
-    const videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    const video = videos.find(v => v.id == id);
-    if (video) {
-        document.getElementById('videoPlayerContainer').style.display = 'block';
-        generateEducationalVideo(video.title);
-    }
-}
+        data.items.forEach(item => {
 
-window.deleteVideoFromLibrary = function(id) {
-    if (confirm('Delete this video?')) {
-        let videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-        videos = videos.filter(v => v.id !== id);
-        localStorage.setItem('generatedVideos', JSON.stringify(videos));
-        loadVideoLibrary();
-        showToast('✅ Video deleted');
-    }
-}
+            resultsDiv.innerHTML += `
+                <div
+                    class="youtube-video-item"
+                    onclick="openYouTubeVideoById('${item.videoId}')"
 
-// Export functions
-window.downloadVideo = function() { showToast('📹 Right-click on the video player to save'); }
-window.shareVideo = function() { 
-    if (currentVideoData) {
-        navigator.clipboard.writeText(`Check out this video: ${currentVideoData.title}`);
-        showToast('✅ Video info copied!');
+                    style="
+                        display:flex;
+                        gap:15px;
+                        padding:12px;
+                        margin:10px 0;
+                        background:rgba(255,255,255,0.05);
+                        border-radius:10px;
+                        cursor:pointer;
+                    ">
+
+                    <img
+                        src="${item.thumbnail}"
+                        style="width:120px;
+                               border-radius:8px;">
+
+                    <div>
+                        <strong>${escapeHtml(item.title)}</strong><br>
+
+                        <span style="font-size:12px;
+                                     color:#a1a1aa;">
+
+                            ${escapeHtml(item.channel)}
+                        </span>
+                    </div>
+
+                </div>
+            `;
+        });
+
     }
-}
-window.uploadToYouTube = function() { showToast('📤 YouTube upload feature coming soon!'); }
-window.saveVideoToLibrary = function() {
-    if (currentVideoData) {
-        saveVideoToLibrary(currentVideoData);
-        showToast('✅ Video saved to library!');
+    catch (err) {
+
+        console.error(err);
+
+        resultsDiv.innerHTML =
+            '<span style="color:#ef4444;">❌ Error searching YouTube</span>';
     }
-}
+};
+
+// ================================================
+// OPEN YOUTUBE VIDEO
+// ================================================
+
+window.openYouTubeVideo = function () {
+
+    if (youtubeVideoInfo?.youtubeUrl) {
+
+        window.open(
+            youtubeVideoInfo.youtubeUrl,
+            '_blank'
+        );
+
+        showToast('🎬 Opening YouTube...');
+    }
+};
+
+// ================================================
+// OPEN BY VIDEO ID
+// ================================================
+
+window.openYouTubeVideoById = function (videoId) {
+
+    window.open(
+        `https://www.youtube.com/watch?v=${videoId}`,
+        '_blank'
+    );
+
+    showToast('🎬 Opening YouTube...');
+};
+
+// ================================================
+// COPY URL
+// ================================================
+
+window.copyYouTubeUrl = function () {
+
+    if (!youtubeVideoInfo?.youtubeUrl) return;
+ 
+    navigator.clipboard.writeText(
+        youtubeVideoInfo.youtubeUrl
+    );
+
+    showToast('✅ URL copied');
+};
 // ================= MIND MAP MODULE (COMPLETE WORKING VERSION) =================
 let mindMapModal = null;
 let currentMindMapData = null;
@@ -3011,7 +2765,7 @@ window.uploadForLearning = function(type) {
         if (statusDiv) statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
         
         try {
-            const response = await fetch("http://127.0.0.1:8000/upload-document", {
+            const response = await fetch("https://your-backend.onrender.com/upload-document", {
                 method: "POST",
                 body: formData
             });
@@ -3301,7 +3055,7 @@ window.uploadForLearning = function(type) {
         if (statusDiv) statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
         
         try {
-            const response = await fetch("http://127.0.0.1:8000/upload-document", {
+            const response = await fetch("https://your-backend.onrender.com/upload-document", {
                 method: "POST",
                 body: formData
             });
@@ -4188,7 +3942,7 @@ window.downloadAudioResponse = async function() {
     textContent = textContent.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
     
     try {
-        const response = await fetch("http://127.0.0.1:8000/generate-audio", {
+        const response = await fetch("https://your-backend.onrender.com/generate-audio", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: textContent, mode: currentAudioMode })
