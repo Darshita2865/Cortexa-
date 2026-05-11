@@ -26,8 +26,8 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 # Initialize Groq client
 if not GROQ_API_KEY:
     print("=" * 50)
-    print("❌ ERROR: GROQ_API_KEY not found in .env file!")
-    print("Please create .env file with: GROQ_API_KEY=your_key_here")
+    print("❌ ERROR: GROQ_API_KEY not found in environment variables!")
+    print("Please set GROQ_API_KEY environment variable")
     print("Get free key from: https://console.groq.com")
     print("=" * 50)
     client = None
@@ -35,7 +35,7 @@ else:
     client = Groq(api_key=GROQ_API_KEY)
     print("=" * 50)
     print("✅ Groq API key loaded successfully!")
-    print(f"📊 API Key: {GROQ_API_KEY[:10]}...")
+    print("� API key is secure and hidden")
     print("=" * 50)
 
 
