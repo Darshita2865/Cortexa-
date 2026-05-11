@@ -1,6 +1,30 @@
 version: '3.8'
+
 services:
-  web:
+  cortexa-web:
     build: .
+    container_name: cortexa-app
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - ./audio_files:/usr/share/nginx/html/audio_files
+    networks:
+      - cortexa-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  cortexa-network:
+    driver: bridge
+
+volumes:
+  audio_files:
+    driver: local
