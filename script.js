@@ -840,6 +840,7 @@ function loadSavedDocument() {
 loadSavedDocument();
 
 
+
 // ================= VIDEO EXPLANATION MODULE - UPDATED =================
 let videoModal = null;
 let currentVideoData = null;
@@ -850,15 +851,26 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isVoiceRecording = false;
 
-// 🔑 YouTube API Key (replace with your actual key)
-const YOUTUBE_API_KEY = '';
+// 🔐 YouTube API Key - Reads from .env file
+// In your .env file: YOUTUBE_API_KEY=your_actual_key
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
 
+// Check if API key is configured
+function isYouTubeApiConfigured() {
+    return YOUTUBE_API_KEY && YOUTUBE_API_KEY !== '';
+}
+// ================= OPEN VIDEO MODAL (FIXED) =================
 window.openVideoMode = function() {
+    console.log("Opening Video Modal");
     const modal = document.getElementById('videoModal');
-    if (modal) modal.style.display = 'flex';
-    loadVideoLibrary();
-    // Set default to text panel
-    handleVideoSourceChange();
+    if (modal) {
+        modal.style.display = 'flex';
+        loadVideoLibrary();
+        handleVideoSourceChange();
+    } else {
+        console.error("videoModal element not found!");
+        alert("Video modal not found. Please check your HTML for element with id='videoModal'");
+    }
 }
 
 window.closeVideoMode = function() {
