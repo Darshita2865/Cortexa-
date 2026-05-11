@@ -6577,8 +6577,8 @@ img {
     background: transparent !important;
 }
 
-/* ================= NUCLEAR WHITE ELIMINATION ================= */
-/* Complete removal of ALL white effects for LinkedIn */
+/* ================= ULTIMATE WHITE ELIMINATION ================= */
+/* Complete removal of ALL white effects - LinkedIn Ready */
 
 /* Global nuclear reset - ALL screen sizes */
 *, *::before, *::after {
@@ -6594,6 +6594,100 @@ img {
     background-image: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    color: #ffffff !important;
+}
+
+/* Force dark on HTML and BODY */
+html, body {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    color: #ffffff !important;
+}
+
+/* Force dark on ALL possible elements */
+html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, ul, ol, li, table, tr, td, th, section, nav, header, footer, main, aside, article, aside, figure, figcaption, hr, br, img, svg, canvas, video, audio, iframe, embed, object, form, fieldset, legend, label, option, optgroup, datalist, keygen, output, progress, meter, details, summary, dialog, template, script, style, link, meta, head, title, base, noscript, track, wbr, area, map, param, source, picture, col, colgroup, tbody, thead, tfoot, caption, address, blockquote, center, del, dir, div, dl, dt, dd, em, font, i, ins, kbd, pre, s, samp, small, strike, strong, sub, sup, tt, u, var, bdo, big, cite, code, dfn, em, i, kbd, samp, small, strike, strong, sub, sup, tt, u, var, .dashboard-page, .main, .sidebar, .right-sidebar, .content-area, .chat-container, .search-box, .chat-input-box, .quiz-question-card, .quiz-options, .modal-overlay, .video-modal, .audio-modal, .quiz-modal, .report-modal, .learning-modal, .games-modal, .feature-card, .game-card, .video-modal, .report-modal, .learning-modal, .games-modal, .chat-bubble, .user-bubble, .ai-bubble, .quiz-option, .quiz-question-text, .modal-header, .modal-content, .modal-body, .modal-footer, .search-results, .video-results, .game-container, .game-content, .typing-speed-game, .quiz-race-game, .trivia-game, .word-scramble-game, .true-false-game, .typing-text, .typing-stats, .scrambled-word, .tf-question, .tf-options, .game-question, .game-options, .game-score, .trivia-question, .trivia-options, .trivia-score, .word-score, .tf-score, .quiz-race-score, .wpm, .accuracy {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+/* Remove ALL white backgrounds from inline styles */
+[style*="background: white"], [style*="background:#fff"], [style*="background:#ffffff"], [style*="background-color: white"], [style*="background-color:#fff"], [style*="background-color:#ffffff"], [style*="background:rgb(255,255,255)"], [style*="background-color:rgb(255,255,255)"], [style*="background: #fff"], [style*="background: #ffffff"], [style*="background-color: #fff"], [style*="background-color: #ffffff"], [style*="background: rgb(255,255,255)"], [style*="background-color: rgb(255,255,255)"], [style*="background: rgba(255,255,255,"], [style*="background-color: rgba(255,255,255,"] {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+}
+
+/* Remove ALL white borders */
+[style*="border: white"], [style*="border:#fff"], [style*="border:#ffffff"], [style*="border-color: white"], [style*="border-color:#fff"], [style*="border-color:#ffffff"], [style*="border: 1px solid white"], [style*="border: 1px solid #fff"], [style*="border: 1px solid #ffffff"], [style*="border: 2px solid white"], [style*="border: 2px solid #fff"], [style*="border: 2px solid #ffffff"] {
+    border-color: #0A0717 !important;
+    border: none !important;
+}
+
+/* Remove ALL white shadows */
+[style*="shadow: white"], [style*="shadow:#fff"], [style*="shadow:#ffffff"], [style*="text-shadow: white"], [style*="text-shadow:#fff"], [style*="text-shadow:#ffffff"], [style*="box-shadow: white"], [style*="box-shadow:#fff"], [style*="box-shadow:#ffffff"] {
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove ALL scrollbars */
+::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+/* Force dark on all containers and modals */
+.dashboard-page, .main, .sidebar, .right-sidebar, .content-area, .chat-container, .search-box, .chat-input-box, .quiz-question-card, .quiz-options, .modal-overlay, .video-modal, .audio-modal, .quiz-modal, .report-modal, .learning-modal, .games-modal, .feature-card, .game-card, .video-modal, .report-modal, .learning-modal, .games-modal, .chat-bubble, .user-bubble, .ai-bubble, .quiz-option, .quiz-question-text, .modal-header, .modal-content, .modal-body, .modal-footer, .search-results, .video-results, .game-container, .game-content, .typing-speed-game, .quiz-race-game, .trivia-game, .word-scramble-game, .true-false-game, .typing-text, .typing-stats, .scrambled-word, .tf-question, .tf-options, .game-question, .game-options, .game-score, .trivia-question, .trivia-options, .trivia-score, .word-score, .tf-score, .quiz-race-score, .wpm, .accuracy {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    color: #ffffff !important;
+}
+
+/* Remove ALL pseudo-elements that could create white lines */
+*:before, *:after {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    content: none !important;
+}
+
+/* Force dark on all iframe and embedded content */
+iframe, embed, object, video {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove any remaining white from images */
+img {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    opacity: 0.8 !important;
+}
+
+/* Force dark on all SVG elements */
+svg, svg * {
+    background: #0A0717 !important;
+    background-color: #0A0717 !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 /* Force dark backgrounds on ALL elements */
