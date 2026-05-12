@@ -19,15 +19,14 @@ app = FastAPI()
 # ================= LOAD ENVIRONMENT VARIABLES =================
 load_dotenv()
 
-# Get API keys from environment
+# Get API keys from environment - NO API KEYS IN CODE
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
-# Initialize Groq client
 if not GROQ_API_KEY:
     print("=" * 50)
     print("❌ ERROR: GROQ_API_KEY not found in environment variables!")
-    print("Please set GROQ_API_KEY environment variable")
+    print("Please set GROQ_API_KEY environment variable in Render dashboard")
     print("Get free key from: https://console.groq.com")
     print("=" * 50)
     client = None
@@ -35,7 +34,7 @@ else:
     client = Groq(api_key=GROQ_API_KEY)
     print("=" * 50)
     print("✅ Groq API key loaded successfully!")
-    print("� API key is secure and hidden")
+    print("🔒 API key is secure and hidden from code")
     print("=" * 50)
 
 
