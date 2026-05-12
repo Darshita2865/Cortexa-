@@ -1,17 +1,43 @@
-console.log("JS LOADED - Cortexa Starting");
+console.log("Cortexa JS Loaded - Full Version");
 
 // ================= GLOBAL VARIABLES =================
-let currentDocument = null;
-let audioModal = null;
-let isListening = false;
-let currentUtterance = null;
-let currentAudio = null;
-let currentAudioMode = 'simple';
 let currentChatId = null;
 let currentProjectId = null;
-let currentAudioText = "";
+let currentDocument = null;
+let currentAudioMode = 'simple';
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let currentAudio = null;
+let currentAudioText = null;
 
-const API_URL = "https://cortexa-2-2ydr.onrender.com/api/chat";
+// API URL - CHANGE THIS FOR PRODUCTION
+const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
+
+// ================= USER-SPECIFIC STORAGE =================
+function getCurrentUser() {
+    return localStorage.getItem("email") || "guest";
+}
+
+function getChats() {
+    const user = getCurrentUser();
+    return JSON.parse(localStorage.getItem(`chats_${user}`)) || [];
+}
+
+function saveChats(chats) {
+    const user = getCurrentUser();
+    localStorage.setItem(`chats_${user}`, JSON.stringify(chats));
+}
+
+function getProjects() {
+    const user = getCurrentUser();
+    return JSON.parse(localStorage.getItem(`projects_${user}`)) || [];
+}
+
+function saveProjects(projects) {
+    const user = getCurrentUser();
+    localStorage.setItem(`projects_${user}`, JSON.stringify(projects));
+}
 
 // ================= HELPER FUNCTIONS =================
 function escapeHtml(text) {
@@ -21,15 +47,43 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function showToast(message, type = 'info') {
+    let toast = document.getElementById('customToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'customToast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: ${type === 'error' ? '#ef4444' : '#10b981'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            font-size: 14px;
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    toast.style.backgroundColor = type === 'error' ? '#ef4444' : '#10b981';
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+    }, 3000);
+}
+
 // ================= FORMAT FUNCTION =================
 function formatContent(content) {
     if (!content) return '';
-    // Remove any "BOLD:" prefix if present
-    let cleaned = content.replace(/^BOLD:\s*/i, '');
-    let formatted = cleaned.replace(/\n/g, '<br>');
-    // Only convert **text** to bold, not everything
+    let formatted = content.replace(/\n/g, '<br>');
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formatted = formatted.replace(/^[\•\-\*]\s/gm, '• ');
     return formatted;
 }
 
@@ -45,17 +99,23 @@ function displayMessage(text, sender) {
     msgDiv.className = sender === "user" ? "user-bubble" : "ai-bubble";
     
     const formattedText = formatContent(text);
+    const senderName = sender === "user" ? "You" : "Cortexa";
     
     msgDiv.innerHTML = `
-        <div class="chat-title">${sender === "user" ? "You" : "Cortexa"}</div>
+        <div class="chat-title">${senderName}</div>
         <div class="chat-content">${formattedText}</div>
     `;
 
-    const id = "msg-" + Date.now();
+    const id = "msg-" + Date.now() + "-" + Math.random();
     msgDiv.id = id;
 
     chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    
+    // Auto-scroll to bottom
+    chatBox.scrollTo({
+        top: chatBox.scrollHeight,
+        behavior: 'smooth'
+    });
 
     return id;
 }
@@ -91,12 +151,12 @@ window.performSearch = async function() {
     queryInput.value = '';
     
     // Show loading indicator
-    const loadingId = displayMessage('<span class="typing-dots">● ● ●</span>', 'bot');
+    const loadingId = displayMessage('<span class="typing-dots">Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>', 'bot');
     
     try {
         const requestBody = {
             message: query,
-            document_content: currentDocument?.content ? currentDocument.content : "null",
+            document_content: currentDocument?.content ? currentDocument.content : null,
             audio: false
         };
         
@@ -128,13 +188,13 @@ window.performSearch = async function() {
         
     } catch (error) {
         console.error("❌ Chat error:", error);
-        updateMessage(loadingId, "⚠️ Error connecting to AI. Make sure backend is running on port 8000");
+        updateMessage(loadingId, `⚠️ Error connecting to AI. Make sure backend is running\n\nDetails: ${error.message}`);
     }
 }
 
 // ================= SAVE CHAT =================
 function saveCurrentChat(userMessage, aiResponse) {
-    let chats = JSON.parse(localStorage.getItem("chats")) || [];
+    let chats = getChats();
     
     if (!currentChatId) {
         currentChatId = 'chat_' + Date.now();
@@ -156,9 +216,12 @@ function saveCurrentChat(userMessage, aiResponse) {
                 { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
                 { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
             );
+            if (chats[chatIndex].messages.length === 2) {
+                chats[chatIndex].title = userMessage.substring(0, 30);
+            }
         }
     }
-    localStorage.setItem("chats", JSON.stringify(chats));
+    saveChats(chats);
     loadChats();
 }
 
@@ -168,7 +231,7 @@ function addWelcomeMessage() {
     if (!container) return;
     
     if (container.children.length === 0) {
-        displayMessage("👋 Hello! I'm Cortexa. How can I help you today?\n\nYou can ask me about:\n• Any topic or concept\n• Upload documents to chat with them\n• Generate audio explanations\n• Create mind maps and presentations", 'bot');
+        displayMessage("👋 Hi! I'm Cortexa. Ask me anything! 💙", 'bot');
     }
 }
 
@@ -177,14 +240,14 @@ function loadChats() {
     const container = document.getElementById("chatList");
     if (!container) return;
     
-    let chats = JSON.parse(localStorage.getItem("chats")) || [];
+    let chats = getChats();
     if (chats.length === 0) {
         container.innerHTML = '<div class="empty-message">No chats yet</div>';
         return;
     }
     
     container.innerHTML = "";
-    chats.forEach(chat => {
+    chats.slice(0, 20).forEach(chat => {
         const div = document.createElement("div");
         div.className = `chat-item ${currentChatId === chat.id ? 'active' : ''}`;
         div.setAttribute('data-chat-id', chat.id);
@@ -206,16 +269,17 @@ function loadProjects() {
     const container = document.getElementById("projectListRight");
     if (!container) return;
     
-    let projects = JSON.parse(localStorage.getItem("projects")) || [];
+    let projects = getProjects();
     if (projects.length === 0) {
-        container.innerHTML = '<div class="empty-message">No projects yet. Click "New Project" to create one!</div>';
+        container.innerHTML = '<div class="empty-message">No projects yet</div>';
         return;
     }
     
     container.innerHTML = "";
-    projects.forEach(project => {
+    projects.slice(0, 10).forEach(project => {
         const div = document.createElement("div");
         div.className = "project-item";
+        div.setAttribute('data-project-id', project.id);
         div.innerHTML = `📁 ${escapeHtml(project.name.substring(0, 35))}`;
         container.appendChild(div);
     });
@@ -223,7 +287,7 @@ function loadProjects() {
 
 // ================= CHAT MANAGEMENT =================
 window.loadChatById = function(chatId) {
-    let chats = JSON.parse(localStorage.getItem("chats")) || [];
+    let chats = getChats();
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
         currentChatId = chat.id;
@@ -235,14 +299,15 @@ window.loadChatById = function(chatId) {
             });
         }
         loadChats();
+        showToast("Chat loaded!");
     }
 }
 
 window.deleteChatById = function(chatId) {
     if (confirm("Delete this chat?")) {
-        let chats = JSON.parse(localStorage.getItem("chats")) || [];
+        let chats = getChats();
         chats = chats.filter(chat => chat.id !== chatId);
-        localStorage.setItem("chats", JSON.stringify(chats));
+        saveChats(chats);
         if (currentChatId === chatId) {
             currentChatId = null;
             const container = document.getElementById("searchResults");
@@ -252,8 +317,10 @@ window.deleteChatById = function(chatId) {
             }
         }
         loadChats();
-        showToastMessage("🗑️ Chat deleted!");
+        showToast("🗑️ Chat deleted!");
     }
+    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+    if (dropdown) dropdown.classList.remove('show');
 }
 
 window.startNewChat = function(e) {
@@ -265,15 +332,15 @@ window.startNewChat = function(e) {
         addWelcomeMessage();
     }
     loadChats();
+    showToast("✨ New chat started!");
 }
 
-// Updated toggleChatMenu function
+// Dropdown functions
 window.toggleChatMenu = function(event, chatId) {
     event.stopPropagation();
     
-    // Close all other dropdowns
-    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
-        if (dropdown.id !== `chat-dropdown-${chatId}` && dropdown.id !== `project-dropdown-${chatId}`) {
+    document.querySelectorAll('.chat-dropdown.show').forEach(dropdown => {
+        if (dropdown.id !== `chat-dropdown-${chatId}`) {
             dropdown.classList.remove('show');
         }
     });
@@ -281,46 +348,11 @@ window.toggleChatMenu = function(event, chatId) {
     const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
     if (!dropdown) return;
     
-    // Remove any inline styles that might interfere
-    dropdown.style.position = '';
-    dropdown.style.top = '';
-    dropdown.style.right = '';
-    dropdown.style.bottom = '';
-    
     dropdown.classList.toggle('show');
     
-    // Auto close after 5 seconds
     setTimeout(() => {
         dropdown.classList.remove('show');
-    }, 5000);
-}
-
-// Updated toggleProjectMenu function
-window.toggleProjectMenu = function(event, projectId) {
-    event.stopPropagation();
-    
-    // Close all other dropdowns
-    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
-        if (dropdown.id !== `chat-dropdown-${projectId}` && dropdown.id !== `project-dropdown-${projectId}`) {
-            dropdown.classList.remove('show');
-        }
-    });
-    
-    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
-    if (!dropdown) return;
-    
-    // Remove any inline styles that might interfere
-    dropdown.style.position = '';
-    dropdown.style.top = '';
-    dropdown.style.right = '';
-    dropdown.style.bottom = '';
-    
-    dropdown.classList.toggle('show');
-    
-    // Auto close after 5 seconds
-    setTimeout(() => {
-        dropdown.classList.remove('show');
-    }, 5000);
+    }, 3000);
 }
 
 window.togglePlusDropdown = function() {
@@ -330,24 +362,24 @@ window.togglePlusDropdown = function() {
 
 window.shareChat = function() {
     if (currentChatId) {
-        let chats = JSON.parse(localStorage.getItem("chats")) || [];
+        let chats = getChats();
         const chat = chats.find(c => c.id === currentChatId);
         if (chat) {
             const shareText = `${chat.title}\n\n${chat.messages.map(m => `${m.role === 'user' ? 'You' : 'Cortexa'}: ${m.content}`).join('\n\n')}`;
             navigator.clipboard.writeText(shareText);
-            showToastMessage("✅ Chat copied!");
+            showToast("✅ Chat copied to clipboard!");
         }
     } else {
-        showToastMessage("❌ No active chat!");
+        showToast("❌ No active chat to share!");
     }
 }
 
 window.deleteChat = function() {
     if (currentChatId) {
         if (confirm("Delete this chat?")) {
-            let chats = JSON.parse(localStorage.getItem("chats")) || [];
+            let chats = getChats();
             chats = chats.filter(chat => chat.id !== currentChatId);
-            localStorage.setItem("chats", JSON.stringify(chats));
+            saveChats(chats);
             currentChatId = null;
             const container = document.getElementById("searchResults");
             if (container) {
@@ -355,667 +387,86 @@ window.deleteChat = function() {
                 addWelcomeMessage();
             }
             loadChats();
-            showToastMessage("🗑️ Chat deleted!");
+            showToast("🗑️ Current chat deleted!");
         }
     } else {
-        showToastMessage("❌ No active chat!");
+        showToast("❌ No active chat to delete!");
     }
+}
+
+window.pinChat = function() {
+    showToast("📌 Pin feature coming soon!");
 }
 
 window.createProject = function() {
     const name = prompt("Enter project name:");
     if (name && name.trim() !== "") {
-        let projects = JSON.parse(localStorage.getItem("projects")) || [];
+        let projects = getProjects();
         const newProject = {
             id: 'project_' + Date.now(),
             name: name.trim(),
             created_at: new Date().toLocaleString()
         };
         projects.push(newProject);
-        localStorage.setItem("projects", JSON.stringify(projects));
+        saveProjects(projects);
         loadProjects();
-        showToastMessage(`✅ Project "${name}" created!`);
+        showToast(`✅ Project "${name}" created!`);
     }
 }
 
 // ================= DOCUMENT CHAT =================
 window.documentChat = function() {
-    const overlay = document.createElement('div');
-    overlay.className = 'upload-overlay';
-    overlay.innerHTML = `
-        <div class="upload-modal">
-            <h3>📄 Upload Document</h3>
-            <input type="file" id="docFileInput" accept=".pdf,.docx,.txt">
-            <div style="margin-top: 15px;">
-                <button onclick="closeUploadOverlay()">Cancel</button>
-                <button onclick="uploadAndChat()">Upload & Chat</button>
-            </div>
-            <div id="uploadStatus" style="margin-top: 10px;"></div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    window.currentOverlay = overlay;
-}
-
-window.closeUploadOverlay = function() {
-    if (window.currentOverlay) {
-        window.currentOverlay.remove();
-        window.currentOverlay = null;
-    }
-}
-
-window.uploadAndChat = async function() {
-    const fileInput = document.getElementById('docFileInput');
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    if (!fileInput.files || fileInput.files.length === 0) {
-        statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Select a file!</span>';
-        return;
-    }
-    
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
-    
-    try {
-        const response = await fetch("https://cortexa-2-2ydr.onrender.com/upload-document", {
-            method: "POST",
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.content) {
-            currentDocument = {
-                name: data.filename,
-                content: data.content
-            };
-            localStorage.setItem("currentDocument", JSON.stringify(currentDocument));
-            statusDiv.innerHTML = '<span style="color: #22c55e;">✅ Document loaded!</span>';
-            setTimeout(() => {
-                window.closeUploadOverlay();
-                displayMessage(`📄 Document loaded: ${data.filename}\n\nYou can now ask questions about this document!`, 'bot');
-                showDocumentIndicator(data.filename);
-            }, 1500);
-        } else {
-            statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Failed to load document</span>';
-        }
-    } catch (error) {
-        console.error("Upload error:", error);
-        statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Upload failed</span>';
-    }
-}
-
-function showDocumentIndicator(filename) {
-    const existing = document.querySelector('.document-indicator');
-    if (existing) existing.remove();
-    const indicator = document.createElement('div');
-    indicator.className = 'document-indicator';
-    indicator.innerHTML = `📄 ${filename.substring(0, 30)} <button onclick="clearDocument()">✕</button>`;
-    indicator.style.cssText = 'position: fixed; bottom: 80px; right: 20px; background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 1000; cursor: pointer;';
-    document.body.appendChild(indicator);
-}
-
-window.clearDocument = function() {
-    currentDocument = null;
-    localStorage.removeItem("currentDocument");
-    const indicator = document.querySelector('.document-indicator');
-    if (indicator) indicator.remove();
-    displayMessage('🗑️ Document cleared. You can now chat normally.', 'bot');
-}
-
-function loadSavedDocument() {
-    const savedDoc = localStorage.getItem("currentDocument");
-    if (savedDoc) {
-        currentDocument = JSON.parse(savedDoc);
-        showDocumentIndicator(currentDocument.name);
-    }
-}
-loadSavedDocument();
-
-window.logout = function() {
-    localStorage.removeItem("isLoggedIn");
-    window.location.href = "login.html";
-}
-
-function showToastMessage(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#a855f7,#6366f1); color:white; padding:10px 20px; border-radius:25px; font-size:14px; z-index:10000; animation:fadeInOut 3s ease;`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-// Add CSS for toast
-if (!document.querySelector('#toast-style')) {
-    const style = document.createElement('style');
-    style.id = 'toast-style';
-    style.textContent = `
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// ================= INITIALIZATION =================
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("DOM fully loaded - Cortexa Ready");
-    
-    // Load chats and projects
-    loadChats();
-    loadProjects();
-    addWelcomeMessage();
-    
-    // Setup enter key for search input
-    const inputField = document.getElementById("searchInput");
-    if (inputField) {
-        inputField.addEventListener("keypress", function(e) {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                window.performSearch();
-            }
-        });
-    }
-    
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.chat-menu-container')) {
-            document.querySelectorAll('.chat-dropdown.show').forEach(dropdown => dropdown.classList.remove('show'));
-        }
-        if (!e.target.closest('.plus-dropdown-container')) {
-            const plusDropdown = document.getElementById('plusDropdown');
-            if (plusDropdown) plusDropdown.classList.remove('show');
-        }
-    });
-});
-
-console.log("✅ script.js loaded successfully!");
-
-// ================= LOAD PROJECTS =================
-function loadProjects() {
-    const container = document.getElementById("projectListRight");
-    if (!container) return;
-    
-    let projects = JSON.parse(localStorage.getItem("projects")) || [];
-    if (projects.length === 0) {
-        container.innerHTML = '<div class="empty-message">No projects yet. Click "New Project" to create one!</div>';
-        return;
-    }
-    
-    container.innerHTML = "";
-    projects.forEach(project => {
-        const div = document.createElement("div");
-        div.className = `project-item ${currentProjectId === project.id ? 'active' : ''}`;
-        div.setAttribute('data-project-id', project.id);
-        div.innerHTML = `
-            <span class="project-title" onclick="loadProjectById('${project.id}')">📁 ${escapeHtml(project.name.substring(0, 35))}</span>
-            <div class="project-menu-container">
-                <button class="project-menu-btn" onclick="toggleProjectMenu(event, '${project.id}')">⋯</button>
-                <div class="project-dropdown" id="project-dropdown-${project.id}">
-                    <div class="dropdown-item" onclick="shareProjectById('${project.id}')">
-                        <span>🔗</span> Share
-                    </div>
-                    <div class="dropdown-item delete" onclick="deleteProjectById('${project.id}')">
-                        <span>🗑️</span> Delete
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// ================= TOGGLE FUNCTIONS =================
-
-
-window.toggleProjectMenu = function(event, projectId) {
-    event.stopPropagation();
-    document.querySelectorAll('.project-dropdown.show').forEach(dropdown => {
-        if (dropdown.id !== `project-dropdown-${projectId}`) {
-            dropdown.classList.remove('show');
-        }
-    });
-    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
-    if (!dropdown) return;
-    const button = event.target;
-    const rect = button.getBoundingClientRect();
-    dropdown.style.position = 'fixed';
-    dropdown.style.bottom = 'auto';
-    dropdown.style.top = `${rect.top - 10}px`;
-    dropdown.style.right = `${window.innerWidth - rect.right + 15}px`;
-    dropdown.classList.toggle('show');
-    setTimeout(() => dropdown.classList.remove('show'), 5000);
-}
-
-window.shareChatById = function(chatId) {
-    let chats = JSON.parse(localStorage.getItem("chats")) || [];
-    const chat = chats.find(c => c.id === chatId);
-    if (chat) {
-        const shareText = `${chat.title}\n\n${chat.messages.map(m => `${m.role === 'user' ? 'You' : 'Cortexa'}: ${m.content}`).join('\n\n')}`;
-        navigator.clipboard.writeText(shareText);
-        alert("✅ Chat copied to clipboard!");
-    }
-    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
-    if (dropdown) dropdown.classList.remove('show');
-}
-
-window.deleteChatById = function(chatId) {
-    if (confirm("Delete this chat?")) {
-        let chats = JSON.parse(localStorage.getItem("chats")) || [];
-        chats = chats.filter(chat => chat.id !== chatId);
-        localStorage.setItem("chats", JSON.stringify(chats));
-        if (currentChatId === chatId) {
-            currentChatId = null;
-            const container = document.getElementById("searchResults");
-            if (container) {
-                container.innerHTML = "";
-                addWelcomeMessage();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.pdf,.docx';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            showToast("📄 Uploading document...");
+            
+            try {
+                const response = await fetch('https://cortexa-2-2ydr.onrender.com/upload-document', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                currentDocument = data;
+                showToast(`✅ Document "${file.name}" loaded! You can now ask questions about it.`);
+                displayMessage(`📄 **Document loaded:** ${file.name}\n\nYou can now ask me questions about this document!`, 'bot');
+            } catch (error) {
+                showToast("❌ Error uploading document", "error");
             }
         }
-        loadChats();
-        alert("🗑️ Chat deleted!");
-    }
-    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
-    if (dropdown) dropdown.classList.remove('show');
+    };
+    input.click();
 }
 
-window.shareProjectById = function(projectId) {
-    let projects = JSON.parse(localStorage.getItem("projects")) || [];
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-        const shareText = `Project: ${project.name}\nCreated: ${project.created_at}`;
-        navigator.clipboard.writeText(shareText);
-        alert("✅ Project shared!");
-    }
-    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
-    if (dropdown) dropdown.classList.remove('show');
+// ================= AUDIO MODE =================
+window.openAudioMode = function() {
+    const modal = document.getElementById('audioModal');
+    if (modal) modal.style.display = 'flex';
 }
 
-window.deleteProjectById = function(projectId) {
-    if (confirm("Delete this project?")) {
-        let projects = JSON.parse(localStorage.getItem("projects")) || [];
-        projects = projects.filter(project => project.id !== projectId);
-        localStorage.setItem("projects", JSON.stringify(projects));
-        if (currentProjectId === projectId) currentProjectId = null;
-        loadProjects();
-        alert("🗑️ Project deleted!");
-    }
-    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
-    if (dropdown) dropdown.classList.remove('show');
-}
-
-window.loadChatById = function(chatId) {
-    let chats = JSON.parse(localStorage.getItem("chats")) || [];
-    const chat = chats.find(c => c.id === chatId);
-    if (chat) {
-        currentChatId = chat.id;
-        const container = document.getElementById("searchResults");
-        if (container) {
-            container.innerHTML = "";
-            chat.messages.forEach(msg => {
-                displayMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
-            });
-        }
-        loadChats();
-    }
-}
-
-window.loadProjectById = function(projectId) {
-    let projects = JSON.parse(localStorage.getItem("projects")) || [];
-    const project = projects.find(p => p.id === projectId);
-    if (project) {
-        currentProjectId = project.id;
-        loadProjects();
-        alert(`📁 Loading project: ${project.name}`);
-    }
-}
-
-window.startNewChat = function(e) {
-    if (e) e.preventDefault();
-    currentChatId = null;
-    const container = document.getElementById("searchResults");
-    if (container) {
-        container.innerHTML = "";
-        addWelcomeMessage();
-    }
-    loadChats();
-}
-
-window.togglePlusDropdown = function() {
-    const dropdown = document.getElementById('plusDropdown');
-    if (dropdown) dropdown.classList.toggle('show');
-}
-
-window.shareChat = function() {
-    if (currentChatId) {
-        let chats = JSON.parse(localStorage.getItem("chats")) || [];
-        const chat = chats.find(c => c.id === currentChatId);
-        if (chat) {
-            const shareText = `${chat.title}\n\n${chat.messages.map(m => `${m.role === 'user' ? 'You' : 'Cortexa'}: ${m.content}`).join('\n\n')}`;
-            navigator.clipboard.writeText(shareText);
-            alert("✅ Chat copied!");
-        }
-    } else {
-        alert("❌ No active chat!");
-    }
-}
-
-window.deleteChat = function() {
-    if (currentChatId) {
-        if (confirm("Delete this chat?")) {
-            let chats = JSON.parse(localStorage.getItem("chats")) || [];
-            chats = chats.filter(chat => chat.id !== currentChatId);
-            localStorage.setItem("chats", JSON.stringify(chats));
-            currentChatId = null;
-            const container = document.getElementById("searchResults");
-            if (container) {
-                container.innerHTML = "";
-                addWelcomeMessage();
-            }
-            loadChats();
-            alert("🗑️ Chat deleted!");
-        }
-    } else {
-        alert("❌ No active chat!");
-    }
-}
-
-window.createProject = function() {
-    const name = prompt("Enter project name:");
-    if (name && name.trim() !== "") {
-        let projects = JSON.parse(localStorage.getItem("projects")) || [];
-        const newProject = {
-            id: 'project_' + Date.now(),
-            name: name.trim(),
-            created_at: new Date().toLocaleString()
-        };
-        projects.push(newProject);
-        localStorage.setItem("projects", JSON.stringify(projects));
-        loadProjects();
-        alert(`✅ Project "${name}" created!`);
-    }
-}
-
-// ================= DOCUMENT CHAT =================
-window.documentChat = function() {
-    const overlay = document.createElement('div');
-    overlay.className = 'upload-overlay';
-    overlay.innerHTML = `
-        <div class="upload-modal">
-            <h3>📄 Upload Document</h3>
-            <input type="file" id="docFileInput" accept=".pdf,.docx,.txt">
-            <div style="margin-top: 15px;">
-                <button onclick="closeUploadOverlay()">Cancel</button>
-                <button onclick="uploadAndChat()">Upload & Chat</button>
-            </div>
-            <div id="uploadStatus" style="margin-top: 10px;"></div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    window.currentOverlay = overlay;
-}
-
-window.closeUploadOverlay = function() {
-    if (window.currentOverlay) {
-        window.currentOverlay.remove();
-        window.currentOverlay = null;
-    }
-}
-
-window.uploadAndChat = async function() {
-    const fileInput = document.getElementById('docFileInput');
-    const statusDiv = document.getElementById('uploadStatus');
-    
-    if (!fileInput.files || fileInput.files.length === 0) {
-        statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Select a file!</span>';
-        return;
-    }
-    
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
-    
-    try {
-        const response = await fetch("https://cortexa-2-2ydr.onrender.com/upload-document", {
-            method: "POST",
-            body: formData
-        }); 
-        
-        const data = await response.json();
-        
-        if (data.content) {
-            currentDocument = {
-                name: data.filename,
-                content: data.content
-            };
-            localStorage.setItem("currentDocument", JSON.stringify(currentDocument));
-            statusDiv.innerHTML = '<span style="color: #22c55e;">✅ Document loaded!</span>';
-            setTimeout(() => {
-                window.closeUploadOverlay();
-                displayMessage(`📄 Document loaded: ${data.filename}\n\nYou can now ask questions about this document!`, 'bot');
-                showDocumentIndicator(data.filename);
-            }, 1500);
-        } else {
-            statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Failed to load document</span>';
-        }
-    } catch (error) {
-        console.error("Upload error:", error);
-        statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Upload failed</span>';
-    }
-}
-
-function showDocumentIndicator(filename) {
-    const existing = document.querySelector('.document-indicator');
-    if (existing) existing.remove();
-    const indicator = document.createElement('div');
-    indicator.className = 'document-indicator';
-    indicator.innerHTML = `📄 ${filename.substring(0, 30)} <button onclick="clearDocument()">✕</button>`;
-    indicator.style.cssText = 'position: fixed; bottom: 80px; right: 20px; background: #a855f7; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 1000; cursor: pointer;';
-    document.body.appendChild(indicator);
-}
-
-window.clearDocument = function() {
-    currentDocument = null;
-    localStorage.removeItem("currentDocument");
-    const indicator = document.querySelector('.document-indicator');
-    if (indicator) indicator.remove();
-    displayMessage('🗑️ Document cleared. You can now chat normally.', 'bot');
-}
-
-function loadSavedDocument() {
-    const savedDoc = localStorage.getItem("currentDocument");
-    if (savedDoc) {
-        currentDocument = JSON.parse(savedDoc);
-        showDocumentIndicator(currentDocument.name);
-    }
-}
-loadSavedDocument();
-
-
-
-// ================= VIDEO EXPLANATION MODULE - UPDATED =================
-let videoModal = null;
-let currentVideoData = null;
-let youtubeVideoInfo = null;
-let videoDocumentContent = null;
-let videoGenerationInterval = null;
-let mediaRecorder = null;
-let audioChunks = [];
-let isVoiceRecording = false;
-
-// 🔐 YouTube API Key - Reads from .env file
-// In your .env file: YOUTUBE_API_KEY=your_actual_key
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
-
-// Check if API key is configured
-function isYouTubeApiConfigured() {
-    return YOUTUBE_API_KEY && YOUTUBE_API_KEY !== '';
-}
-// ================= OPEN VIDEO MODAL (FIXED) =================
-window.openVideoMode = function() {
-    console.log("Opening Video Modal");
-    const modal = document.getElementById('videoModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        modal.style.zIndex = '10000';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        
-        // Load video library and switch to YouTube tab
-        loadVideoLibrary();
-        switchVideoTab('youtube');
-        
-        console.log("Video modal opened successfully");
-    } else {
-        console.error("videoModal element not found!");
-        alert("Video modal not found. Please check your HTML for element with id='videoModal'");
-    }
-}
-window.closeVideoMode = function() {
-    const modal = document.getElementById('videoModal');
+window.closeAudioMode = function() {
+    const modal = document.getElementById('audioModal');
     if (modal) modal.style.display = 'none';
-    if (videoGenerationInterval) clearInterval(videoGenerationInterval);
-    // Stop voice recording if active
-    if (mediaRecorder && isVoiceRecording) {
-        mediaRecorder.stop();
-        isVoiceRecording = false;
-    }
 }
 
-window.switchVideoTab = function(tab) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.target) event.target.classList.add('active');
-    
-    document.getElementById('createTab').style.display = 'none';
-    document.getElementById('youtubeTab').style.display = 'none';
-    document.getElementById('libraryTab').style.display = 'none';
-    
-    if (tab === 'create') document.getElementById('createTab').style.display = 'block';
-    else if (tab === 'youtube') document.getElementById('youtubeTab').style.display = 'block';
-    else if (tab === 'library') {
-        document.getElementById('libraryTab').style.display = 'block';
-        loadVideoLibrary();
-    }
+window.setAudioMode = function(mode, btn) {
+    currentAudioMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    showToast(`🎵 Audio mode: ${mode}`);
 }
 
-window.handleVideoSourceChange = function() {
-    const source = document.getElementById('videoContentSource').value;
-    document.getElementById('textSourcePanel').style.display = source === 'text' ? 'block' : 'none';
-    document.getElementById('documentSourcePanel').style.display = source === 'document' ? 'block' : 'none';
+window.toggleMicrophone = async function() {
+    const micBtn = document.getElementById('micButton');
+    const statusDiv = document.getElementById('micStatus');
     
-    // Handle Chat Source
-    if (source === 'chat') {
-        useCurrentChatForVideo();
-    }
-    
-    // Handle Voice Input
-    if (source === 'voice') {
-        startVoiceInputForVideo();
-    }
-}
-
-// ================= USE CURRENT CHAT (WORKING) =================
-window.useCurrentChatForVideo = function() {
-    const chatMessages = document.querySelectorAll('.chat-content');
-    let chatContent = '';
-    chatMessages.forEach(msg => {
-        const text = msg.innerText || msg.textContent;
-        if (text && !text.includes('Cortexa') && !text.includes('You')) {
-            chatContent += text + '\n';
-        }
-    });
-    
-    // Also get user messages specifically
-    const userBubbles = document.querySelectorAll('.user-bubble .chat-content');
-    userBubbles.forEach(bubble => {
-        chatContent += bubble.innerText + '\n';
-    });
-    
-    if (chatContent && chatContent.trim() !== '') {
-        const topicInput = document.getElementById('videoTopicInput');
-        if (topicInput) {
-            // Extract key topic from chat (first few words or detect subject)
-            const firstLine = chatContent.split('\n')[0];
-            const shortTopic = firstLine.substring(0, 100);
-            topicInput.value = `Based on our conversation about: ${shortTopic}\n\nFull conversation context:\n${chatContent.substring(0, 800)}`;
-            showToast('✅ Current chat loaded! You can now generate a video based on our conversation.');
-        }
-    } else {
-        showToast('❌ No chat content found. Start a conversation first!');
-        // Switch back to text mode
-        document.getElementById('videoContentSource').value = 'text';
-        handleVideoSourceChange();
-    }
-}
-
-// ================= VOICE INPUT (WORKING) =================
-window.startVoiceInputForVideo = async function() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        showToast('❌ Voice recognition not supported in this browser. Please use Chrome or Edge.');
-        document.getElementById('videoContentSource').value = 'text';
-        handleVideoSourceChange();
-        return;
-    }
-    
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    showToast('🎤 Listening... Please speak your topic.');
-    
-    recognition.onstart = () => {
-        console.log('Voice recognition started');
-    };
-    
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        const topicInput = document.getElementById('videoTopicInput');
-        if (topicInput) {
-            topicInput.value = transcript;
-            showToast(`✅ Voice captured: "${transcript}"`);
-        }
-    };
-    
-    recognition.onerror = (event) => {
-        console.error('Recognition error:', event.error);
-        showToast(`❌ Voice error: ${event.error}. Please try typing instead.`);
-        document.getElementById('videoContentSource').value = 'text';
-        handleVideoSourceChange();
-    };
-    
-    recognition.onend = () => {
-        console.log('Voice recognition ended');
-    };
-    
-    recognition.start();
-    
-    // Auto timeout after 10 seconds
-    setTimeout(() => {
-        try {
-            recognition.stop();
-        } catch(e) {}
-    }, 10000);
-}
-
-// Alternative: Record audio for longer content
-window.toggleVoiceRecording = async function() {
-    if (!isVoiceRecording) {
+    if (!isRecording) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
@@ -1027,63 +478,1059 @@ window.toggleVoiceRecording = async function() {
             
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                // Here you would send to backend for transcription
-                showToast('🎤 Recording saved! You can now type or continue.');
+                statusDiv.innerHTML = '🎤 Speech detected! Processing...';
+                showToast("🎤 Voice input received! Please type your question for now (voice-to-text coming soon)");
+                statusDiv.innerHTML = 'Click microphone to speak';
+                isRecording = false;
+                micBtn.style.background = '';
                 stream.getTracks().forEach(track => track.stop());
             };
             
             mediaRecorder.start();
-            isVoiceRecording = true;
-            showToast('🎙️ Recording... Click microphone again to stop.');
-            
-            const micBtn = document.querySelector('#createTab .mic-button');
-            if (micBtn) micBtn.classList.add('listening');
-            
+            isRecording = true;
+            micBtn.style.background = '#ef4444';
+            statusDiv.innerHTML = '🔴 Recording... Click again to stop';
         } catch (err) {
             console.error('Microphone error:', err);
-            showToast('❌ Cannot access microphone. Please check permissions.');
+            statusDiv.innerHTML = '❌ Microphone access denied';
+            showToast("Microphone access denied", "error");
         }
     } else {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
+        if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
-            isVoiceRecording = false;
-            showToast('✅ Recording stopped. You can now generate your video.');
-            const micBtn = document.querySelector('#createTab .mic-button');
-            if (micBtn) micBtn.classList.remove('listening');
         }
     }
 }
 
-// Helper function to show toast messages
-function showToast(message) {
-    const existingToast = document.querySelector('.video-toast');
-    if (existingToast) existingToast.remove();
+window.sendAudioQuery = async function() {
+    const queryInput = document.getElementById('audioQueryInput');
+    const query = queryInput.value.trim();
+    if (!query) {
+        showToast("Please enter a question", "error");
+        return;
+    }
     
+    const responseArea = document.getElementById('audioResponseArea');
+    const responseText = document.getElementById('responseText');
+    
+    responseArea.style.display = 'block';
+    responseText.innerHTML = '<span class="typing-dots">Generating response...</span>';
+    
+    try {
+        const requestBody = { message: query, audio: true };
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+        const data = await response.json();
+        
+        currentAudioText = data.response;
+        responseText.innerHTML = formatContent(data.response);
+        
+        // Generate audio
+        const audioResponse = await fetch('https://cortexa-2-2ydr.onrender.com/generate-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: data.response })
+        });
+        const audioData = await audioResponse.json();
+        
+        if (audioData.audio_url) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `https://cortexa-2-2ydr.onrender.com${audioData.audio_url}`;
+            document.getElementById('audioPlayerContainer').style.display = 'block';
+        }
+        
+    } catch (error) {
+        responseText.innerHTML = '❌ Error generating response';
+        showToast("Error connecting to AI", "error");
+    }
+}
+
+window.playAudioResponse = function() {
+    const audio = document.getElementById('audioPlayer');
+    if (audio && audio.src) {
+        audio.play();
+    } else {
+        showToast("No audio available", "error");
+    }
+}
+
+window.pauseAudioResponse = function() {
+    const audio = document.getElementById('audioPlayer');
+    if (audio) audio.pause();
+}
+
+window.stopAudioResponse = function() {
+    const audio = document.getElementById('audioPlayer');
+    if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+    }
+}
+
+window.downloadAudioResponse = function() {
+    const audio = document.getElementById('audioPlayer');
+    if (audio && audio.src) {
+        const a = document.createElement('a');
+        a.href = audio.src;
+        a.download = 'cortexa_audio.mp3';
+        a.click();
+        showToast("Downloading audio...");
+    } else {
+        showToast("No audio available", "error");
+    }
+}
+
+// ================= VIDEO MODE (FULL FEATURED) =================
+window.openVideoMode = function() {
+    const modal = document.getElementById('videoModal');
+    if (modal) modal.style.display = 'flex';
+    switchVideoTab('youtube');
+}
+
+window.closeVideoMode = function() {
+    const modal = document.getElementById('videoModal');
+    if (modal) modal.style.display = 'none';
+    // Clear results when closing
+    const youtubeResults = document.getElementById('youtubeResults');
+    const youtubeVideoInfo = document.getElementById('youtubeVideoInfo');
+    const youtubeOptions = document.getElementById('youtubeOptions');
+    if (youtubeResults) youtubeResults.innerHTML = '';
+    if (youtubeVideoInfo) youtubeVideoInfo.style.display = 'none';
+    if (youtubeOptions) youtubeOptions.style.display = 'none';
+}
+
+window.switchVideoTab = function(tab) {
+    const youtubeTab = document.getElementById('youtubeTab');
+    const libraryTab = document.getElementById('libraryTab');
+    const btns = document.querySelectorAll('.tab-btn');
+    
+    btns.forEach(btn => btn.classList.remove('active'));
+    
+    if (tab === 'youtube') {
+        if (youtubeTab) youtubeTab.style.display = 'block';
+        if (libraryTab) libraryTab.style.display = 'none';
+        if (btns[0]) btns[0].classList.add('active');
+    } else {
+        if (youtubeTab) youtubeTab.style.display = 'none';
+        if (libraryTab) libraryTab.style.display = 'block';
+        if (btns[1]) btns[1].classList.add('active');
+        loadVideoLibrary();
+    }
+}
+
+// Search YouTube and display videos
+window.searchYouTube = async function() {
+    const query = document.getElementById('youtubeSearchQuery').value;
+    if (!query) {
+        showToast("Please enter a search term", "error");
+        return;
+    }
+    
+    showToast("🔍 Searching YouTube...");
+    const resultsDiv = document.getElementById('youtubeResults');
+    if (!resultsDiv) return;
+    
+    resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
+    
+    try {
+        const response = await fetch(`https://cortexa-2-2ydr.onrender.com/youtube-search?query=${encodeURIComponent(query)}&max_results=12`);
+        const data = await response.json();
+        
+        if (data.error) {
+            resultsDiv.innerHTML = `<div class="error-message">❌ ${data.error}</div>`;
+            showToast(data.error, "error");
+            return;
+        }
+        
+        if (!data.videos || data.videos.length === 0) {
+            resultsDiv.innerHTML = '<div class="no-results">😕 No videos found. Try a different search term.</div>';
+            return;
+        }
+        
+        // Display video results in a beautiful grid
+        resultsDiv.innerHTML = `
+            <div class="search-header">
+                <h3>📹 Search Results (${data.videos.length} videos)</h3>
+                <p>Click on any video to get AI summary</p>
+            </div>
+            <div class="youtube-grid">
+                ${data.videos.map(video => `
+                    <div class="video-card">
+                        <div class="video-thumbnail">
+                            <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
+                            <div class="video-duration">${video.duration || 'N/A'}</div>
+                        </div>
+                        <div class="video-details">
+                            <h4 class="video-title">${escapeHtml(video.title.substring(0, 70))}</h4>
+                            <p class="video-channel">${escapeHtml(video.channel)}</p>
+                            <p class="video-stats">👁️ ${video.views || 'N/A'} views</p>
+                            <button class="play-youtube-btn" onclick="getVideoInfoAndSummary('${video.id}', '${escapeHtml(video.title)}')">
+                                🤖 Get AI Summary
+                            </button>
+                            <button class="watch-btn" onclick="openInYouTube('${video.id}')">
+                                ▶️ Watch on YouTube
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        showToast(`Found ${data.videos.length} videos!`);
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsDiv.innerHTML = '<div class="error-message">❌ Failed to search YouTube. Make sure backend is running.</div>';
+        showToast("Error connecting to backend", "error");
+    }
+}
+
+// Get video info and generate AI summary
+window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
+    showToast("📹 Getting video information and generating AI summary...");
+    
+    const infoDiv = document.getElementById('youtubeVideoInfo');
+    if (!infoDiv) return;
+    
+    infoDiv.style.display = 'block';
+    infoDiv.innerHTML = '<div class="loading-spinner">🧠 Analyzing video content...</div>';
+    
+    try {
+        // First get video info
+        const infoResponse = await fetch(`https://cortexa-2-2ydr.onrender.com/youtube-video-info?videoid=${videoId}`);
+        const videoInfo = await infoResponse.json();
+        
+        if (videoInfo.error) {
+            infoDiv.innerHTML = `<div class="error-message">❌ ${videoInfo.error}</div>`;
+            return;
+        }
+        
+        // Generate AI summary using chat API
+        const summaryPrompt = `Please provide a comprehensive summary of this YouTube video:
+        
+Title: ${videoTitle || videoInfo.title}
+Channel: ${videoInfo.channel || 'Unknown'}
+Description: ${videoInfo.description || 'No description available'}
+
+Please provide:
+1. Main topic/theme of the video
+2. 5-7 key points covered
+3. Important takeaways
+4. Who should watch this video
+5. A brief one-paragraph summary
+
+Format the response in a clean, organized way with emojis for each section.`;
+
+        const summaryResponse = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                message: summaryPrompt,
+                document_content: null,
+                audio: false
+            })
+        });
+        
+        const summaryData = await summaryResponse.json();
+        const aiSummary = summaryData.response || "Summary generation failed. Please try again.";
+        
+        infoDiv.innerHTML = `
+            <div class="video-detail-card">
+                <div class="video-detail-header">
+                    <h3>✅ ${escapeHtml(videoInfo.title || videoTitle)}</h3>
+                    <button class="close-video-info" onclick="closeVideoInfo()">✖</button>
+                </div>
+                <div class="video-detail-content">
+                    <p><strong>📺 Channel:</strong> ${escapeHtml(videoInfo.channel || 'N/A')}</p>
+                    <p><strong>👁️ Views:</strong> ${parseInt(videoInfo.views || 0).toLocaleString()}</p>
+                    <p><strong>👍 Likes:</strong> ${parseInt(videoInfo.likes || 0).toLocaleString()}</p>
+                    <p><strong>⏱️ Duration:</strong> ${videoInfo.duration || 'N/A'}</p>
+                    
+                    <div class="ai-summary-section">
+                        <h4>🤖 AI GENERATED SUMMARY</h4>
+                        <div class="summary-text">${formatContent(aiSummary)}</div>
+                    </div>
+                    
+                    <details>
+                        <summary>📝 Video Description</summary>
+                        <p class="video-description">${escapeHtml((videoInfo.description || 'No description').substring(0, 1000))}</p>
+                    </details>
+                    
+                    <div class="video-action-buttons">
+                        <button class="watch-btn" onclick="openInYouTube('${videoId}')">
+                            🎬 Watch on YouTube
+                        </button>
+                        <button class="summary-btn" onclick="copySummaryToClipboard()">
+                            📋 Copy Summary
+                        </button>
+                        <button class="summary-btn" onclick="downloadSummaryAsFile()">
+                            💾 Download Summary
+                        </button>
+                        <button class="summary-btn" onclick="saveVideoToLibrary('${videoId}', '${escapeHtml(videoInfo.title || videoTitle)}')">
+                            💾 Save to Library
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('youtubeOptions').style.display = 'block';
+        showToast("✅ AI Summary generated successfully!");
+        
+    } catch (error) {
+        console.error('Error:', error);
+        infoDiv.innerHTML = '<div class="error-message">❌ Error generating summary. Please try again.</div>';
+        showToast("Error generating summary", "error");
+    }
+}
+
+window.closeVideoInfo = function() {
+    const infoDiv = document.getElementById('youtubeVideoInfo');
+    if (infoDiv) infoDiv.style.display = 'none';
+}
+
+// Open video in YouTube
+window.openInYouTube = function(videoId) {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    window.open(youtubeUrl, '_blank');
+    showToast("📺 Opening YouTube in new tab...");
+}
+
+// Copy summary to clipboard
+window.copySummaryToClipboard = function() {
+    const summaryText = document.querySelector('.summary-text')?.innerText;
+    if (summaryText) {
+        navigator.clipboard.writeText(summaryText);
+        showToast("📋 Summary copied to clipboard!");
+    } else {
+        showToast("No summary to copy", "error");
+    }
+}
+
+// Download summary as file
+window.downloadSummaryAsFile = function() {
+    const summaryText = document.querySelector('.summary-text')?.innerText;
+    if (summaryText) {
+        const blob = new Blob([summaryText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'video_summary.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("💾 Summary downloaded!");
+    } else {
+        showToast("No summary to download", "error");
+    }
+}
+
+// Save video to library
+window.saveVideoToLibrary = function(videoId, videoTitle) {
+    const user = getCurrentUser();
+    const savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
+    
+    if (!savedVideos.some(v => v.id === videoId)) {
+        const newVideo = {
+            id: videoId,
+            title: videoTitle,
+            url: `https://youtube.com/watch?v=${videoId}`,
+            date: new Date().toLocaleString(),
+            thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+        };
+        savedVideos.push(newVideo);
+        localStorage.setItem(`videos_${user}`, JSON.stringify(savedVideos));
+        showToast("💾 Video saved to library!");
+        loadVideoLibrary();
+    } else {
+        showToast("Video already in library!");
+    }
+}
+
+// Load video library
+function loadVideoLibrary() {
+    const user = getCurrentUser();
+    const libraryDiv = document.getElementById('videoLibraryList');
+    if (!libraryDiv) return;
+    
+    const savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
+    
+    if (savedVideos.length === 0) {
+        libraryDiv.innerHTML = '<div class="empty-library">📭 No saved videos. Search and save videos to see them here!</div>';
+        return;
+    }
+    
+    libraryDiv.innerHTML = `
+        <div class="library-grid">
+            ${savedVideos.map(video => `
+                <div class="library-card">
+                    <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
+                    <div class="library-card-info">
+                        <h4>${escapeHtml(video.title.substring(0, 50))}</h4>
+                        <p class="library-date">Saved: ${video.date}</p>
+                        <button class="library-play-btn" onclick="getVideoInfoAndSummary('${video.id}', '${escapeHtml(video.title)}')">
+                            🤖 Get AI Summary
+                        </button>
+                        <button class="library-remove-btn" onclick="removeFromLibrary('${video.id}')">
+                            🗑️ Remove
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+window.removeFromLibrary = function(videoId) {
+    const user = getCurrentUser();
+    let savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
+    savedVideos = savedVideos.filter(v => v.id !== videoId);
+    localStorage.setItem(`videos_${user}`, JSON.stringify(savedVideos));
+    loadVideoLibrary();
+    showToast("🗑️ Video removed from library");
+}
+
+// ================= COMPLETE FIXED MIND MAP - WORKING VERSION =================
+
+// Global variables
+let currentMindMapData = null;
+let mindMapZoom = 1;
+let mindMapOffsetX = 0;
+let mindMapOffsetY = 0;
+let isDraggingMindMap = false;
+let dragStartX = 0;
+let dragStartY = 0;
+
+// ================= OPEN/CLOSE MODAL FUNCTIONS =================
+window.openMindMapMode = function() {
+    console.log("Opening Mind Map Modal");
+    const modal = document.getElementById('mindMapModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '100000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    }
+    switchMindMapTab('create');
+}
+
+window.closeMindMapMode = function() {
+    const modal = document.getElementById('mindMapModal');
+    if (modal) modal.style.display = 'none';
+}
+
+window.switchMindMapTab = function(tab) {
+    const createTab = document.getElementById('mindmapCreateTab');
+    const libraryTab = document.getElementById('mindmapLibraryTab');
+    const btns = document.querySelectorAll('.mindmap-tab-btn');
+    
+    btns.forEach(btn => btn.classList.remove('active'));
+    
+    if (tab === 'create') {
+        if (createTab) createTab.style.display = 'block';
+        if (libraryTab) libraryTab.style.display = 'none';
+        if (btns[0]) btns[0].classList.add('active');
+    } else {
+        if (createTab) createTab.style.display = 'none';
+        if (libraryTab) libraryTab.style.display = 'block';
+        if (btns[1]) btns[1].classList.add('active');
+        loadMindMapLibrary();
+    }
+}
+
+// ================= GENERATE AND DRAW MIND MAP =================
+window.generateAndDrawMindMap = function() {
+    const topic = document.getElementById('mindmapTopicInput').value;
+    if (!topic) {
+        showMindMapToast("Please enter a topic", "error");
+        return;
+    }
+    
+    const progressDiv = document.getElementById('mindmapProgress');
+    const progressFill = document.getElementById('mindmapProgressFill');
+    const progressStatus = document.getElementById('mindmapProgressStatus');
+    const displayDiv = document.getElementById('mindmapDisplay');
+    
+    if (progressDiv) {
+        progressDiv.style.display = 'block';
+        if (progressFill) progressFill.style.width = '0%';
+        if (progressStatus) progressStatus.textContent = 'Generating mind map...';
+    }
+    
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 10;
+        if (progressFill) progressFill.style.width = width + '%';
+        if (width >= 100) clearInterval(interval);
+    }, 150);
+    
+    setTimeout(() => {
+        clearInterval(interval);
+        if (progressFill) progressFill.style.width = '100%';
+        
+        setTimeout(() => {
+            if (progressDiv) progressDiv.style.display = 'none';
+            if (displayDiv) displayDiv.style.display = 'block';
+            
+            const mindMapData = generateSimpleMindMap(topic);
+            
+            currentMindMapData = {
+                id: Date.now(),
+                title: mindMapData.main,
+                data: mindMapData,
+                created_at: new Date().toISOString()
+            };
+            
+            drawSimpleMindMap(mindMapData);
+            showMindMapToast("✅ Mind map generated successfully!");
+            
+        }, 500);
+    }, 2000);
+}
+
+// ================= GENERATE MIND MAP DATA =================
+function generateSimpleMindMap(topic) {
+    const lowerTopic = topic.toLowerCase();
+    
+    // Pre-defined mind maps with CORRECT hierarchical structure
+    const mindMaps = {
+        'machine learning': {
+            main: 'Machine Learning',
+            children: [
+                { name: 'Definition', expanded: true, children: [
+                    { name: 'Subset of Artificial Intelligence', children: [] },
+                    { name: 'Learn from data without explicit programming', children: [] },
+                    { name: 'Improves with experience', children: [] }
+                ]},
+                { name: 'Types of Learning', expanded: true, children: [
+                    { name: 'Supervised Learning', children: [
+                        { name: 'Labeled data', children: [] },
+                        { name: 'Classification', children: [] },
+                        { name: 'Regression', children: [] }
+                    ] },
+                    { name: 'Unsupervised Learning', children: [
+                        { name: 'Unlabeled data', children: [] },
+                        { name: 'Clustering', children: [] },
+                        { name: 'Association', children: [] }
+                    ] },
+                    { name: 'Reinforcement Learning', children: [
+                        { name: 'Reward-based', children: [] },
+                        { name: 'Agent & Environment', children: [] }
+                    ] }
+                ]},
+                { name: 'Applications', expanded: true, children: [
+                    { name: 'Recommendation Systems', children: [] },
+                    { name: 'Fraud Detection', children: [] },
+                    { name: 'Speech Recognition', children: [] },
+                    { name: 'Self-driving Cars', children: [] },
+                    { name: 'Healthcare Diagnostics', children: [] }
+                ]},
+                { name: 'Challenges', expanded: true, children: [
+                    { name: 'Data Privacy', children: [] },
+                    { name: 'Bias in Algorithms', children: [] },
+                    { name: 'High Computational Requirements', children: [] }
+                ]}
+            ]
+        },
+        'turing machine': {
+            main: 'Turing Machine (Unit-5)',
+            children: [
+                { name: 'Introduction', expanded: true, children: [
+                    { name: 'Alan Turing (1936)', children: [] },
+                    { name: 'Theoretical model of computation', children: [] },
+                    { name: 'Comparison of Automata', children: [] }
+                ]},
+                { name: 'TM Components', expanded: true, children: [
+                    { name: 'Q: Finite set of states', children: [] },
+                    { name: 'Σ: Input alphabet', children: [] },
+                    { name: 'Γ: Tape alphabet', children: [] },
+                    { name: 'δ: Transition function', children: [] },
+                    { name: 'q₀: Start state', children: [] },
+                    { name: 'B: Blank symbol', children: [] },
+                    { name: 'F: Final states', children: [] }
+                ]},
+                { name: 'Operations', expanded: true, children: [
+                    { name: 'Read symbol', children: [] },
+                    { name: 'Write/Modify symbol', children: [] },
+                    { name: 'Shift Head (Left/Right/Stay)', children: [] }
+                ]},
+                { name: 'Formal Definition', expanded: false, children: [
+                    { name: '(Q, Σ, Γ, δ, q₀, B, F) - 7-tuple', children: [] }
+                ]},
+                { name: 'Universal Turing Machine', expanded: false, children: [
+                    { name: 'Simulates any Turing Machine', children: [] }
+                ]}
+            ]
+        }
+    };
+    
+    for (const [key, value] of Object.entries(mindMaps)) {
+        if (lowerTopic.includes(key)) {
+            return JSON.parse(JSON.stringify(value));
+        }
+    }
+    
+    // Dynamic mind map for other topics
+    return {
+        main: topic.substring(0, 50),
+        children: [
+            { name: 'Introduction', expanded: true, children: [{ name: 'Basic concepts', children: [] }] },
+            { name: 'Key Concepts', expanded: true, children: [{ name: 'Main ideas', children: [] }] },
+            { name: 'Applications', expanded: true, children: [{ name: 'Real-world uses', children: [] }] },
+            { name: 'Conclusion', expanded: false, children: [{ name: 'Summary', children: [] }] }
+        ]
+    };
+}
+
+function countNodes(node) {
+    let count = 1;
+    if (node.expanded && node.children) {
+        for (const child of node.children) {
+            count += countNodes(child);
+        }
+    }
+    return count;
+}
+
+// ================= DRAW MIND MAP - VERTICAL TREE STYLE =================
+
+function calculateNodePositions(node, nodes, x, y, level, levelWidths) {
+    node.x = x;
+    node.y = y;
+    node.level = level;
+    nodes.push(node);
+    
+    if (!node.expanded || !node.children || node.children.length === 0) return;
+    
+    const childStartY = y + 70;
+    const totalChildren = node.children.length;
+    const levelWidth = levelWidths[level + 1] || 600;
+    const startX = x - (levelWidth / 2);
+    const stepX = levelWidth / (totalChildren + 1);
+    
+    for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const childX = startX + stepX * (i + 1);
+        const childY = childStartY;
+        
+        calculateNodePositions(child, nodes, childX, childY, level + 1, levelWidths);
+    }
+}
+
+function drawNodeBox(ctx, node) {
+    const isRoot = node.level === 0;
+    const hasChildren = node.children && node.children.length > 0;
+    
+    ctx.font = isRoot ? 'bold 15px Arial' : '13px Arial';
+    const textWidth = ctx.measureText(node.name).width;
+    const boxWidth = Math.min(Math.max(170, textWidth + 60), 280);
+    const boxHeight = isRoot ? 48 : 42;
+    
+    // Draw box
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(node.x - boxWidth/2, node.y - boxHeight/2, boxWidth, boxHeight);
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(node.x - boxWidth/2, node.y - boxHeight/2, boxWidth, boxHeight);
+    
+    // Expand/collapse button
+    if (hasChildren) {
+        const btnX = node.x + boxWidth/2 - 18;
+        const btnY = node.y;
+        
+        ctx.fillStyle = '#666666';
+        ctx.beginPath();
+        ctx.arc(btnX, btnY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.expanded ? '−' : '+', btnX, btnY);
+    }
+    
+    // Draw text
+    ctx.fillStyle = '#000000';
+    ctx.font = isRoot ? 'bold 14px Arial' : '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    let displayName = node.name;
+    const maxWidth = boxWidth - 50;
+    if (ctx.measureText(displayName).width > maxWidth) {
+        while (ctx.measureText(displayName + '...').width > maxWidth && displayName.length > 4) {
+            displayName = displayName.slice(0, -1);
+        }
+        displayName += '...';
+    }
+    ctx.fillText(displayName, node.x, node.y);
+}
+
+function drawSimpleMindMap(data) {
+    const canvas = document.getElementById('mindmapCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Calculate canvas size based on node count
+    const rootNode = { expanded: true, children: data.children };
+    const totalNodes = countNodes(rootNode);
+    const maxDepth = getMaxDepth(rootNode);
+    
+    canvas.width = Math.max(1200, totalNodes * 100);
+    canvas.height = Math.max(800, (maxDepth + 1) * 85);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw light grid
+    ctx.strokeStyle = '#e8e8e8';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < canvas.width; i += 50) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(canvas.width, i);
+        ctx.stroke();
+    }
+    
+    // Calculate level widths
+    const levelWidths = {};
+    for (let i = 0; i <= maxDepth; i++) {
+        levelWidths[i] = Math.max(400, canvas.width - (i * 150));
+    }
+    
+    const root = {
+        name: data.main,
+        children: data.children,
+        x: canvas.width / 2,
+        y: 50,
+        level: 0,
+        expanded: true,
+        parent: null
+    };
+    
+    const nodes = [];
+    calculateNodePositions(root, nodes, root.x, root.y, 0, levelWidths);
+    
+    // Set parent references
+    for (let i = 0; i < nodes.length; i++) {
+        for (let j = 0; j < nodes.length; j++) {
+            if (nodes[j].level === nodes[i].level + 1 && 
+                Math.abs(nodes[j].x - nodes[i].x) < 200 && 
+                nodes[j].y > nodes[i].y) {
+                nodes[j].parent = nodes[i];
+                break;
+            }
+        }
+    }
+    
+    // Draw lines
+    for (const node of nodes) {
+        if (node.parent) {
+            ctx.beginPath();
+            ctx.moveTo(node.parent.x, node.parent.y + 24);
+            ctx.lineTo(node.x, node.y - 21);
+            ctx.strokeStyle = '#555555';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+    
+    // Draw horizontal lines between siblings
+    const siblingsByParent = {};
+    for (const node of nodes) {
+        if (node.parent) {
+            const parentId = node.parent.name;
+            if (!siblingsByParent[parentId]) siblingsByParent[parentId] = [];
+            siblingsByParent[parentId].push(node);
+        }
+    }
+    
+    for (const siblings of Object.values(siblingsByParent)) {
+        if (siblings.length > 1) {
+            const firstX = siblings[0].x;
+            const lastX = siblings[siblings.length - 1].x;
+            const y = siblings[0].y;
+            
+            ctx.beginPath();
+            ctx.moveTo(firstX, y);
+            ctx.lineTo(lastX, y);
+            ctx.strokeStyle = '#aaaaaa';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+    
+    // Draw nodes
+    for (const node of nodes) {
+        drawNodeBox(ctx, node);
+    }
+    
+    // Footer
+    ctx.fillStyle = '#cccccc';
+    ctx.font = '10px Arial';
+    ctx.fillText('Cortexa AI Mind Map', canvas.width - 120, canvas.height - 12);
+    
+    window.mindMapNodes = nodes;
+}
+
+function getMaxDepth(node, currentDepth = 1) {
+    if (!node.expanded || !node.children || node.children.length === 0) {
+        return currentDepth;
+    }
+    let maxDepth = currentDepth;
+    for (const child of node.children) {
+        const childDepth = getMaxDepth(child, currentDepth + 1);
+        maxDepth = Math.max(maxDepth, childDepth);
+    }
+    return maxDepth;
+}
+
+// ================= CLICK HANDLER =================
+function setupCanvasClick() {
+    const canvas = document.getElementById('mindmapCanvas');
+    if (!canvas) return;
+    
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        if (window.mindMapNodes) {
+            for (const node of window.mindMapNodes) {
+                const ctx = canvas.getContext('2d');
+                ctx.font = node.level === 0 ? 'bold 15px Arial' : '13px Arial';
+                const textWidth = ctx.measureText(node.name).width;
+                const boxWidth = Math.min(Math.max(170, textWidth + 60), 280);
+                const boxHeight = node.level === 0 ? 48 : 42;
+                
+                const left = node.x - boxWidth/2;
+                const right = node.x + boxWidth/2;
+                const top = node.y - boxHeight/2;
+                const bottom = node.y + boxHeight/2;
+                
+                if (mouseX >= left && mouseX <= right && mouseY >= top && mouseY <= bottom) {
+                    if (node.children && node.children.length > 0) {
+                        const btnX = node.x + boxWidth/2 - 18;
+                        const btnY = node.y;
+                        const isOnButton = Math.hypot(mouseX - btnX, mouseY - btnY) <= 12;
+                        
+                        if (isOnButton) {
+                            node.expanded = !node.expanded;
+                            if (currentMindMapData) {
+                                drawSimpleMindMap(currentMindMapData.data);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    });
+}
+
+// ================= ZOOM & PAN CONTROLS =================
+function applyMindMapZoom() {
+    const canvas = document.getElementById('mindmapCanvas');
+    if (canvas) {
+        canvas.style.transform = `scale(${mindMapZoom}) translate(${mindMapOffsetX}px, ${mindMapOffsetY}px)`;
+        canvas.style.transformOrigin = 'top left';
+        canvas.style.transition = 'transform 0.2s ease';
+    }
+}
+
+window.zoomMindMap = function(direction) {
+    if (direction === 'in') {
+        mindMapZoom = Math.min(mindMapZoom + 0.1, 2);
+    } else {
+        mindMapZoom = Math.max(mindMapZoom - 0.1, 0.5);
+    }
+    applyMindMapZoom();
+    showMindMapToast(`Zoom ${direction === 'in' ? 'in' : 'out'} to ${Math.round(mindMapZoom * 100)}%`);
+}
+
+window.resetMindMapView = function() {
+    mindMapZoom = 1;
+    mindMapOffsetX = 0;
+    mindMapOffsetY = 0;
+    applyMindMapZoom();
+    showMindMapToast('View reset to original size');
+}
+
+window.exportMindMapAsPNG = function() {
+    const canvas = document.getElementById('mindmapCanvas');
+    if (canvas) {
+        const link = document.createElement('a');
+        link.download = `mindmap_${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        showMindMapToast('✅ Mind map exported as PNG!');
+    }
+}
+
+window.exportMindMapAsJSON = function() {
+    if (currentMindMapData) {
+        const blob = new Blob([JSON.stringify(currentMindMapData, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `mindmap_${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showMindMapToast('✅ Mind map exported as JSON!');
+    } else {
+        showMindMapToast('No mind map to export!', 'error');
+    }
+}
+
+window.saveMindMapToLibrary = function() {
+    if (currentMindMapData) {
+        let mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
+        const existingIndex = mindMaps.findIndex(m => m.id === currentMindMapData.id);
+        if (existingIndex !== -1) {
+            mindMaps[existingIndex] = currentMindMapData;
+        } else {
+            mindMaps.unshift(currentMindMapData);
+        }
+        localStorage.setItem('mindMaps', JSON.stringify(mindMaps));
+        showMindMapToast('✅ Mind map saved to library!');
+        loadMindMapLibrary();
+    } else {
+        showMindMapToast('No mind map to save!', 'error');
+    }
+}
+
+window.shareMindMap = function() {
+    if (currentMindMapData) {
+        navigator.clipboard.writeText(`🧠 Mind Map: ${currentMindMapData.title}\nCreated: ${currentMindMapData.created_at}\n\nGenerated by Cortexa AI`);
+        showMindMapToast('✅ Mind map info copied to clipboard!');
+    } else {
+        showMindMapToast('No mind map to share!', 'error');
+    }
+}
+
+// ================= LIBRARY FUNCTIONS =================
+function loadMindMapLibrary() {
+    const mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
+    const libraryDiv = document.getElementById('mindmapLibraryList');
+    if (!libraryDiv) return;
+    
+    if (mindMaps.length === 0) {
+        libraryDiv.innerHTML = '<div class="empty-library">🧠 No mind maps yet. Create your first mind map!</div>';
+        return;
+    }
+    
+    libraryDiv.innerHTML = '';
+    mindMaps.forEach(mindMap => {
+        const date = new Date(mindMap.created_at).toLocaleString();
+        libraryDiv.innerHTML += `
+            <div class="mindmap-library-item">
+                <div class="library-info">
+                    <strong>🧠 ${escapeHtml(mindMap.title)}</strong>
+                    <small>📅 ${date}</small>
+                </div>
+                <div class="library-buttons">
+                    <button onclick="loadMindMapFromLibrary(${mindMap.id})">👁️ Load</button>
+                    <button onclick="deleteMindMapFromLibrary(${mindMap.id})">🗑️ Delete</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+window.loadMindMapFromLibrary = function(id) {
+    const mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
+    const mindMap = mindMaps.find(m => m.id === id);
+    if (mindMap) {
+        currentMindMapData = mindMap;
+        document.getElementById('mindmapDisplay').style.display = 'block';
+        drawSimpleMindMap(mindMap.data);
+        showMindMapToast(`📂 Loaded: ${mindMap.title}`);
+    } else {
+        showMindMapToast('Mind map not found!', 'error');
+    }
+}
+
+window.deleteMindMapFromLibrary = function(id) {
+    if (confirm('Delete this mind map permanently?')) {
+        let mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
+        mindMaps = mindMaps.filter(m => m.id !== id);
+        localStorage.setItem('mindMaps', JSON.stringify(mindMaps));
+        loadMindMapLibrary();
+        showMindMapToast('✅ Mind map deleted');
+    }
+}
+
+// ================= DRAG FUNCTIONALITY =================
+function setupMindMapDrag() {
+    const canvas = document.getElementById('mindmapCanvas');
+    if (!canvas) return;
+    
+    canvas.addEventListener('mousedown', (e) => {
+        isDraggingMindMap = true;
+        dragStartX = e.clientX - mindMapOffsetX;
+        dragStartY = e.clientY - mindMapOffsetY;
+        canvas.style.cursor = 'grabbing';
+    });
+    
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingMindMap) {
+            mindMapOffsetX = e.clientX - dragStartX;
+            mindMapOffsetY = e.clientY - dragStartY;
+            applyMindMapZoom();
+        }
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDraggingMindMap = false;
+        if (canvas) canvas.style.cursor = 'grab';
+    });
+}
+
+// ================= UTILITIES =================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showMindMapToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = 'video-toast';
     toast.style.cssText = `
         position: fixed;
         bottom: 100px;
         left: 50%;
         transform: translateX(-50%);
-        background: linear-gradient(90deg, #a855f7, #6366f1);
+        background: ${type === 'error' ? '#ef4444' : 'linear-gradient(90deg, #a855f7, #6366f1)'};
         color: white;
         padding: 10px 20px;
         border-radius: 25px;
         font-size: 14px;
-        z-index: 30001;
+        z-index: 35001;
         animation: fadeInOut 3s ease;
-        white-space: nowrap;
     `;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        if (toast) toast.remove();
-    }, 3000);
+    setTimeout(() => toast.remove(), 3000);
 }
 
-// Add CSS animation for toast
+// Add CSS animation
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeInOut {
@@ -1095,783 +1542,678 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ================= UPDATED YOUTUBE INTEGRATION (Opens on YouTube.com) =================
-window.fetchYouTubeVideo = async function() {
-    const url = document.getElementById('youtubeUrl').value;
-    if (!url) {
-        showToast('Please enter a YouTube URL');
-        return;
-    }
+// ================= INITIALIZATION =================
+document.addEventListener('DOMContentLoaded', () => {
+    setupMindMapDrag();
+    setupCanvasClick();
+    loadMindMapLibrary();
     
-    const infoDiv = document.getElementById('youtubeVideoInfo');
-    infoDiv.innerHTML = '<div class="loading-spinner"></div> Fetching video info...';
-    infoDiv.style.display = 'block';
-    
-    let videoId = '';
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=)([^&]+)/,
-        /(?:youtu\.be\/)([^?]+)/,
-        /(?:youtube\.com\/embed\/)([^?]+)/
-    ];
-    
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) { 
-            videoId = match[1]; 
-            break; 
-        }
-    }
-    
-    if (!videoId) {
-        infoDiv.innerHTML = '<span style="color: #ef4444;">❌ Invalid YouTube URL</span>';
-        return;
-    }
-    
-    try {
-        const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-        const response = await fetch(oembedUrl);
-        const data = await response.json();
-        
-        youtubeVideoInfo = {
-            id: videoId,
-            title: data.title,
-            channel: data.author_name,
-            thumbnail: data.thumbnail_url,
-            youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`
-        };
-        
-        // Display video info with OPEN ON YOUTUBE button (not embedded player)
-        infoDiv.innerHTML = `
-            <div style="background: rgba(168,85,247,0.1); padding: 15px; border-radius: 10px;">
-                <img src="${youtubeVideoInfo.thumbnail}" style="width: 100%; border-radius: 10px; margin-bottom: 10px;">
-                <h4>${escapeHtml(youtubeVideoInfo.title)}</h4>
-                <p>📺 ${escapeHtml(youtubeVideoInfo.channel)}</p>
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button onclick="openYouTubeVideo()" style="flex: 1; padding: 12px; background: linear-gradient(90deg,#ff0000,#cc0000); border: none; border-radius: 8px; color: white; cursor: pointer;">
-                        ▶️ Watch on YouTube.com
-                    </button>
-                    <button onclick="copyYouTubeUrl()" style="flex: 1; padding: 12px; background: rgba(168,85,247,0.3); border: 1px solid rgba(168,85,247,0.5); border-radius: 8px; color: white; cursor: pointer;">
-                        📋 Copy URL
-                    </button>
-                </div>
-            </div>
-        `;
-        document.getElementById('youtubeOptions').style.display = 'block';
-        
-    } catch (err) {
-        infoDiv.innerHTML = '<span style="color: #ef4444;">❌ Error fetching video info</span>';
-    }
-}
+    const canvas = document.getElementById('mindmapCanvas');
+    if (canvas) canvas.style.cursor = 'grab';
+});
 
-// Open YouTube video directly on YouTube.com (not in Cortexa)
-window.openYouTubeVideo = function() {
-    if (youtubeVideoInfo && youtubeVideoInfo.youtubeUrl) {
-        window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        showToast('🎬 Opening YouTube video in new tab...');
-    } else {
-        showToast('❌ No video selected. Fetch a video first!');
-    }
-}
 
-window.copyYouTubeUrl = function() {
-    if (youtubeVideoInfo && youtubeVideoInfo.youtubeUrl) {
-        navigator.clipboard.writeText(youtubeVideoInfo.youtubeUrl);
-        showToast('✅ YouTube URL copied to clipboard!');
-    } else {
-        showToast('❌ No video URL to copy');
-    }
-}
+// ================= REPORT MODE (FULL FEATURED) =================
 
-window.searchYouTube = async function() {
-    const query = document.getElementById('youtubeSearchQuery').value;
-    if (!query) {
-        showToast('Please enter a search query');
-        return;
-    }
-    
-    const resultsDiv = document.getElementById('youtubeResults');
-    resultsDiv.innerHTML = '<div class="loading-spinner"></div> Searching...';
-    
-    if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === 'AIzaSyD9Zw2nSmE7dkzNN5JtaiXKdQA9Rctu9LI') {
-        resultsDiv.innerHTML = `
-            <div style="background: rgba(168,85,247,0.1); padding: 20px; border-radius: 10px; text-align: center;">
-                <p>⚠️ YouTube API key not configured!</p>
-                <p style="font-size: 12px; margin-top: 10px;">Add your YouTube Data API v3 key to use search.</p>
-                <p style="font-size: 12px;">For now, you can still use direct YouTube URLs above.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    try {
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<div style="background: rgba(239,68,68,0.1); padding: 20px; border-radius: 10px; text-align: center;">
-                <p>❌ API Error: ${data.error.message}</p>
-            </div>`;
-            return;
-        }
-        
-        if (data.items && data.items.length > 0) {
-            resultsDiv.innerHTML = `<h3>📺 Search Results for "${escapeHtml(query)}":</h3>
-                <p style="font-size: 12px; color: #a1a1aa; margin-bottom: 10px;">💡 Click any video to open it on YouTube</p>`;
-            
-            data.items.forEach(item => {
-                const videoId = item.id.videoId;
-                const title = item.snippet.title;
-                const channel = item.snippet.channelTitle;
-                const thumbnail = item.snippet.thumbnails.medium.url;
-                
-                resultsDiv.innerHTML += `
-                    <div class="youtube-video-item" onclick="openYouTubeVideoById('${videoId}')" style="display: flex; gap: 15px; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; transition: 0.2s;">
-                        <img src="${thumbnail}" style="width: 120px; border-radius: 8px;">
-                        <div>
-                            <strong>${escapeHtml(title)}</strong><br>
-                            <span style="font-size: 12px; color: #a1a1aa;">${escapeHtml(channel)}</span>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            resultsDiv.innerHTML = '<span style="color: #a1a1aa;">No results found</span>';
-        }
-    } catch (err) {
-        console.error(err);
-        resultsDiv.innerHTML = '<span style="color: #ef4444;">❌ Error searching YouTube</span>';
-    }
-}
 
-// Open YouTube video by ID directly on YouTube
-window.openYouTubeVideoById = function(videoId) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    window.open(youtubeUrl, '_blank');
-    showToast('🎬 Opening video on YouTube...');
-}
-
-window.selectYouTubeVideo = function(videoId) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    window.open(youtubeUrl, '_blank');
-    showToast('🎬 Opening video on YouTube...');
-}
-
-window.createVideoFromYouTube = function(type) {
-    if (!youtubeVideoInfo) {
-        showToast('Please fetch a YouTube video first!');
-        return;
-    }
-    
-    // For summary/deepdive - use the content to generate educational video
-    if (type === 'summary' || type === 'deepdive') {
-        document.getElementById('videoProgress').style.display = 'block';
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            document.getElementById('videoProgressFill').style.width = progress + '%';
-            if (progress >= 100) {
-                clearInterval(interval);
-                document.getElementById('videoProgress').style.display = 'none';
-                document.getElementById('videoPlayerContainer').style.display = 'block';
-                
-                generateEducationalVideo(youtubeVideoInfo.title);
-                
-                document.getElementById('videoScriptDisplay').innerHTML = `
-                    <h4>✅ ${type === 'summary' ? 'Summary Video' : 'Educational Deep Dive'} Created!</h4>
-                    <p><strong>Source:</strong> ${escapeHtml(youtubeVideoInfo.title)}</p>
-                    <p><strong>Channel:</strong> ${escapeHtml(youtubeVideoInfo.channel)}</p>
-                    <hr>
-                    <p>💡 You can now watch the original video on YouTube by clicking the link above.</p>
-                    <p>📚 This educational content was generated based on the video's topic.</p>
-                `;
-                
-                currentVideoData = {
-                    title: `${type === 'summary' ? 'Summary' : 'Deep Dive'} - ${youtubeVideoInfo.title}`,
-                    video_url: 'canvas-stream',
-                    duration: '4 minutes',
-                    created_at: new Date().toISOString()
-                };
-                saveVideoToLibrary(currentVideoData);
-            }
-        }, 300);
-    } else if (type === 'shorts') {
-        showToast('📱 Opening YouTube to create Shorts...');
-        if (youtubeVideoInfo) {
-            window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        }
-    }
-}
-
-window.extractYouTubeTranscript = function() {
-    if (!youtubeVideoInfo) {
-        showToast('Please fetch a YouTube video first!');
-        return;
-    }
-    
-    document.getElementById('videoScriptDisplay').innerHTML = `
-        <h4>📝 Video Information</h4>
-        <p><strong>Title:</strong> ${escapeHtml(youtubeVideoInfo.title)}</p>
-        <p><strong>Channel:</strong> ${escapeHtml(youtubeVideoInfo.channel)}</p>
-        <hr>
-        <p>🔗 <strong>Watch the video on YouTube:</strong></p>
-        <a href="${youtubeVideoInfo.youtubeUrl}" target="_blank" style="color: #a855f7;">${youtubeVideoInfo.youtubeUrl}</a>
-        <hr>
-        <p>💡 For full transcript, you can use YouTube's built-in transcript feature on the video page.</p>
-    `;
-    document.getElementById('videoScriptDisplay').style.display = 'block';
-}
-
-window.translateYouTubeVideo = function() {
-    if (youtubeVideoInfo) {
-        window.open(youtubeVideoInfo.youtubeUrl, '_blank');
-        showToast('🌐 Open the video on YouTube and use captions/translation features there.');
-    } else {
-        showToast('❌ Please fetch a video first');
-    }
-}
-
-// ================= REST OF THE FUNCTIONS (keep your existing ones) =================
-window.uploadVideoDocument = function() {
-    const fileInput = document.getElementById('videoDocumentInput');
-    if (!fileInput.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        videoDocumentContent = e.target.result;
-        document.getElementById('documentStatus').innerHTML = '<span style="color: #22c55e;">✅ Document loaded!</span>';
-        showToast('✅ Document loaded! You can now generate a video.');
-    };
-    reader.readAsText(fileInput.files[0]);
-}
-
-function getVideoContent() {
-    const source = document.getElementById('videoContentSource').value;
-    if (source === 'text') return document.getElementById('videoTopicInput').value;
-    if (source === 'document' && videoDocumentContent) return videoDocumentContent;
-    if (source === 'chat') {
-        const topicInput = document.getElementById('videoTopicInput');
-        return topicInput ? topicInput.value : '';
-    }
-    if (source === 'voice') {
-        const topicInput = document.getElementById('videoTopicInput');
-        return topicInput ? topicInput.value : '';
-    }
-    return null;
-}
-
-window.previewVideoScript = async function() {
-    const topic = getVideoContent();
-    if (!topic) {
-        showToast('Please enter a topic or upload content!');
-        return;
-    }
-    
-    const scriptDisplay = document.getElementById('videoScriptDisplay');
-    scriptDisplay.innerHTML = '<div class="loading-spinner"></div> Generating educational script...';
-    scriptDisplay.style.display = 'block';
-    
-    const duration = document.getElementById('videoDuration').value;
-    const minutes = duration === 'short' ? 2 : duration === 'medium' ? 4 : 8;
-    
-    const script = generateEducationalScript(topic, minutes);
-    scriptDisplay.innerHTML = `<h4>📝 Educational Video Script: "${topic.substring(0, 100)}"</h4>
-        <pre style="white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">${script}</pre>`;
-}
-
-function generateEducationalScript(topic, minutes) {
-    return `🎓 EDUCATIONAL VIDEO: ${topic.substring(0, 50).toUpperCase()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[0:00 - Introduction]
-Welcome to this educational video about ${topic}!
-
-[0:30 - What is it?]
-Let's explore the fundamentals of ${topic} and why it matters.
-
-[1:30 - Key Concepts]
-• Core principles to understand
-• Important terminology explained
-• How it works in practice
-
-[2:30 - Examples & Applications]
-Real-world applications and practical examples.
-
-[3:30 - Summary & Takeaways]
-Key points to remember:
-1. Main concept summary
-2. Important facts
-3. Next steps for learning
-
-[4:30 - Conclusion]
-Thanks for watching! Continue your learning journey.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Estimated Duration: ${minutes} minutes`;
-}
-
-window.generateVideo = async function() {
-    const topic = getVideoContent();
-    if (!topic) {
-        showToast('Please enter a topic or content!');
-        return;
-    }
-    
-    document.getElementById('videoProgress').style.display = 'block';
-    document.getElementById('videoProgressFill').style.width = '0%';
-    
-    const steps = ['Analyzing topic...', 'Creating educational content...', 'Generating visuals...', 'Adding narration...', 'Rendering video...', 'Finalizing...'];
-    let stepIndex = 0;
-    let progress = 0;
-    
-    videoGenerationInterval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress > 100) progress = 100;
-        document.getElementById('videoProgressFill').style.width = progress + '%';
-        
-        if (progress > (stepIndex + 1) * 16 && stepIndex < steps.length - 1) {
-            stepIndex++;
-            document.getElementById('progressStatus').textContent = steps[stepIndex];
-        }
-        
-        if (progress >= 100) {
-            clearInterval(videoGenerationInterval);
-            finishVideoGeneration(topic);
-        }
-    }, 800);
-}
-
-function finishVideoGeneration(topic) {
-    document.getElementById('videoProgress').style.display = 'none';
-    document.getElementById('videoPlayerContainer').style.display = 'block';
-    
-    generateEducationalVideo(topic);
-    
-    const script = generateEducationalScript(topic, 4);
-    document.getElementById('videoScriptDisplay').innerHTML = `
-        <h4>✅ Video Generated Successfully!</h4>
-        <p><strong>Topic:</strong> ${topic.substring(0, 100)}</p>
-        <p><strong>Duration:</strong> ${document.getElementById('videoDuration').value}</p>
-        <p><strong>Style:</strong> ${document.getElementById('videoStyle').value}</p>
-        <hr>
-        <h4>📝 Video Script:</h4>
-        <pre style="white-space: pre-wrap;">${script}</pre>
-    `;
-    
-    currentVideoData = {
-        title: topic.substring(0, 50),
-        video_url: 'canvas-stream',
-        duration: document.getElementById('videoDuration').value,
-        created_at: new Date().toISOString()
-    };
-    
-    saveVideoToLibrary(currentVideoData);
-}
-
-function generateEducationalVideo(topic) {
-    const videoCanvas = document.getElementById('generatedVideo');
-    videoCanvas.style.display = 'block';
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = 854;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    
-    const contentSlides = [
-        { title: `📚 Learning: ${topic.substring(0, 40)}`, content: `Exploring the fascinating world of ${topic}`, duration: 3000 },
-        { title: `🎯 Key Concepts`, content: `• Core principles\n• Important terminology\n• Fundamental ideas`, duration: 4000 },
-        { title: `💡 Practical Applications`, content: `${topic} is used in:\n• Real-world scenarios\n• Industry solutions\n• Everyday technology`, duration: 4000 },
-        { title: `📊 Summary`, content: `You've learned key insights about ${topic}!\nContinue exploring to master this subject.`, duration: 3000 }
-    ];
-    
-    let currentSlide = 0;
-    let startTime = Date.now();
-    
-    function drawSlide() {
-        const slide = contentSlides[currentSlide];
-        ctx.fillStyle = '#0A0717';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#1a162b');
-        gradient.addColorStop(1, '#0A0717');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#a855f7';
-        ctx.font = 'bold 32px Poppins';
-        ctx.textAlign = 'center';
-        ctx.fillText(slide.title, canvas.width / 2, 80);
-        
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '20px Poppins';
-        const lines = slide.content.split('\n');
-        let y = 160;
-        lines.forEach(line => {
-            ctx.fillText(line, canvas.width / 2, y);
-            y += 45;
-        });
-        
-        ctx.fillStyle = '#6366f1';
-        ctx.fillRect(0, canvas.height - 5, (canvas.width / contentSlides.length) * (currentSlide + 1), 5);
-    }
-    
-    function animate() {
-        const elapsed = Date.now() - startTime;
-        
-        if (elapsed >= contentSlides[currentSlide].duration) {
-            currentSlide++;
-            startTime = Date.now();
-            if (currentSlide >= contentSlides.length) {
-                currentSlide = 0;
-                startTime = Date.now();
-            }
-        }
-        drawSlide();
-        requestAnimationFrame(animate);
-    }
-    
-    animate();
-    
-    const stream = canvas.captureStream(30);
-    videoCanvas.srcObject = stream;
-    videoCanvas.play().catch(e => console.log('Auto-play prevented'));
-    
-    window.activeVideoCanvas = canvas;
-    window.activeVideoStream = stream;
-}
-
-// Keep your existing library functions
-function saveVideoToLibrary(videoData) {
-    let videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    videos.unshift({
-        id: Date.now(),
-        title: videoData.title,
-        url: videoData.video_url,
-        duration: videoData.duration,
-        created_at: videoData.created_at
-    });
-    localStorage.setItem('generatedVideos', JSON.stringify(videos));
-    loadVideoLibrary();
-}
-
-function loadVideoLibrary() {
-    const videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    const libraryDiv = document.getElementById('videoLibraryList');
-    
-    if (videos.length === 0) {
-        libraryDiv.innerHTML = '<div class="empty-library">🎬 No videos yet. Create your first video!</div>';
-        return;
-    }
-    
-    libraryDiv.innerHTML = '';
-    videos.forEach(video => {
-        libraryDiv.innerHTML += `
-            <div class="video-library-item">
-                <div>
-                    <strong>📹 ${escapeHtml(video.title.substring(0, 50))}</strong><br>
-                    <small>📅 ${new Date(video.created_at).toLocaleString()}</small><br>
-                    <small>⏱️ ${video.duration}</small>
-                </div>
-                <div>
-                    <button onclick="replayVideoFromLibrary(${video.id})">▶️ Play</button>
-                    <button onclick="deleteVideoFromLibrary(${video.id})">🗑️ Delete</button>
-                </div>
-            </div>
-        `;
-    });
-}
-
-window.replayVideoFromLibrary = function(id) {
-    const videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-    const video = videos.find(v => v.id == id);
-    if (video) {
-        document.getElementById('videoPlayerContainer').style.display = 'block';
-        generateEducationalVideo(video.title);
-    }
-}
-
-window.deleteVideoFromLibrary = function(id) {
-    if (confirm('Delete this video?')) {
-        let videos = JSON.parse(localStorage.getItem('generatedVideos')) || [];
-        videos = videos.filter(v => v.id !== id);
-        localStorage.setItem('generatedVideos', JSON.stringify(videos));
-        loadVideoLibrary();
-        showToast('✅ Video deleted');
-    }
-}
-
-// Export functions
-window.downloadVideo = function() { showToast('📹 Right-click on the video player to save'); }
-window.shareVideo = function() { 
-    if (currentVideoData) {
-        navigator.clipboard.writeText(`Check out this video: ${currentVideoData.title}`);
-        showToast('✅ Video info copied!');
-    }
-}
-window.uploadToYouTube = function() { showToast('📤 YouTube upload feature coming soon!'); }
-window.saveVideoToLibrary = function() {
-    if (currentVideoData) {
-        saveVideoToLibrary(currentVideoData);
-        showToast('✅ Video saved to library!');
-    }
-}
-
-// ================= REPORT MODULE (COMPLETE WORKING - SIMPLIFIED) =================
-console.log("Loading Report Module...");
-
-let currentReport = null;
-
-// ================= OPEN/CLOSE =================
 window.openReportMode = function() {
-    console.log("Opening Report Modal");
     const modal = document.getElementById('reportModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
+        modal.style.zIndex = '10000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+    }
 }
 
 window.closeReportMode = function() {
     const modal = document.getElementById('reportModal');
     if (modal) modal.style.display = 'none';
-    const displayDiv = document.getElementById('reportDisplay');
-    if (displayDiv) displayDiv.style.display = 'none';
 }
 
-// ================= GENERATE REPORT =================
-window.generateReport = function() {
-    console.log("Generate Report clicked");
-    
-    const input = document.getElementById('reportTopicInput');
-    if (!input) {
-        alert("Input field not found!");
+window.generateReport = async function() {
+    const topic = document.getElementById('reportTopicInput').value;
+    if (!topic) {
+        showToast("Please enter a topic", "error");
         return;
     }
     
-    let content = input.value.trim();
-    if (!content) {
-        alert("❌ Please enter content to generate report!");
-        return;
-    }
+    // Get format
+    const format = document.getElementById('reportFormat')?.value || 'PDF Document';
+    
+    // Get selected report options
+    const includeCharts = document.getElementById('includeCharts')?.checked || false;
+    const includeTables = document.getElementById('includeTables')?.checked || false;
+    const includeExecutive = document.getElementById('includeExecutive')?.checked || true;
+    const includeRecommendations = document.getElementById('includeRecommendations')?.checked || true;
+    const includeAppendix = document.getElementById('includeAppendix')?.checked || false;
     
     const progressDiv = document.getElementById('reportProgress');
-    if (progressDiv) progressDiv.style.display = 'block';
-    
-    const includeCharts = document.getElementById('includeCharts').checked;
-    const includeTables = document.getElementById('includeTables').checked;
-    const includeSummary = document.getElementById('includeSummary').checked;
-    const includeRecommendations = document.getElementById('includeRecommendations').checked;
-    const includeAppendix = document.getElementById('includeAppendix').checked;
-    
-    let progress = 0;
     const progressFill = document.getElementById('reportProgressFill');
-    const progressStatus = document.getElementById('reportProgressStatus');
+    const displayDiv = document.getElementById('reportDisplay');
+    const contentDiv = document.getElementById('reportContent');
     
+    if (progressDiv) {
+        progressDiv.style.display = 'block';
+        progressDiv.innerHTML = `
+            <div class="progress-bar">
+                <div id="reportProgressFill" class="progress-fill"></div>
+            </div>
+            <p class="generating-text">📊 Generating comprehensive report on "${topic.substring(0, 50)}"...</p>
+        `;
+    }
+    
+    let width = 0;
     const interval = setInterval(() => {
-        progress += Math.random() * 20;
-        if (progress > 100) progress = 100;
-        if (progressFill) progressFill.style.width = progress + '%';
-        if (progressStatus && progress < 100) {
-            const steps = ['Analyzing content...', 'Structuring report...', 'Writing sections...', 'Formatting...'];
-            const stepIndex = Math.floor(progress / 25);
-            if (stepIndex < steps.length) progressStatus.textContent = steps[stepIndex];
+        width += 10;
+        if (progressFill) progressFill.style.width = width + '%';
+    }, 200);
+    
+    try {
+        let prompt = `Generate a comprehensive, professional report about "${topic}".
+
+The report should include:`;
+
+        if (includeExecutive) prompt += `\n- Executive Summary`;
+        prompt += `\n- Introduction`;
+        prompt += `\n- Key Findings (at least 5 points with detailed explanations)`;
+        prompt += `\n- Detailed Analysis`;
+        if (includeCharts) prompt += `\n- Charts and Graphs Analysis (describe what charts would show)`;
+        if (includeTables) prompt += `\n- Data Tables (create relevant data tables)`;
+        prompt += `\n- Challenges and Opportunities`;
+        if (includeRecommendations) prompt += `\n- Recommendations (at least 3 actionable recommendations)`;
+        prompt += `\n- Conclusion`;
+        if (includeAppendix) prompt += `\n- Appendix with References and Sources`;
+
+        prompt += `\n\nFormat the report with proper headings (## for main sections), subheadings (### for subsections), and bullet points.
+Make it professional, well-structured, data-driven, and suitable for business/academic audience.
+Use markdown formatting.`;
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: prompt, document_content: null, audio: false })
+        });
+        
+        const data = await response.json();
+        let reportContent = data.response || "Failed to generate report.";
+        
+        // Format the report with proper HTML styling
+        reportContent = reportContent.replace(/## (.*?)$/gm, '<h2>$1</h2>');
+        reportContent = reportContent.replace(/### (.*?)$/gm, '<h3>$1</h3>');
+        reportContent = reportContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        reportContent = reportContent.replace(/^- (.*?)$/gm, '<li>$1</li>');
+        reportContent = reportContent.replace(/\n/g, '<br>');
+        
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (displayDiv) displayDiv.style.display = 'block';
+        
+        // Store report data for later use
+        window.currentReport = {
+            topic: topic,
+            content: reportContent,
+            rawContent: data.response,
+            format: format,
+            date: new Date().toLocaleString(),
+            options: { includeCharts, includeTables, includeExecutive, includeRecommendations, includeAppendix }
+        };
+        
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="report-container" id="reportContainer">
+                    <div class="report-title-section">
+                        <h1>📊 ${escapeHtml(topic)}</h1>
+                        <div class="report-meta">
+                            <span>📅 Generated: ${new Date().toLocaleString()}</span>
+                            <span>📄 Format: ${format}</span>
+                            <span>🤖 Generated by Cortexa AI</span>
+                        </div>
+                    </div>
+                    <div class="report-content" id="reportContentText">
+                        ${reportContent}
+                    </div>
+                    <div class="report-footer">
+                        <p>© ${new Date().getFullYear()} Cortexa AI Report Generator - All Rights Reserved</p>
+                    </div>
+                </div>
+            `;
         }
-        if (progress >= 100) {
-            clearInterval(interval);
-            
-            const reportTitle = extractTitleFromInput(content);
-            const reportHtml = generateReportHTML(content, reportTitle, {
-                includeCharts, includeTables, includeSummary, includeRecommendations, includeAppendix
-            });
-            
-            if (progressDiv) progressDiv.style.display = 'none';
-            const displayDiv = document.getElementById('reportDisplay');
-            if (displayDiv) displayDiv.style.display = 'block';
-            
-            const reportContent = document.getElementById('reportContent');
-            if (reportContent) reportContent.innerHTML = reportHtml;
-            
-            currentReport = {
-                id: Date.now(),
-                title: reportTitle,
-                content: reportHtml,
-                created_at: new Date().toISOString()
-            };
-            
-            showReportToast("✅ Report generated successfully!");
-        }
-    }, 300);
+        
+        showToast("✅ Report generated successfully!");
+        
+    } catch (error) {
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        console.error('Report error:', error);
+        showToast("Error generating report", "error");
+    }
 }
 
-function extractTitleFromInput(content) {
-    const lines = content.split('\n');
-    for (let line of lines.slice(0, 5)) {
-        let cleanLine = line.trim();
-        cleanLine = cleanLine.replace(/^title:\s*/i, '');
-        cleanLine = cleanLine.replace(/^#\s*/i, '');
-        if (cleanLine.length > 10 && cleanLine.length < 100) {
-            return cleanLine.substring(0, 70);
-        }
-    }
-    return "Comprehensive Report";
-}
-
-function generateReportHTML(content, title, options) {
-    const sentences = content.split(/[.!?\n]+/).filter(s => s.trim().length > 15);
-    
-    let html = `<div style="text-align: center; margin-bottom: 30px;">`;
-    html += `<h1 style="color: #a855f7; font-size: 32px; margin-bottom: 15px;">${escapeHtml(title)}</h1>`;
-    html += `<div style="width: 60px; height: 3px; background: linear-gradient(90deg,#a855f7,#6366f1); margin: 0 auto 15px auto;"></div>`;
-    html += `<p style="color: #a1a1aa; font-size: 12px;">Generated: ${new Date().toLocaleString()}</p>`;
-    html += `</div>`;
-    
-    if (options.includeSummary) {
-        html += `<div style="background: rgba(168,85,247,0.08); padding: 20px; border-radius: 12px; margin-bottom: 25px;">`;
-        html += `<h2 style="color: #a855f7; margin-bottom: 12px;">📋 Executive Summary</h2>`;
-        html += `<p>${sentences[0] || 'This report provides a comprehensive analysis.'}</p>`;
-        html += `</div>`;
-    }
-    
-    html += `<h2 style="color: #6366f1; margin-top: 20px; margin-bottom: 12px;">1. Introduction</h2>`;
-    html += `<p>${sentences[0] || title}</p>`;
-    if (sentences[1]) html += `<p>${escapeHtml(sentences[1].substring(0, 200))}</p>`;
-    
-    html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">2. Key Findings</h2>`;
-    html += `<ul style="line-height: 1.8;">`;
-    for (let i = 1; i < Math.min(sentences.length, 5); i++) {
-        if (sentences[i] && sentences[i].length > 10) {
-            html += `<li><strong>Finding ${i}:</strong> ${escapeHtml(sentences[i].substring(0, 150))}</li>`;
-        }
-    }
-    html += `</ul>`;
-    
-    html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">3. Detailed Analysis</h2>`;
-    for (let i = 2; i < Math.min(sentences.length, 5); i++) {
-        if (sentences[i] && sentences[i].length > 20) {
-            html += `<p style="margin-bottom: 12px;">• ${escapeHtml(sentences[i].substring(0, 200))}</p>`;
-        }
-    }
-    
-    if (options.includeTables) {
-        html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">4. Data Summary</h2>`;
-        html += `<table style="width:100%; border-collapse: collapse;">`;
-        html += `<thead><tr style="background: rgba(168,85,247,0.15);">`;
-        html += `<th style="border: 1px solid #a855f7; padding: 10px;">Category</th><th>Value</th><th>Status</th></tr></thead><tbody>`;
-        html += `<tr><td style="border:1px solid #333; padding:8px;">Primary Metric</td><td>92.5%</td><td style="color:#22c55e;">✅ On Track</td></tr>`;
-        html += `<tr><td style="border:1px solid #333; padding:8px;">Secondary Metric</td><td>87.3%</td><td style="color:#fbbf24;">⚠️ Needs Review</td></tr>`;
-        html += `</tbody></table>`;
-    }
-    
-    if (options.includeCharts) {
-        html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">5. Performance Metrics</h2>`;
-        html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 15px 0;">`;
-        html += `<div style="background: rgba(168,85,247,0.08); padding: 15px; border-radius: 10px; text-align: center;"><strong>📊 Metric A</strong><br><span style="font-size: 22px;">92%</span></div>`;
-        html += `<div style="background: rgba(168,85,247,0.08); padding: 15px; border-radius: 10px; text-align: center;"><strong>📈 Metric B</strong><br><span style="font-size: 22px;">87%</span></div>`;
-        html += `<div style="background: rgba(168,85,247,0.08); padding: 15px; border-radius: 10px; text-align: center;"><strong>🎯 Metric C</strong><br><span style="font-size: 22px;">94%</span></div>`;
-        html += `</div>`;
-    }
-    
-    if (options.includeRecommendations) {
-        html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">6. Recommendations</h2>`;
-        html += `<ul><li>Optimize existing processes for better efficiency</li><li>Implement regular monitoring and reporting</li><li>Invest in training and skill development</li></ul>`;
-    }
-    
-    html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">7. Conclusion</h2>`;
-    if (sentences.length > 0) {
-        html += `<p>${escapeHtml(sentences[sentences.length-1].substring(0, 300))}</p>`;
-    }
-    
-    if (options.includeAppendix) {
-        html += `<h2 style="color: #6366f1; margin-top: 25px; margin-bottom: 12px;">📎 Appendix</h2>`;
-        html += `<p><strong>Sources:</strong> User-provided content</p><p><strong>Methodology:</strong> AI-powered analysis</p>`;
-    }
-    
-    html += `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; color: #a1a1aa; font-size: 11px;">`;
-    html += `<p>Generated by Cortexa AI Report Generator</p></div>`;
-    
-    return html;
-}
-
-// ================= REPORT TOOLBAR FUNCTIONS =================
+// Download Report as PDF
 window.downloadReportAsPDF = function() {
-    if (!currentReport) { showReportToast("❌ No report to download"); return; }
-    const content = document.getElementById('reportContent').innerHTML;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>${currentReport.title}</title>
-        <style>body{font-family:Arial; padding:40px; max-width:900px; margin:auto;} h1{color:#a855f7;} table{border-collapse:collapse; width:100%;} th,td{border:1px solid #ddd; padding:8px;}</style>
-        </head><body>${content}</body></html>`);
-    win.document.close();
-    win.print();
-    showReportToast("📄 PDF generation started");
+    const reportContainer = document.getElementById('reportContainer');
+    if (!reportContainer) {
+        showToast("No report to download! Generate a report first.", "error");
+        return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>${window.currentReport?.topic || 'Report'} - Cortexa AI</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        padding: 40px;
+                        max-width: 900px;
+                        margin: 0 auto;
+                        line-height: 1.6;
+                    }
+                    .report-title-section {
+                        text-align: center;
+                        margin-bottom: 40px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid #667eea;
+                    }
+                    .report-title-section h1 {
+                        color: #667eea;
+                        margin-bottom: 10px;
+                    }
+                    .report-meta {
+                        color: #666;
+                        font-size: 12px;
+                    }
+                    .report-content h2 {
+                        color: #667eea;
+                        margin-top: 30px;
+                        border-left: 4px solid #667eea;
+                        padding-left: 15px;
+                    }
+                    .report-content h3 {
+                        color: #764ba2;
+                        margin-top: 20px;
+                    }
+                    .report-content li {
+                        margin: 8px 0;
+                    }
+                    .report-footer {
+                        margin-top: 50px;
+                        padding-top: 20px;
+                        border-top: 1px solid #ddd;
+                        text-align: center;
+                        font-size: 11px;
+                        color: #999;
+                    }
+                    button {
+                        display: none;
+                    }
+                </style>
+            </head>
+            <body>
+                ${reportContainer.outerHTML}
+            </body>
+        </html>
+    `);
+    printWindow.print();
+    printWindow.close();
+    showToast("📄 Report sent to printer (save as PDF)");
+}
+
+// Download Report as DOCX
+window.downloadReportAsDOCX = function() {
+    if (!window.currentReport) {
+        showToast("No report to download! Generate a report first.", "error");
+        return;
+    }
+    
+    const reportContent = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
+    if (!reportContent) {
+        showToast("No content to download", "error");
+        return;
+    }
+    
+    const docContent = `
+${window.currentReport.topic}
+${"=".repeat(50)}
+
+Generated on: ${window.currentReport.date}
+Format: ${window.currentReport.format}
+
+${reportContent}
+
+${"=".repeat(50)}
+Generated by Cortexa AI Report Generator
+    `;
+    
+    const blob = new Blob([docContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${window.currentReport.topic.replace(/[^a-z0-9]/gi, '_')}_report.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("📄 Report downloaded as DOCX!");
+}
+
+// Copy Report to Clipboard
+window.copyReportToClipboard = function() {
+    if (!window.currentReport) {
+        showToast("No report to copy! Generate a report first.", "error");
+        return;
+    }
+    
+    const reportText = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
+    if (reportText) {
+        navigator.clipboard.writeText(reportText).then(() => {
+            showToast("📋 Report copied to clipboard!");
+        }).catch(() => {
+            showToast("Failed to copy", "error");
+        });
+    } else {
+        showToast("No content to copy", "error");
+    }
+}
+
+// Share Report
+window.shareReport = function() {
+    if (!window.currentReport) {
+        showToast("No report to share! Generate a report first.", "error");
+        return;
+    }
+    
+    const shareText = `📊 Report: ${window.currentReport.topic}\n\n${(document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent).substring(0, 500)}...\n\nGenerated on: ${window.currentReport.date}\n\nGenerated by Cortexa AI`;
+    
+    navigator.clipboard.writeText(shareText).then(() => {
+        showToast("📤 Report summary copied to clipboard! You can now share it anywhere.");
+    }).catch(() => {
+        showToast("Failed to copy for sharing", "error");
+    });
+}
+
+// Save Report to Library
+window.saveReportToLibrary = function() {
+    if (!window.currentReport) {
+        showToast("No report to save! Generate a report first.", "error");
+        return;
+    }
+    
+    const user = getCurrentUser();
+    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    
+    const reportToSave = {
+        id: 'report_' + Date.now(),
+        title: window.currentReport.topic,
+        content: window.currentReport.rawContent,
+        formattedContent: window.currentReport.content,
+        date: window.currentReport.date,
+        format: window.currentReport.format,
+        options: window.currentReport.options
+    };
+    
+    savedReports.unshift(reportToSave);
+    localStorage.setItem(`reports_${user}`, JSON.stringify(savedReports));
+    
+    showToast(`✅ Report "${window.currentReport.topic}" saved to library!`);
+}
+
+// Print Report
+window.printReport = function() {
+    const reportContainer = document.getElementById('reportContainer');
+    if (!reportContainer) {
+        showToast("No report to print! Generate a report first.", "error");
+        return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>${window.currentReport?.topic || 'Report'} - Cortexa AI</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        padding: 40px;
+                        max-width: 900px;
+                        margin: 0 auto;
+                        line-height: 1.6;
+                    }
+                    .report-title-section {
+                        text-align: center;
+                        margin-bottom: 40px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid #667eea;
+                    }
+                    .report-title-section h1 {
+                        color: #667eea;
+                    }
+                    .report-meta {
+                        color: #666;
+                        font-size: 12px;
+                    }
+                    .report-footer {
+                        margin-top: 50px;
+                        padding-top: 20px;
+                        border-top: 1px solid #ddd;
+                        text-align: center;
+                        font-size: 11px;
+                    }
+                    button { display: none; }
+                </style>
+            </head>
+            <body>
+                ${reportContainer.outerHTML}
+            </body>
+        </html>
+    `);
+    printWindow.print();
+    printWindow.close();
+    showToast("🖨️ Report sent to printer!");
+}
+
+// Load Report from Library (optional feature)
+window.loadReportFromLibrary = function(reportId) {
+    const user = getCurrentUser();
+    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    const report = savedReports.find(r => r.id === reportId);
+    
+    if (report) {
+        window.currentReport = {
+            topic: report.title,
+            content: report.formattedContent,
+            rawContent: report.content,
+            date: report.date,
+            format: report.format,
+            options: report.options
+        };
+        
+        const contentDiv = document.getElementById('reportContent');
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="report-container" id="reportContainer">
+                    <div class="report-title-section">
+                        <h1>📊 ${escapeHtml(report.title)}</h1>
+                        <div class="report-meta">
+                            <span>📅 Generated: ${report.date}</span>
+                            <span>📄 Format: ${report.format}</span>
+                        </div>
+                    </div>
+                    <div class="report-content" id="reportContentText">
+                        ${report.formattedContent}
+                    </div>
+                    <div class="report-footer">
+                        <p>© ${new Date().getFullYear()} Cortexa AI Report Generator</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        document.getElementById('reportDisplay').style.display = 'block';
+        showToast(`✅ Report "${report.title}" loaded from library!`);
+    } else {
+        showToast("Report not found!", "error");
+    }
+}
+
+// View saved reports library
+window.openReportLibrary = function() {
+    const user = getCurrentUser();
+    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    
+    if (savedReports.length === 0) {
+        showToast("No saved reports found!", "info");
+        return;
+    }
+    
+    let libraryHTML = '<div class="report-library-modal"><h3>📚 Saved Reports</h3><div class="report-list">';
+    savedReports.forEach(report => {
+        libraryHTML += `
+            <div class="report-list-item">
+                <div class="report-info">
+                    <strong>${escapeHtml(report.title)}</strong>
+                    <small>${report.date}</small>
+                </div>
+                <button onclick="loadReportFromLibrary('${report.id}')">Load</button>
+            </div>
+        `;
+    });
+    libraryHTML += '</div><button onclick="closeReportLibrary()">Close</button></div>';
+    
+    // Create modal for library
+    let modal = document.getElementById('reportLibraryModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'reportLibraryModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            z-index: 10001;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = libraryHTML;
+    modal.style.display = 'block';
+}
+
+window.closeReportLibrary = function() {
+    const modal = document.getElementById('reportLibraryModal');
+    if (modal) modal.style.display = 'none';
+}
+window.closeReportMode = function() {
+    const modal = document.getElementById('reportModal');
+    if (modal) modal.style.display = 'none';
+}
+
+window.generateReport = async function() {
+    const topic = document.getElementById('reportTopicInput').value;
+    if (!topic) {
+        showToast("Please enter a topic", "error");
+        return;
+    }
+    
+    // Get selected report options
+    const includeCharts = document.getElementById('includeCharts')?.checked || false;
+    const includeTables = document.getElementById('includeTables')?.checked || false;
+    const includeExecutive = document.getElementById('includeExecutive')?.checked || true;
+    const includeRecommendations = document.getElementById('includeRecommendations')?.checked || true;
+    const includeAppendix = document.getElementById('includeAppendix')?.checked || false;
+    
+    const progressDiv = document.getElementById('reportProgress');
+    const progressFill = document.getElementById('reportProgressFill');
+    const displayDiv = document.getElementById('reportDisplay');
+    const contentDiv = document.getElementById('reportContent');
+    
+    if (progressDiv) progressDiv.style.display = 'block';
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 10;
+        if (progressFill) progressFill.style.width = width + '%';
+    }, 200);
+    
+    try {
+        let prompt = `Generate a comprehensive, professional report about "${topic}".
+
+The report should include:`;
+
+        if (includeExecutive) prompt += `\n- Executive Summary`;
+        prompt += `\n- Introduction`;
+        prompt += `\n- Key Findings (at least 5 points)`;
+        prompt += `\n- Detailed Analysis`;
+        if (includeCharts) prompt += `\n- Charts and Graphs Analysis`;
+        if (includeTables) prompt += `\n- Data Tables`;
+        prompt += `\n- Challenges and Opportunities`;
+        if (includeRecommendations) prompt += `\n- Recommendations (at least 3)`;
+        prompt += `\n- Conclusion`;
+        if (includeAppendix) prompt += `\n- Appendix with References`;
+
+        prompt += `\n\nFormat the report with proper headings, subheadings, and bullet points.
+Make it professional, well-structured, and suitable for business/academic audience.`;
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: prompt, document_content: null, audio: false })
+        });
+        
+        const data = await response.json();
+        let reportContent = data.response || "Failed to generate report.";
+        
+        // Format the report with proper styling
+        reportContent = reportContent.replace(/#{3,}/g, '##');
+        reportContent = reportContent.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+        reportContent = reportContent.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+        reportContent = reportContent.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+        reportContent = reportContent.replace(/^- (.*?)$/gm, '<li>$1</li>');
+        reportContent = reportContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        reportContent = reportContent.replace(/\n/g, '<br>');
+        
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (displayDiv) displayDiv.style.display = 'block';
+        
+        window.currentReport = {
+            topic: topic,
+            content: reportContent,
+            date: new Date().toLocaleString()
+        };
+        
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="report-container">
+                    <div class="report-title-section">
+                        <h1>📊 ${escapeHtml(topic)}</h1>
+                        <div class="report-meta">
+                            <span>📅 Generated: ${new Date().toLocaleString()}</span>
+                            <span>📄 Type: Comprehensive Report</span>
+                        </div>
+                    </div>
+                    <div class="report-content">
+                        ${reportContent}
+                    </div>
+                    <div class="report-footer">
+                        <p>Generated by Cortexa AI Report Generator</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        showToast("✅ Report generated successfully!");
+        
+    } catch (error) {
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        console.error('Report error:', error);
+        showToast("Error generating report", "error");
+    }
+}
+window.downloadReportAsPDF = function() {
+    const content = document.getElementById('reportContent')?.innerHTML;
+    if (content) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Report</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; }
+                        .report-header { text-align: center; margin-bottom: 30px; }
+                        h1 { color: #667eea; }
+                    </style>
+                </head>
+                <body>${content}</body>
+            </html>
+        `);
+        printWindow.print();
+        showToast("Report sent to printer (save as PDF)");
+    } else {
+        showToast("No report to download", "error");
+    }
 }
 
 window.downloadReportAsDOCX = function() {
-    if (!currentReport) { showReportToast("❌ No report to download"); return; }
-    const content = document.getElementById('reportContent').innerHTML;
-    const blob = new Blob([`<html><head><title>${currentReport.title}</title><style>body{font-family:Arial; padding:40px;}</style></head><body>${content}</body></html>`], { type: 'text/html' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${currentReport.title.replace(/[^a-z0-9]/gi, '_')}.html`;
-    link.click();
-    showReportToast("✅ Report downloaded");
+    const content = document.getElementById('reportContent')?.innerText;
+    if (content) {
+        const blob = new Blob([content], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'report.doc';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Report downloaded as DOC!");
+    } else {
+        showToast("No report to download", "error");
+    }
 }
 
 window.copyReportToClipboard = function() {
-    if (!currentReport) { showReportToast("❌ No report to copy"); return; }
-    navigator.clipboard.writeText(document.getElementById('reportContent').innerText);
-    showReportToast("✅ Report copied!");
+    const content = document.getElementById('reportContent')?.innerText;
+    if (content) {
+        navigator.clipboard.writeText(content);
+        showToast("Report copied to clipboard!");
+    } else {
+        showToast("No report to copy", "error");
+    }
 }
 
 window.shareReport = function() {
-    if (!currentReport) { showReportToast("❌ No report to share"); return; }
-    navigator.clipboard.writeText(`Check out my report: ${currentReport.title}`);
-    showReportToast("✅ Report info copied!");
+    if (window.currentReport) {
+        const shareText = `${window.currentReport.topic}\n\n${window.currentReport.content.substring(0, 500)}...`;
+        navigator.clipboard.writeText(shareText);
+        showToast("Report summary copied to clipboard!");
+    } else {
+        showToast("No report to share", "error");
+    }
 }
 
 window.saveReportToLibrary = function() {
-    if (!currentReport) { showReportToast("❌ No report to save"); return; }
-    let reports = JSON.parse(localStorage.getItem('reports')) || [];
-    reports.unshift(currentReport);
-    localStorage.setItem('reports', JSON.stringify(reports));
-    showReportToast("✅ Report saved!");
+    if (!window.currentReport) {
+        showToast("No report to save", "error");
+        return;
+    }
+    
+    const user = getCurrentUser();
+    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    savedReports.push(window.currentReport);
+    localStorage.setItem(`reports_${user}`, JSON.stringify(savedReports));
+    showToast("💾 Report saved to library!");
 }
 
 window.printReport = function() {
-    if (!currentReport) { showReportToast("❌ No report to print"); return; }
-    const printWin = window.open('', '_blank');
-    printWin.document.write(`<html><head><title>${currentReport.title}</title>
-        <style>body{font-family:Arial; padding:30px;} h1{color:#a855f7;}</style>
-        </head><body>${document.getElementById('reportContent').innerHTML}</body></html>`);
-    printWin.document.close();
-    printWin.print();
+    const content = document.getElementById('reportContent')?.innerHTML;
+    if (content) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head><title>Report</title></head>
+                <body>${content}</body>
+            </html>
+        `);
+        printWindow.print();
+    }
 }
 
-function showReportToast(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#a855f7,#6366f1); color:white; padding:10px 20px; border-radius:25px; font-size:14px; z-index:45001; animation:fadeInOut 3s ease;`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-// ================= LEARNING TOOLS MODULE =================
-let currentQuiz = null;
-let currentFlashcards = [];
-let currentFlashcardIndex = 0;
-let quizUserAnswers = [];
-let quizStarted = false;
-let learningDocumentContent = null;
-
-// Open/Close Modal
+// ================= LEARNING TOOLS MODE (QUIZ + NOTES) =================
 window.openLearningTools = function() {
     const modal = document.getElementById('learningToolsModal');
     if (modal) modal.style.display = 'flex';
-    learningDocumentContent = null;
-    const docStatus = document.getElementById('learningDocStatus');
-    if (docStatus) docStatus.innerHTML = '';
+    switchLearningTab('quiz');
 }
 
 window.closeLearningTools = function() {
@@ -1880,936 +2222,986 @@ window.closeLearningTools = function() {
 }
 
 window.switchLearningTab = function(tab) {
-    document.querySelectorAll('.learning-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.target) event.target.classList.add('active');
+    const quizTab = document.getElementById('quizTab');
+    const notesTab = document.getElementById('notesTab');
+    const btns = document.querySelectorAll('.learning-tab-btn');
     
-    document.getElementById('quizTab').style.display = 'none';
-    document.getElementById('notesTab').style.display = 'none';
+    btns.forEach(btn => btn.classList.remove('active'));
     
     if (tab === 'quiz') {
-        document.getElementById('quizTab').style.display = 'block';
-    } else if (tab === 'notes') {
-        document.getElementById('notesTab').style.display = 'block';
+        if (quizTab) quizTab.style.display = 'block';
+        if (notesTab) notesTab.style.display = 'none';
+        if (btns[0]) btns[0].classList.add('active');
+    } else {
+        if (quizTab) quizTab.style.display = 'none';
+        if (notesTab) notesTab.style.display = 'block';
+        if (btns[1]) btns[1].classList.add('active');
     }
 }
 
-// ================= QUIZ GENERATION =================
+// =================  QUIZ FUNCTIONS =================
 
-window.generateQuiz = function() {
-    const topic = document.getElementById('quizTopicInput').value.trim();
+window.generateQuiz = async function() {
+    const topic = document.getElementById('quizTopicInput').value;
     if (!topic) {
-        alert('Please enter a topic or content!');
+        showToast("Please enter a topic", "error");
         return;
     }
     
-    let count = parseInt(document.getElementById('quizCount').value) || 5;
-    const difficulty = document.getElementById('quizDifficulty').value;
-    const type = document.getElementById('quizType').value;
+    const numQuestions = document.getElementById('quizNumQuestions')?.value || 5;
+    const difficulty = document.getElementById('quizDifficulty')?.value || 'Medium';
+    const questionType = document.getElementById('quizQuestionType')?.value || 'Mixed';
     
     const progressDiv = document.getElementById('quizProgress');
+    const progressFill = document.getElementById('quizProgressFill');
+    const displayDiv = document.getElementById('quizDisplay');
+    const contentDiv = document.getElementById('quizContent');
+    
     if (progressDiv) progressDiv.style.display = 'block';
-    const progressStatus = document.getElementById('quizProgressStatus');
-    if (progressStatus) progressStatus.textContent = '📝 Creating smart quiz from your content...';
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 10;
+        if (progressFill) progressFill.style.width = width + '%';
+    }, 100);
     
-    // Generate smart quiz from the content
-    setTimeout(() => {
+    try {
+        const prompt = `Generate a quiz about "${topic}" with exactly ${numQuestions} questions. 
+Difficulty: ${difficulty}. Type: ${questionType}.
+
+Return ONLY valid JSON with this exact format:
+{
+    "title": "${topic} Quiz",
+    "questions": [
+        {
+            "id": 1,
+            "text": "Question text here",
+            "type": "mcq",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "correctAnswer": "Option A",
+            "explanation": "Brief explanation"
+        }
+    ]
+}
+
+For true/false, options should be ["True", "False"].
+Make questions educational and appropriate for ${difficulty} difficulty.`;
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                message: prompt,
+                document_content: null,
+                audio: false
+            })
+        });
+        
+        const data = await response.json();
+        let quizData;
+        
+        try {
+            let jsonStr = data.response;
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            if (jsonMatch) jsonStr = jsonMatch[0];
+            quizData = JSON.parse(jsonStr);
+        } catch (e) {
+            quizData = {
+                title: `${topic} Quiz`,
+                questions: Array(parseInt(numQuestions)).fill().map((_, i) => ({
+                    id: i + 1,
+                    text: `Sample question about ${topic} ${i + 1}`,
+                    type: "mcq",
+                    options: ["Option A", "Option B", "Option C"],
+                    correctAnswer: "Option A",
+                    explanation: "This is a sample explanation."
+                }))
+            };
+        }
+        
+        clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
+        if (displayDiv) displayDiv.style.display = 'block';
         
-        // Parse the content to create meaningful questions
-        const content = learningDocumentContent || topic;
-        const smartQuiz = createSmartQuiz(content, count, difficulty, type);
+        window.currentQuizData = quizData;
+        window.quizAnswers = {}; // Store user answers
         
-        document.getElementById('quizDisplay').style.display = 'block';
-        renderRealQuiz(smartQuiz);
-        currentQuiz = smartQuiz;
-        quizUserAnswers = new Array(smartQuiz.questions.length).fill(null);
-        quizStarted = false;
-        document.getElementById('quizResult').style.display = 'none';
-    }, 500);
-}
-
-// Create smart quiz with REAL content-based questions
-function createSmartQuiz(content, count, difficulty, type) {
-    const questions = [];
-    
-    // Extract sentences and key phrases from content
-    const sentences = content.split(/[.!?\n]+/).filter(s => s.trim().length > 20);
-    const words = content.split(/\s+/);
-    
-    // Find key terms (capitalized words or long words)
-    const keyTerms = [];
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i].replace(/[^a-zA-Z]/g, '');
-        if (word.length > 5 && /[A-Z]/.test(word[0])) {
-            keyTerms.push(word);
-        }
-    }
-    
-    // If no key terms found, use common terms from the content
-    const uniqueTerms = [...new Set(keyTerms)].slice(0, 8);
-    
-    for (let i = 0; i < Math.min(count, 10); i++) {
-        const sentence = sentences[i % sentences.length] || content.substring(0, 100);
-        const term = uniqueTerms[i % uniqueTerms.length] || "this concept";
-        
-        if (type === 'truefalse' || (type === 'mixed' && i % 3 === 0)) {
-            // Create True/False question based on actual content
-            const isTrue = sentence.toLowerCase().includes(term.toLowerCase()) || i % 2 === 0;
-            questions.push({
-                question: `Based on the content: "${sentence.substring(0, 80)}..."`,
-                options: ["True", "False"],
-                correct: isTrue ? 0 : 1,
-                marks: 1,
-                explanation: `The content states: "${sentence.substring(0, 150)}..."`
-            });
-        } else {
-            // Create MCQ with REAL options based on content
-            const correctAnswer = sentence.length > 80 ? sentence.substring(0, 80) + "..." : sentence;
-            
-            // Generate plausible wrong answers from other parts of content
-            const otherSentences = sentences.filter((s, idx) => idx !== i % sentences.length);
-            const wrongAnswers = [];
-            for (let j = 0; j < 3 && j < otherSentences.length; j++) {
-                let wrong = otherSentences[j];
-                if (wrong.length > 60) wrong = wrong.substring(0, 60) + "...";
-                wrongAnswers.push(wrong);
-            }
-            
-            // Fill with generic but relevant wrong answers if needed
-            while (wrongAnswers.length < 3) {
-                wrongAnswers.push(`The text does not specifically mention this aspect of ${term}`);
-            }
-            
-            questions.push({
-                question: `What does the content say about "${term}"?`,
-                options: [correctAnswer, wrongAnswers[0], wrongAnswers[1], wrongAnswers[2]],
-                correct: 0,
-                marks: 2,
-                explanation: `According to the content: "${sentence.substring(0, 200)}..."`
-            });
-        }
-    }
-    
-    // If still no questions, create fallback questions
-    if (questions.length === 0) {
-        for (let i = 0; i < count; i++) {
-            questions.push({
-                question: `What is the main topic discussed in the content?`,
-                options: [
-                    `The content focuses on ${content.substring(0, 50)}...`,
-                    `It discusses unrelated topics`,
-                    `The main idea is not clear`,
-                    `None of the above`
-                ],
-                correct: 0,
-                marks: 1,
-                explanation: `The main topic is about ${content.substring(0, 100)}...`
-            });
-        }
-    }
-    
-    // Get title from first sentence
-    const title = sentences[0] ? sentences[0].substring(0, 50) : "Quiz";
-    
-    return {
-        title: title,
-        questions: questions.slice(0, count),
-        difficulty: difficulty,
-        totalQuestions: Math.min(questions.length, count)
-    };
-}
-
-// Render quiz with REAL options (not Option A, B, C, D)
-function renderRealQuiz(quiz) {
-    const quizContent = document.getElementById('quizContent');
-    if (!quizContent) return;
-    
-    if (!quiz || !quiz.questions || quiz.questions.length === 0) {
-        quizContent.innerHTML = '<div class="error-message">No questions generated. Please enter more detailed content.</div>';
-        return;
-    }
-    
-    let html = `
-        <div class="quiz-header">
-            <h3>📝 ${escapeHtml(quiz.title)}</h3>
-            <p>Total Questions: ${quiz.questions.length} | Difficulty: ${quiz.difficulty || 'Medium'}</p>
-        </div>
-        <div class="quiz-questions-container">
-    `;
-    
-    quiz.questions.forEach((q, index) => {
-        html += `
-            <div class="quiz-question-card" style="margin-bottom: 30px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
-                <div class="quiz-question-text">
-                    <strong>Q${index + 1}:</strong> ${escapeHtml(q.question)}
-                </div>
-                <div class="quiz-options-list" style="margin-top: 15px; margin-left: 20px;">
+        let quizHTML = `
+            <div class="quiz-header">
+                <h3>📝 ${escapeHtml(quizData.title)}</h3>
+                <p>Difficulty: ${difficulty} | Questions: ${quizData.questions.length}</p>
+            </div>
+            <div id="quizQuestionsContainer">
         `;
         
-        if (q.options && q.options.length > 0) {
-            q.options.forEach((opt, optIndex) => {
-                const letter = String.fromCharCode(65 + optIndex);
-                html += `
-                    <label style="display: block; margin: 10px 0; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;" 
-                           onmouseover="this.style.background='rgba(168,85,247,0.1)'" 
-                           onmouseout="this.style.background='transparent'">
-                        <input type="radio" name="q${index}" value="${optIndex}" onclick="selectQuizAnswer(${index}, ${optIndex})">
-                        <span style="margin-left: 10px;"><strong>${letter}.</strong> ${escapeHtml(opt)}</span>
+        quizData.questions.forEach((q, idx) => {
+            const qNum = idx + 1;
+            quizHTML += `
+                <div class="quiz-question-card" data-question-id="${qNum}" data-correct="${escapeHtml(q.correctAnswer)}">
+                    <p class="quiz-question-text"><strong>Question ${qNum}:</strong> ${escapeHtml(q.text)}</p>
+                    <div class="quiz-options">
+            `;
+            
+            const options = q.options || (q.type === 'truefalse' ? ['True', 'False'] : ['Option A', 'Option B', 'Option C']);
+            options.forEach(opt => {
+                quizHTML += `
+                    <label class="quiz-option">
+                        <input type="radio" name="q${qNum}" value="${escapeHtml(opt)}" onchange="saveQuizAnswer(${qNum}, '${escapeHtml(opt)}')">
+                        <span>${escapeHtml(opt)}</span>
                     </label>
                 `;
             });
-        }
+            
+            quizHTML += `
+                    </div>
+                    <div class="quiz-feedback" id="feedback-${qNum}" style="display:none;"></div>
+                </div>
+            `;
+        });
         
-        html += `
-                </div>
-                <div class="quiz-explanation" id="explanation-${index}" style="display: none; margin-top: 15px; padding: 12px; background: rgba(168,85,247,0.1); border-radius: 8px; border-left: 3px solid #a855f7;">
-                    <strong>📚 Explanation:</strong><br>${q.explanation ? escapeHtml(q.explanation) : 'Based on the content provided.'}
-                </div>
+        quizHTML += `
             </div>
+            <div class="quiz-actions">
+                <button class="quiz-action-btn submit-quiz-btn" onclick="submitQuizAnswers()">✅ Submit Quiz</button>
+                <button class="quiz-action-btn" onclick="resetQuizAnswers()">🔄 Reset All</button>
+                <button class="quiz-action-btn" onclick="exportQuizAsPDF()">📄 Export PDF</button>
+                <button class="quiz-action-btn" onclick="copyQuizToClipboard()">📋 Copy</button>
+                <button class="quiz-action-btn" onclick="saveQuizToLibrary()">💾 Save to Library</button>
+            </div>
+            <div class="quiz-results-container" id="quizResultsContainer" style="display:none;"></div>
         `;
-    });
-    
-    html += `
-        </div>
-        <div class="quiz-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <button onclick="startRealQuiz()" class="quiz-action-btn">▶️ Start Quiz</button>
-            <button onclick="resetRealQuiz()" class="quiz-action-btn">🔄 Reset</button>
-            <button onclick="submitRealQuiz()" class="quiz-action-btn">✅ Submit</button>
-            <button onclick="showRealQuizAnswers()" class="quiz-action-btn">🔍 Show Answers</button>
-        </div>
-    `;
-    
-    quizContent.innerHTML = html;
-}
-
-// Quiz control functions
-function startRealQuiz() {
-    if (!currentQuiz) return;
-    quizStarted = true;
-    quizUserAnswers = new Array(currentQuiz.questions.length).fill(null);
-    
-    // Clear all radio buttons
-    for (let i = 0; i < currentQuiz.questions.length; i++) {
-        const radios = document.querySelectorAll(`input[name="q${i}"]`);
-        radios.forEach(radio => radio.checked = false);
-        const explanationDiv = document.getElementById(`explanation-${i}`);
-        if (explanationDiv) explanationDiv.style.display = 'none';
-    }
-    document.getElementById('quizResult').style.display = 'none';
-    alert('📝 Quiz started! Select your answers and click Submit.');
-}
-
-function resetRealQuiz() {
-    if (currentQuiz) {
-        renderRealQuiz(currentQuiz);
-        quizUserAnswers = new Array(currentQuiz.questions.length).fill(null);
-        document.getElementById('quizResult').style.display = 'none';
-        quizStarted = false;
+        
+        if (contentDiv) contentDiv.innerHTML = quizHTML;
+        showToast(`✅ Quiz generated with ${quizData.questions.length} questions!`);
+        
+    } catch (error) {
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        console.error('Quiz error:', error);
+        showToast("Error generating quiz", "error");
     }
 }
 
-function submitRealQuiz() {
-    if (!currentQuiz) {
-        alert('Please generate a quiz first!');
-        return;
+// Save individual answer when selected
+window.saveQuizAnswer = function(questionNum, answer) {
+    if (!window.quizAnswers) window.quizAnswers = {};
+    window.quizAnswers[questionNum] = answer;
+    
+    // Visual feedback that answer is saved
+    const questionCard = document.querySelector(`.quiz-question-card[data-question-id="${questionNum}"]`);
+    if (questionCard) {
+        questionCard.style.borderLeft = '4px solid #10b981';
     }
-    if (!quizStarted) {
-        alert('Please click "Start Quiz" first!');
+}
+
+// Submit all answers and show results
+window.submitQuizAnswers = function() {
+    if (!window.currentQuizData || !window.currentQuizData.questions) {
+        showToast("No quiz loaded!", "error");
         return;
     }
     
     let score = 0;
+    const totalQuestions = window.currentQuizData.questions.length;
     const results = [];
     
-    for (let i = 0; i < currentQuiz.questions.length; i++) {
-        const userAnswer = quizUserAnswers[i];
-        const correctAnswer = currentQuiz.questions[i].correct;
-        const isCorrect = (userAnswer === correctAnswer);
+    // Calculate score and prepare results
+    window.currentQuizData.questions.forEach((q, idx) => {
+        const qNum = idx + 1;
+        const userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
+        const isCorrect = userAnswer === q.correctAnswer;
         
         if (isCorrect) {
-            score += currentQuiz.questions[i].marks || 10;
-            results.push({ q: i+1, correct: true });
-        } else {
-            results.push({ q: i+1, correct: false });
+            score++;
         }
         
-        // Show explanation
-        const explanationDiv = document.getElementById(`explanation-${i}`);
-        if (explanationDiv) {
-            explanationDiv.style.display = 'block';
-            if (isCorrect) {
-                explanationDiv.style.background = 'rgba(74, 222, 128, 0.15)';
-                explanationDiv.style.borderLeftColor = '#4ade80';
+        results.push({
+            id: qNum,
+            question: q.text,
+            userAnswer: userAnswer || "Not answered",
+            correctAnswer: q.correctAnswer,
+            isCorrect: isCorrect,
+            explanation: q.explanation
+        });
+        
+        // Show feedback for this question
+        const feedbackDiv = document.getElementById(`feedback-${qNum}`);
+        if (feedbackDiv) {
+            if (userAnswer) {
+                if (isCorrect) {
+                    feedbackDiv.innerHTML = `
+                        <div class="correct-feedback">
+                            ✅ <strong>Correct!</strong> ${q.explanation || 'Great job!'}
+                        </div>
+                    `;
+                    feedbackDiv.style.backgroundColor = '#d1fae5';
+                } else {
+                    feedbackDiv.innerHTML = `
+                        <div class="wrong-feedback">
+                            ❌ <strong>Incorrect!</strong><br>
+                            Your answer: ${escapeHtml(userAnswer)}<br>
+                            Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
+                            ${q.explanation ? `📖 ${q.explanation}` : ''}
+                        </div>
+                    `;
+                    feedbackDiv.style.backgroundColor = '#fee2e2';
+                }
             } else {
-                explanationDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                explanationDiv.style.borderLeftColor = '#ef4444';
+                feedbackDiv.innerHTML = `
+                    <div class="wrong-feedback">
+                        ⚠️ <strong>Not answered!</strong><br>
+                        Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
+                        ${q.explanation ? `📖 ${q.explanation}` : ''}
+                    </div>
+                `;
+                feedbackDiv.style.backgroundColor = '#fffbeb';
             }
-        }
-    }
-    
-    const totalMarks = currentQuiz.questions.reduce((sum, q) => sum + (q.marks || 10), 0);
-    const percentage = (score / totalMarks) * 100;
-    let grade = percentage >= 80 ? 'Excellent! 🎉' : percentage >= 60 ? 'Good job! 👍' : 'Keep practicing! 📚';
-    
-    const resultDiv = document.getElementById('quizResult');
-    resultDiv.style.display = 'block';
-    resultDiv.innerHTML = `
-        <div style="text-align: center; padding: 20px; background: rgba(168,85,247,0.15); border-radius: 12px; margin-top: 20px;">
-            <h3>📊 Quiz Results</h3>
-            <p style="font-size: 28px; margin: 15px 0; color: #a855f7;">${score} / ${totalMarks}</p>
-            <p>Percentage: ${percentage.toFixed(1)}%</p>
-            <p style="color: #a855f7; font-size: 18px;">${grade}</p>
-            <button onclick="resetRealQuiz()" class="quiz-action-btn" style="margin-top: 15px;">🔄 Try Again</button>
-        </div>
-    `;
-}
-
-function showRealQuizAnswers() {
-    if (!currentQuiz) return;
-    
-    for (let i = 0; i < currentQuiz.questions.length; i++) {
-        const correctAnswer = currentQuiz.questions[i].correct;
-        const correctText = currentQuiz.questions[i].options[correctAnswer];
-        const explanationDiv = document.getElementById(`explanation-${i}`);
-        if (explanationDiv) {
-            explanationDiv.style.display = 'block';
-            explanationDiv.innerHTML = `<strong>✅ Correct Answer:</strong> ${escapeHtml(correctText)}<br><br><strong>📚 Explanation:</strong><br>${currentQuiz.questions[i].explanation || 'Based on the content provided.'}`;
-            explanationDiv.style.background = 'rgba(168,85,247,0.15)';
-            explanationDiv.style.borderLeft = '3px solid #a855f7';
-        }
-    }
-}
-
-// Also update the document upload to store content properly
-window.uploadForLearning = function(type) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.docx,.txt';
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        let inputField;
-        if (type === 'quiz') inputField = document.getElementById('quizTopicInput');
-        else if (type === 'flashcard') inputField = document.getElementById('flashcardTopicInput');
-        else inputField = document.getElementById('notesTopicInput');
-        
-        const statusDiv = document.getElementById('learningDocStatus');
-        if (statusDiv) statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
-        
-        try {
-            const response = await fetch("https://cortexa-2-2ydr.onrender.com/upload-document", {
-                method: "POST",
-                body: formData
-            });
-            const data = await response.json();
-            
-            if (data.content && data.content !== "No text extracted") {
-                learningDocumentContent = data.content;
-                inputField.value = data.content.substring(0, 500);
-                if (statusDiv) {
-                    statusDiv.innerHTML = `<span style="color: #22c55e;">✅ Loaded: ${data.filename} (${data.content.length} chars)</span>`;
-                    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 3000);
-                }
-                alert(`✅ Document loaded! ${data.content.length} characters extracted. Click Generate Quiz to create smart questions.`);
-            } else {
-                throw new Error("No text extracted");
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            inputField.value = `Content from: ${file.name}`;
-            learningDocumentContent = `Content from ${file.name}. This document contains educational material about the topic.`;
-            if (statusDiv) {
-                statusDiv.innerHTML = `<span style="color: #fbbf24;">⚠️ Using filename as content. For better results, ensure backend is running.</span>`;
-            }
-            alert(`⚠️ Document "${file.name}" ready. Click Generate Quiz to create questions.`);
-        }
-    };
-    input.click();
-}
-
-// ================= STUDY NOTES GENERATOR  =================
-window.generateStudyNotes = function() {
-    console.log("===== GENERATE STUDY NOTES STARTED =====");
-    
-    const topicInput = document.getElementById('notesTopicInput');
-    if (!topicInput) {
-        console.error("notesTopicInput not found!");
-        alert("Error: Study notes input not found!");
-        return;
-    }
-    
-    let topic = topicInput.value.trim();
-    
-    if (!topic && learningDocumentContent) {
-        topic = learningDocumentContent;
-    }
-    
-    if (!topic) {
-        alert('Please enter a topic or content in the textarea above!');
-        return;
-    }
-    
-    const lengthSelect = document.getElementById('notesLength');
-    const length = lengthSelect ? lengthSelect.value : 'long';
-    
-    const styleSelect = document.getElementById('notesStyle');
-    const style = styleSelect ? styleSelect.value : 'outline';
-    
-    console.log("Selected Length:", length);
-    console.log("Selected Style:", style);
-    
-    const progressDiv = document.getElementById('notesProgress');
-    if (progressDiv) progressDiv.style.display = 'block';
-    const progressStatus = document.getElementById('notesProgressStatus');
-    if (progressStatus) progressStatus.textContent = '📝 Generating study notes from your content...';
-    
-    setTimeout(() => {
-        if (progressDiv) progressDiv.style.display = 'none';
-        
-        // Clean and extract sentences properly
-        let cleanTopic = topic.replace(/\r\n/g, '. ').replace(/\n+/g, '. ');
-        
-        // Split by periods, question marks, exclamation marks
-        let allSentences = cleanTopic.split(/[.!?]+/).filter(s => s.trim().length > 20);
-        
-        // Clean each sentence
-        allSentences = allSentences.map(s => s.trim().replace(/^\s+/, '').replace(/\s+$/, ''));
-        
-        console.log("Extracted sentences:", allSentences.length);
-        console.log("First sentence:", allSentences[0]);
-        
-        // Extract main title from first sentence
-        let title = extractMainTitle(allSentences[0] || topic);
-        
-        let notesHtml = '';
-        
-        // ===== HEADER =====
-        notesHtml = `
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #a855f7; font-size: 28px; margin-bottom: 10px;">📚 ${escapeHtml(title)}</h1>
-                <div style="width: 60px; height: 3px; background: linear-gradient(90deg, #a855f7, #6366f1); margin: 0 auto;"></div>
-                <p style="color: #a1a1aa; font-size: 12px; margin-top: 10px;">Generated Study Notes • ${new Date().toLocaleDateString()}</p>
-            </div>
-        `;
-        
-        // ===== OVERVIEW SECTION (always show, using first sentence) =====
-        let overviewText = allSentences[0] || topic.substring(0, 200);
-        notesHtml += `<div style="margin-bottom: 25px;">
-            <h2 style="color: #a855f7; font-size: 20px; margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 12px;">📖 Overview</h2>
-            <p style="line-height: 1.7; color: #e5e7eb;">${escapeHtml(overviewText)}</p>
-        </div>`;
-        
-        // Determine how many points based on length
-        let maxPoints = 0;
-        let showDetailedAnalysis = false;
-        
-        switch(length) {
-            case 'short':
-                maxPoints = 3;
-                showDetailedAnalysis = false;
-                break;
-            case 'medium':
-                maxPoints = 5;
-                showDetailedAnalysis = false;
-                break;
-            case 'long':
-                maxPoints = 8;
-                showDetailedAnalysis = true;
-                break;
-            default:
-                maxPoints = 5;
-                showDetailedAnalysis = false;
-        }
-        
-        // ===== KEY POINTS SECTION =====
-        let keyPoints = allSentences.slice(1, Math.min(allSentences.length, maxPoints + 1));
-        
-        // Filter out very short or duplicate-like sentences
-        keyPoints = keyPoints.filter(s => s.length > 25);
-        
-        console.log("Key points extracted:", keyPoints.length);
-        
-        notesHtml += `<div style="margin-bottom: 25px;">
-            <h2 style="color: #a855f7; font-size: 20px; margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 12px;">🔑 Key Points</h2>`;
-        
-        if (keyPoints.length === 0) {
-            // Fallback: use first sentence as key point
-            notesHtml += `<p style="line-height: 1.6; color: #e5e7eb;">${escapeHtml(allSentences[0] || topic.substring(0, 200))}</p>`;
-        } else {
-            if (style === 'bullet') {
-                // BULLET POINTS STYLE
-                notesHtml += `<ul style="list-style-type: none; padding-left: 0;">`;
-                for (let i = 0; i < keyPoints.length; i++) {
-                    notesHtml += `<li style="margin-bottom: 14px; padding-left: 22px; position: relative; line-height: 1.6;">
-                        <span style="position: absolute; left: 0; color: #a855f7; font-size: 16px;">•</span>
-                        ${escapeHtml(keyPoints[i])}
-                    </li>`;
-                }
-                notesHtml += `</ul>`;
-            } 
-            else if (style === 'outline') {
-                // OUTLINE FORMAT (Numbered)
-                notesHtml += `<ol style="list-style-type: none; padding-left: 0; margin: 0;">`;
-                for (let i = 0; i < keyPoints.length; i++) {
-                    notesHtml += `<li style="margin-bottom: 14px; padding-left: 30px; position: relative; line-height: 1.6;">
-                        <span style="position: absolute; left: 0; color: #a855f7; font-weight: bold;">${i + 1}.</span>
-                        ${escapeHtml(keyPoints[i])}
-                    </li>`;
-                }
-                notesHtml += `</ol>`;
-            } 
-            else {
-                // PARAGRAPH STYLE
-                for (let i = 0; i < keyPoints.length; i++) {
-                    notesHtml += `<p style="margin-bottom: 12px; line-height: 1.6; padding-left: 15px; border-left: 2px solid rgba(168,85,247,0.3);">${escapeHtml(keyPoints[i])}</p>`;
-                }
-            }
-        }
-        notesHtml += `</div>`;
-        
-        // ===== DETAILED ANALYSIS (only for LONG notes) =====
-        if (showDetailedAnalysis && allSentences.length > maxPoints + 1) {
-            let detailedPoints = allSentences.slice(maxPoints + 1, Math.min(allSentences.length, maxPoints + 5));
-            detailedPoints = detailedPoints.filter(s => s.length > 30);
-            
-            if (detailedPoints.length > 0) {
-                notesHtml += `<div style="margin-bottom: 25px;">
-                    <h2 style="color: #a855f7; font-size: 20px; margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 12px;">📊 Detailed Analysis</h2>`;
-                
-                for (let i = 0; i < detailedPoints.length; i++) {
-                    notesHtml += `<div style="background: rgba(168, 85, 247, 0.05); padding: 14px 18px; border-radius: 10px; margin-bottom: 12px; border-left: 3px solid #a855f7;">
-                        <p style="margin: 0; line-height: 1.6;">${escapeHtml(detailedPoints[i])}</p>
-                    </div>`;
-                }
-                notesHtml += `</div>`;
-            }
-        }
-        
-        // ===== SUMMARY SECTION =====
-        let summaryText = allSentences[allSentences.length - 1] || allSentences[0] || topic.substring(0, 200);
-        if (summaryText.length > 280) {
-            summaryText = summaryText.substring(0, 280) + "...";
-        }
-        
-        notesHtml += `<div style="margin-bottom: 20px;">
-            <h2 style="color: #a855f7; font-size: 20px; margin-bottom: 12px; border-left: 3px solid #a855f7; padding-left: 12px;">📝 Summary</h2>
-            <div style="background: rgba(168, 85, 247, 0.08); padding: 15px 20px; border-radius: 12px;">
-                <p style="line-height: 1.7; font-style: italic; color: #e5e7eb;">${escapeHtml(summaryText)}</p>
-            </div>
-        </div>`;
-        
-        // ===== FOOTER =====
-        let lengthText = '';
-        switch(length) {
-            case 'short': lengthText = 'Short (Key Points)'; break;
-            case 'medium': lengthText = 'Medium (Detailed)'; break;
-            case 'long': lengthText = 'Long (Comprehensive)'; break;
-            default: lengthText = 'Medium';
-        }
-        
-        let styleText = '';
-        switch(style) {
-            case 'bullet': styleText = 'Bullet Points'; break;
-            case 'outline': styleText = 'Outline Format'; break;
-            case 'paragraph': styleText = 'Paragraph Style'; break;
-            default: styleText = style;
-        }
-        
-        notesHtml += `<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; color: #a1a1aa; font-size: 11px;">
-            <p>✨ Generated by Cortexa Learning Tools • ${lengthText} • ${styleText}</p>
-        </div>`;
-        
-        const notesDisplay = document.getElementById('notesDisplay');
-        const notesContent = document.getElementById('notesContent');
-        
-        if (notesDisplay) notesDisplay.style.display = 'block';
-        if (notesContent) notesContent.innerHTML = notesHtml;
-        
-        showToastMessage(`✅ Study notes generated! (${allSentences.length} sentences extracted, ${keyPoints.length} key points)`);
-        
-    }, 500);
-}
-
-// Helper function to extract main title from first sentence
-function extractMainTitle(firstSentence) {
-    if (!firstSentence) return "Study Notes";
-    
-    // Clean the sentence
-    let cleanSentence = firstSentence.trim();
-    
-    // Try to extract the main topic (usually first few words before "is" or "are" or "refers")
-    let commonPatterns = [
-        /^([^.]+?)\s+(?:is|are|refers to|means|involves|focuses on)/i,
-        /^([^.]+?\.)/
-    ];
-    
-    for (let pattern of commonPatterns) {
-        let match = cleanSentence.match(pattern);
-        if (match && match[1]) {
-            let potentialTitle = match[1].trim();
-            if (potentialTitle.length > 5 && potentialTitle.length < 80) {
-                return potentialTitle;
-            }
-        }
-    }
-    
-    // If no pattern matches, take first 50 characters
-    if (cleanSentence.length > 50) {
-        return cleanSentence.substring(0, 50) + "...";
-    }
-    
-    return cleanSentence;
-}
-// ================= UPLOAD FOR LEARNING (UPDATED) =================
-window.uploadForLearning = function(type) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.docx,.txt';
-    input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        let inputField;
-        if (type === 'quiz') {
-            inputField = document.getElementById('quizTopicInput');
-        } else if (type === 'notes') {
-            inputField = document.getElementById('notesTopicInput');
-        } else {
-            return;
-        }
-        
-        const statusDiv = document.getElementById('learningDocStatus');
-        if (statusDiv) statusDiv.innerHTML = '<span style="color: #a855f7;">⏳ Uploading...</span>';
-        
-        try {
-            const response = await fetch("https://cortexa-2-2ydr.onrender.com/upload-document", {
-                method: "POST",
-                body: formData
-            });
-            const data = await response.json();
-            
-            if (data.content && data.content !== "No text extracted") {
-                learningDocumentContent = data.content;
-                if (inputField) inputField.value = data.content.substring(0, 500);
-                if (statusDiv) {
-                    statusDiv.innerHTML = `<span style="color: #22c55e;">✅ Loaded: ${data.filename} (${data.content.length} chars)</span>`;
-                    setTimeout(() => { if(statusDiv) statusDiv.innerHTML = ''; }, 3000);
-                }
-                alert(`✅ Document loaded! Click Generate ${type === 'quiz' ? 'Quiz' : 'Notes'}.`);
-            } else {
-                throw new Error("No text extracted");
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            if (inputField) inputField.value = `Content from: ${file.name}`;
-            learningDocumentContent = `Content from ${file.name}. This document contains educational material about the topic.`;
-            if (statusDiv) {
-                statusDiv.innerHTML = `<span style="color: #fbbf24;">⚠️ Using filename as content.</span>`;
-            }
-            alert(`⚠️ Document "${file.name}" ready. Click Generate.`);
-        }
-    };
-    input.click();
-}
-
-// ================= USE CHAT FOR LEARNING (UPDATED) =================
-window.useChatForLearning = function(type) {
-    const chatMessages = document.querySelectorAll('.chat-content');
-    let chatContent = '';
-    chatMessages.forEach(msg => {
-        let text = msg.innerText || msg.textContent;
-        if (text && !text.includes('typing-dots') && !text.includes('Cortexa') && text.length > 20) {
-            chatContent += text + '\n\n';
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.style.padding = '12px';
+            feedbackDiv.style.borderRadius = '8px';
+            feedbackDiv.style.marginTop = '10px';
         }
     });
     
-    let inputField;
-    if (type === 'quiz') {
-        inputField = document.getElementById('quizTopicInput');
-    } else if (type === 'notes') {
-        inputField = document.getElementById('notesTopicInput');
+    const percentage = Math.round((score / totalQuestions) * 100);
+    let gradeMessage = '';
+    let gradeIcon = '';
+    
+    if (percentage >= 90) {
+        gradeMessage = 'Excellent! You\'re a master of this topic! 🏆';
+        gradeIcon = '🎉';
+    } else if (percentage >= 70) {
+        gradeMessage = 'Good job! You have a solid understanding! 👍';
+        gradeIcon = '📚';
+    } else if (percentage >= 50) {
+        gradeMessage = 'Not bad! Review the material and try again! 💪';
+        gradeIcon = '📖';
     } else {
+        gradeMessage = 'Keep studying! You\'ll get better with practice! 🌟';
+        gradeIcon = '⭐';
+    }
+    
+    // Display overall results
+    const resultsContainer = document.getElementById('quizResultsContainer');
+    if (resultsContainer) {
+        resultsContainer.style.display = 'block';
+        resultsContainer.innerHTML = `
+            <div class="results-card">
+                <div class="results-header">
+                    <span class="results-icon">${gradeIcon}</span>
+                    <h3>📊 Quiz Results</h3>
+                </div>
+                <div class="score-display">
+                    <div class="score-number">${score}/${totalQuestions}</div>
+                    <div class="score-percentage">${percentage}%</div>
+                </div>
+                <div class="grade-message">${gradeMessage}</div>
+                <div class="results-details">
+                    <details>
+                        <summary>📖 View Detailed Results</summary>
+                        <div class="detailed-results">
+                            ${results.map(r => `
+                                <div class="result-item ${r.isCorrect ? 'correct-result' : 'wrong-result'}">
+                                    <p><strong>Q${r.id}:</strong> ${escapeHtml(r.question)}</p>
+                                    <p>Your answer: ${escapeHtml(r.userAnswer)}</p>
+                                    <p>Correct: ${escapeHtml(r.correctAnswer)}</p>
+                                    ${r.explanation ? `<p>Explanation: ${escapeHtml(r.explanation)}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                </div>
+                <div class="results-actions">
+                    <button class="results-btn" onclick="scrollToWrongAnswers()">📖 Review Wrong Answers</button>
+                    <button class="results-btn" onclick="resetQuizAnswers()">🔄 Try Again</button>
+                    <button class="results-btn" onclick="exportQuizResults()">📄 Export Results</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Scroll to results
+    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showToast(`Quiz completed! Score: ${score}/${totalQuestions} (${percentage}%)`);
+}
+
+// Reset all answers
+window.resetQuizAnswers = function() {
+    // Clear stored answers
+    window.quizAnswers = {};
+    
+    // Clear all radio inputs
+    document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(radio => {
+        radio.checked = false;
+    });
+    
+    // Clear all feedback
+    document.querySelectorAll('.quiz-feedback').forEach(feedback => {
+        feedback.style.display = 'none';
+        feedback.innerHTML = '';
+    });
+    
+    // Reset question card borders
+    document.querySelectorAll('.quiz-question-card').forEach(card => {
+        card.style.borderLeft = '';
+    });
+    
+    // Hide results container
+    const resultsContainer = document.getElementById('quizResultsContainer');
+    if (resultsContainer) resultsContainer.style.display = 'none';
+    
+    showToast("Quiz reset! You can try again.");
+}
+
+// Scroll to wrong answers only
+window.scrollToWrongAnswers = function() {
+    const wrongFeedbacks = document.querySelectorAll('.wrong-feedback');
+    if (wrongFeedbacks.length > 0) {
+        wrongFeedbacks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast(`Reviewing ${wrongFeedbacks.length} incorrect answers...`);
+    } else {
+        showToast("🎉 Perfect score! No wrong answers to review!");
+    }
+}
+
+// Export quiz results
+window.exportQuizResults = function() {
+    if (!window.currentQuizData || !window.quizAnswers) {
+        showToast("No quiz results to export!", "error");
         return;
     }
     
-    if (chatContent && chatContent.trim() !== '') {
-        learningDocumentContent = chatContent;
-        if (inputField) inputField.value = chatContent.substring(0, 500);
-        showToastMessage('✅ Chat content loaded! Click Generate.');
-    } else {
-        alert('❌ No chat content found. Start a conversation first!');
+    let exportText = `📝 ${window.currentQuizData.title}\n`;
+    exportText += `📅 Date: ${new Date().toLocaleString()}\n`;
+    exportText += `📊 Total Questions: ${window.currentQuizData.questions.length}\n`;
+    exportText += `="\n\n`;
+    
+    let score = 0;
+    
+    window.currentQuizData.questions.forEach((q, idx) => {
+        const qNum = idx + 1;
+        const userAnswer = window.quizAnswers[qNum] || "Not answered";
+        const isCorrect = userAnswer === q.correctAnswer;
+        if (isCorrect) score++;
+        
+        exportText += `${qNum}. ${q.text}\n`;
+        exportText += `   Your answer: ${userAnswer}\n`;
+        exportText += `   Correct answer: ${q.correctAnswer}\n`;
+        exportText += `   Result: ${isCorrect ? '✓ CORRECT' : '✗ INCORRECT'}\n`;
+        if (q.explanation) {
+            exportText += `   Explanation: ${q.explanation}\n`;
+        }
+        exportText += `\n`;
+    });
+    
+    const percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
+    exportText += `="\n`;
+    exportText += `FINAL SCORE: ${score}/${window.currentQuizData.questions.length} (${percentage}%)\n`;
+    exportText += `Grade: ${percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT'}\n`;
+    
+    // Download as text file
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${window.currentQuizData.title.replace(/ /g, '_')}_results.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast("Quiz results exported!");
+}
+
+// Remove the old startQuiz function and replace with submitQuizAnswers
+window.startQuiz = function() {
+    // This function is deprecated - now using submitQuizAnswers
+    showToast("Please answer the questions and click 'Submit Quiz'", "info");
+}
+
+// Study Notes Generation
+window.generateStudyNotes = async function() {
+    const topic = document.getElementById('notesTopicInput').value;
+    if (!topic) {
+        showToast("Please enter a topic", "error");
+        return;
+    }
+    
+    const progressDiv = document.getElementById('notesProgress');
+    const progressFill = document.getElementById('notesProgressFill');
+    const displayDiv = document.getElementById('notesDisplay');
+    const contentDiv = document.getElementById('notesContent');
+    
+    if (progressDiv) progressDiv.style.display = 'block';
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 10;
+        if (progressFill) progressFill.style.width = width + '%';
+    }, 100);
+    
+    try {
+        const prompt = `Create comprehensive study notes about "${topic}".
+
+Include:
+1. Key Concepts (at least 5)
+2. Important Definitions
+3. Summary Points
+4. Key Takeaways
+5. Study Tips
+
+Format with clear headings, bullet points, and emojis for easy reading.
+Make it organized and educational.`;
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                message: prompt,
+                document_content: null,
+                audio: false
+            })
+        });
+        
+        const data = await response.json();
+        const notesContent = data.response || "Failed to generate notes.";
+        
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (displayDiv) displayDiv.style.display = 'block';
+        
+        if (contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="notes-header">
+                    <h2>📚 Study Notes: ${escapeHtml(topic)}</h2>
+                    <p>Generated on: ${new Date().toLocaleString()}</p>
+                </div>
+                <div class="notes-body">
+                    ${formatContent(notesContent)}
+                </div>
+            `;
+        }
+        
+        window.currentNotes = { topic, content: notesContent, date: new Date().toLocaleString() };
+        showToast("✅ Study notes generated!");
+        
+    } catch (error) {
+        clearInterval(interval);
+        if (progressDiv) progressDiv.style.display = 'none';
+        console.error('Notes error:', error);
+        showToast("Error generating notes", "error");
     }
 }
 
-// Export functions
-window.exportQuizAsPDF = function() { alert('📄 PDF export coming soon!'); }
-window.copyQuizToClipboard = function() { 
-    const content = document.getElementById('quizContent')?.innerText;
-    if (content) navigator.clipboard.writeText(content);
-    alert('✅ Quiz copied!');
+// Quiz helper functions
+window.startQuiz = function() {
+    if (!window.currentQuizData || !window.currentQuizData.questions) {
+        showToast("No quiz loaded. Generate a quiz first!", "error");
+        return;
+    }
+    
+    let score = 0;
+    
+    window.currentQuizData.questions.forEach((q, idx) => {
+        const qNum = idx + 1;
+        const selected = document.querySelector(`input[name="q${qNum}"]:checked`);
+        const feedbackDiv = document.getElementById(`feedback-${qNum}`);
+        
+        if (selected) {
+            const userAnswer = selected.value;
+            if (userAnswer === q.correctAnswer) {
+                score++;
+                if (feedbackDiv) {
+                    feedbackDiv.innerHTML = `✅ Correct! ${q.explanation || ''}`;
+                    feedbackDiv.style.color = '#10b981';
+                    feedbackDiv.style.display = 'block';
+                }
+            } else {
+                if (feedbackDiv) {
+                    feedbackDiv.innerHTML = `❌ Incorrect! Correct answer: ${q.correctAnswer}. ${q.explanation || ''}`;
+                    feedbackDiv.style.color = '#ef4444';
+                    feedbackDiv.style.display = 'block';
+                }
+            }
+        } else {
+            if (feedbackDiv) {
+                feedbackDiv.innerHTML = `⚠️ No answer selected. Correct answer: ${q.correctAnswer}`;
+                feedbackDiv.style.color = '#f59e0b';
+                feedbackDiv.style.display = 'block';
+            }
+        }
+    });
+    
+    const percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
+    let gradeMessage = percentage >= 90 ? '🎉 Excellent!' : percentage >= 70 ? '👍 Good job!' : percentage >= 50 ? '📚 Not bad!' : '💪 Keep practicing!';
+    
+    const scoreDiv = document.getElementById('quizScore');
+    if (scoreDiv) {
+        scoreDiv.style.display = 'block';
+        scoreDiv.innerHTML = `
+            <div class="score-card">
+                <h4>📊 Score: ${score}/${window.currentQuizData.questions.length} (${percentage}%)</h4>
+                <p>${gradeMessage}</p>
+                <button onclick="resetQuiz()">🔄 Retake Quiz</button>
+            </div>
+        `;
+    }
+    
+    showToast(`Quiz completed! Score: ${score}/${window.currentQuizData.questions.length}`);
 }
-window.saveQuizToLibrary = function() { alert('💾 Saved to library!'); }
-window.exportNotesAsPDF = function() { alert('📄 PDF export coming soon!'); }
-window.copyNotesToClipboard = function() { 
-    const content = document.getElementById('notesContent')?.innerText;
-    if (content) navigator.clipboard.writeText(content);
-    alert('✅ Notes copied!');
-}
-window.saveNotesToLibrary = function() { alert('💾 Saved to library!'); }
-window.printNotes = function() { window.print(); }
 
-// ================= GAMES MODULE =================
+window.resetQuiz = function() {
+    document.querySelectorAll('#quizForm input[type="radio"]').forEach(radio => radio.checked = false);
+    for (let i = 1; i <= (window.currentQuizData?.questions.length || 0); i++) {
+        const feedbackDiv = document.getElementById(`feedback-${i}`);
+        if (feedbackDiv) {
+            feedbackDiv.style.display = 'none';
+            feedbackDiv.innerHTML = '';
+        }
+    }
+    const scoreDiv = document.getElementById('quizScore');
+    if (scoreDiv) scoreDiv.style.display = 'none';
+    showToast("Quiz reset!");
+}
+
+window.exportQuizAsPDF = function() {
+    const content = document.getElementById('quizContent')?.innerHTML;
+    if (content) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html><head><title>Quiz</title>
+            <style>body { font-family: Arial; padding: 20px; } .quiz-question-card { margin-bottom: 20px; }</style>
+            </head><body>${content}</body></html>
+        `);
+        printWindow.print();
+    }
+}
+
+window.copyQuizToClipboard = function() {
+    if (!window.currentQuizData) return;
+    let quizText = `${window.currentQuizData.title}\n\n`;
+    window.currentQuizData.questions.forEach((q, idx) => {
+        quizText += `${idx + 1}. ${q.text}\n   Correct: ${q.correctAnswer}\n\n`;
+    });
+    navigator.clipboard.writeText(quizText);
+    showToast("Quiz copied!");
+}
+
+window.saveQuizToLibrary = function() {
+    if (!window.currentQuizData) return;
+    const user = getCurrentUser();
+    const savedQuizzes = JSON.parse(localStorage.getItem(`quizzes_${user}`) || '[]');
+    savedQuizzes.push({
+        id: 'quiz_' + Date.now(),
+        title: window.currentQuizData.title,
+        data: window.currentQuizData,
+        date: new Date().toLocaleString()
+    });
+    localStorage.setItem(`quizzes_${user}`, JSON.stringify(savedQuizzes));
+    showToast("Quiz saved to library!");
+}
+
+// Notes helper functions
+window.exportNotesAsPDF = function() {
+    const content = document.getElementById('notesContent')?.innerHTML;
+    if (content) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html><head><title>Study Notes</title>
+            <style>body { font-family: Arial; padding: 20px; }</style>
+            </head><body>${content}</body></html>
+        `);
+        printWindow.print();
+    }
+}
+
+window.copyNotesToClipboard = function() {
+    const content = document.getElementById('notesContent')?.innerText;
+    if (content) {
+        navigator.clipboard.writeText(content);
+        showToast("Notes copied!");
+    }
+}
+
+window.saveNotesToLibrary = function() {
+    if (!window.currentNotes) return;
+    const user = getCurrentUser();
+    const savedNotes = JSON.parse(localStorage.getItem(`notes_${user}`) || '[]');
+    savedNotes.push(window.currentNotes);
+    localStorage.setItem(`notes_${user}`, JSON.stringify(savedNotes));
+    showToast("Notes saved to library!");
+}
+
+window.printNotes = function() {
+    const content = document.getElementById('notesContent')?.innerHTML;
+    if (content) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<html><head><title>Notes</title></head><body>${content}</body></html>`);
+        printWindow.print();
+    }
+}
+
+window.useChatForLearning = async function(type) {
+    if (!currentChatId) {
+        showToast("No active chat found. Start a chat first!", "error");
+        return;
+    }
+    
+    let chats = getChats();
+    const chat = chats.find(c => c.id === currentChatId);
+    
+    if (!chat || !chat.messages || chat.messages.length === 0) {
+        showToast("No chat content found!", "error");
+        return;
+    }
+    
+    // Get the last few messages for context
+    const lastMessages = chat.messages.slice(-5);
+    const chatContent = lastMessages.map(m => `${m.role}: ${m.content}`).join('\n\n');
+    
+    if (type === 'quiz') {
+        document.getElementById('quizTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
+        showToast("✅ Chat content loaded! Click Generate Quiz");
+    } else if (type === 'notes') {
+        document.getElementById('notesTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
+        showToast("✅ Chat content loaded! Click Generate Notes");
+    } else if (type === 'mindmap') {
+        document.getElementById('mindmapTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
+        showToast("✅ Chat content loaded! Click Generate Mind Map");
+    }
+}
+
+window.uploadForLearning = function(type) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.pdf,.docx';
+    input.onchange = () => showToast(`Document uploaded for ${type} generation!`);
+    input.click();
+}
+
+// ================= COMPLETE GAMES MODULE WITH BIG BOXES =================
+
+// Game state variables
+let currentGameType = null;
+let currentQuizQuestions = [];
+let currentQuizIndex = 0;
+let quizScore = 0;
+let quizTimer = null;
+let timeLeft = 30;
+
+let memoryCards = [];
+let memoryFlipped = [];
+let memoryLocked = false;
+let memoryMatches = 0;
+
+let typingCurrentWord = "";
+let typingScore = 0;
+let typingRound = 0;
+let typingWordsList = [];
+
+let triviaQuestions = [];
+let triviaIndex = 0;
+let triviaScore = 0;
+
+let scrambleCurrentWord = "";
+let scrambleCurrentHint = "";
+let scrambleScore = 0;
+let scrambleRound = 0;
+let scrambleWordsList = [];
+
+let tfQuestions = [];
+let tfIndex = 0;
+let tfScore = 0;
 
 // Open Games Modal
 window.openGamesModal = function() {
+    console.log("Opening Games Modal");
     const modal = document.getElementById('gamesModal');
     if (modal) {
         modal.style.display = 'flex';
-        showGameSelectionScreen();
-    } else {
-        console.error("gamesModal not found");
-        alert("Games modal not found. Please check your HTML.");
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
+        modal.style.zIndex = '200000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
     }
+    // Show game selection by default
+    showGameSelectionScreen();
 }
 
 // Close Games Modal
 window.closeGamesModal = function() {
     const modal = document.getElementById('gamesModal');
     if (modal) modal.style.display = 'none';
+    if (quizTimer) clearInterval(quizTimer);
 }
 
-// Show Game Selection Screen
+// Show game selection screen with big boxes
 function showGameSelectionScreen() {
     const gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
     
     gameContent.innerHTML = `
-        <div class="games-grid-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 20px;">
-            <div class="game-card-large" onclick="startGame('quiz')" style="background: linear-gradient(135deg, #1a162b, #0A0717); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s;">
-                <div class="game-card-icon" style="font-size: 60px;">🏆</div>
-                <h3 style="color: #a855f7; margin: 15px 0 10px;">Quiz Race</h3>
-                <p style="color: #a1a1aa;">Test your knowledge with timed quizzes</p>
-                <button class="play-now-btn" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Play Now →</button>
+        <div class="games-grid-container">
+            <div class="game-card-large" onclick="selectGame('quiz-race')">
+                <div class="game-card-icon">🏆</div>
+                <h3>Quiz Race</h3>
+                <p>Test your knowledge with timed quizzes</p>
+                <button class="play-now-btn">Play Now →</button>
             </div>
             
-            <div class="game-card-large" onclick="startGame('memory')" style="background: linear-gradient(135deg, #1a162b, #0A0717); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer;">
-                <div class="game-card-icon" style="font-size: 60px;">🎴</div>
-                <h3 style="color: #a855f7; margin: 15px 0 10px;">Memory Match</h3>
-                <p style="color: #a1a1aa;">Match pairs of cards</p>
-                <button class="play-now-btn" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Play Now →</button>
+            <div class="game-card-large" onclick="selectGame('memory-match')">
+                <div class="game-card-icon">🎴</div>
+                <h3>Memory Match</h3>
+                <p>Match terms with definitions</p>
+                <button class="play-now-btn">Play Now →</button>
             </div>
             
-            <div class="game-card-large" onclick="startGame('typing')" style="background: linear-gradient(135deg, #1a162b, #0A0717); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer;">
-                <div class="game-card-icon" style="font-size: 60px;">⌨️</div>
-                <h3 style="color: #a855f7; margin: 15px 0 10px;">Typing Speed</h3>
-                <p style="color: #a1a1aa;">Improve your typing speed</p>
-                <button class="play-now-btn" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Play Now →</button>
+            <div class="game-card-large" onclick="selectGame('typing-speed')">
+                <div class="game-card-icon">⌨️</div>
+                <h3>Typing Speed</h3>
+                <p>Improve your typing speed</p>
+                <button class="play-now-btn">Play Now →</button>
             </div>
             
-            <div class="game-card-large" onclick="startGame('trivia')" style="background: linear-gradient(135deg, #1a162b, #0A0717); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer;">
-                <div class="game-card-icon" style="font-size: 60px;">❓</div>
-                <h3 style="color: #a855f7; margin: 15px 0 10px;">Trivia Challenge</h3>
-                <p style="color: #a1a1aa;">Answer random knowledge questions</p>
-                <button class="play-now-btn" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Play Now →</button>
+            <div class="game-card-large" onclick="selectGame('trivia-challenge')">
+                <div class="game-card-icon">❓</div>
+                <h3>Trivia Challenge</h3>
+                <p>Answer random knowledge questions</p>
+                <button class="play-now-btn">Play Now →</button>
             </div>
             
-            <div class="game-card-large" onclick="startGame('wordguess')" style="background: linear-gradient(135deg, #1a162b, #0A0717); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer;">
-                <div class="game-card-icon" style="font-size: 60px;">🔤</div>
-                <h3 style="color: #a855f7; margin: 15px 0 10px;">Word Guess</h3>
-                <p style="color: #a1a1aa;">Guess the hidden word</p>
-                <button class="play-now-btn" style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Play Now →</button>
+            <div class="game-card-large" onclick="selectGame('word-scramble')">
+                <div class="game-card-icon">🔤</div>
+                <h3>Word Scramble</h3>
+                <p>Unscramble the letters to form words</p>
+                <button class="play-now-btn">Play Now →</button>
+            </div>
+            
+            <div class="game-card-large" onclick="selectGame('true-false')">
+                <div class="game-card-icon">✓✗</div>
+                <h3>True or False</h3>
+                <p>Test your knowledge with true/false questions</p>
+                <button class="play-now-btn">Play Now →</button>
             </div>
         </div>
     `;
 }
 
-// Start Game based on type
-function startGame(gameType) {
-    if (gameType === 'quiz') {
-        startQuizGame();
-    } else if (gameType === 'memory') {
-        startMemoryGame();
-    } else if (gameType === 'typing') {
-        startTypingGame();
-    } else if (gameType === 'trivia') {
-        startTriviaGame();
-    } else if (gameType === 'wordguess') {
-        startWordGuessGame();
+// Select and start a game
+window.selectGame = function(gameType) {
+    currentGameType = gameType;
+    const gameContent = document.getElementById('gameContent');
+    if (!gameContent) return;
+    
+    // Add back button
+    gameContent.innerHTML = `
+        <div class="game-header-bar">
+            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            <h2 class="current-game-title">${getGameTitle(gameType)}</h2>
+        </div>
+        <div id="activeGameContainer" class="active-game-container"></div>
+    `;
+    
+    const activeContainer = document.getElementById('activeGameContainer');
+    
+    // Load the selected game
+    switch(gameType) {
+        case 'quiz-race':
+            loadQuizRaceGame(activeContainer);
+            break;
+        case 'memory-match':
+            loadMemoryMatchGame(activeContainer);
+            break;
+        case 'typing-speed':
+            loadTypingSpeedGame(activeContainer);
+            break;
+        case 'trivia-challenge':
+            loadTriviaChallengeGame(activeContainer);
+            break;
+        case 'word-scramble':
+            loadWordScrambleGame(activeContainer);
+            break;
+        case 'true-false':
+            loadTrueFalseGame(activeContainer);
+            break;
+        default:
+            showGameSelectionScreen();
     }
 }
 
-// ========== QUIZ GAME ==========
-let quizGameQuestions = [];
-let quizGameIndex = 0;
-let quizGameScore = 0;
-let quizGameActive = false;
+function getGameTitle(gameType) {
+    const titles = {
+        'quiz-race': '🏆 Quiz Race',
+        'memory-match': '🎴 Memory Match',
+        'typing-speed': '⌨️ Typing Speed',
+        'trivia-challenge': '❓ Trivia Challenge',
+        'word-scramble': '🔤 Word Scramble',
+        'true-false': '✓✗ True or False'
+    };
+    return titles[gameType] || 'Game';
+}
 
-function startQuizGame() {
-    closeGamesModal();
-    const topic = prompt("Enter a topic for the quiz:", "General Knowledge");
-    if (!topic) return;
+// ================= QUIZ RACE GAME =================
+function loadQuizRaceGame(container) {
+    currentQuizIndex = 0;
+    quizScore = 0;
     
-    if (typeof displayMessage === 'function') {
-        displayMessage(`🎮 Starting QUIZ GAME on "${topic}"!`, 'bot');
-        displayMessage(`Answer the following questions. Type your answer (A, B, C, or D)`, 'bot');
-    } else {
-        alert(`🎮 Starting QUIZ GAME on "${topic}"!\nAnswer the following questions.`);
-    }
-    
-    quizGameQuestions = [
-        { question: `What is ${topic}?`, options: ["A) A concept", "B) A technology", "C) A field of study", "D) All of the above"], correct: 3 },
-        { question: `Why is ${topic} important?`, options: ["A) It helps solve problems", "B) It's not important", "C) Only for experts", "D) None"], correct: 0 },
-        { question: `Where is ${topic} used?`, options: ["A) Healthcare", "B) Finance", "C) Education", "D) All sectors"], correct: 3 },
-        { question: `Who should learn ${topic}?`, options: ["A) Students", "B) Professionals", "C) Everyone", "D) Only researchers"], correct: 2 },
-        { question: `Is ${topic} growing?`, options: ["A) Yes, rapidly", "B) No", "C) Slowly", "D) Not sure"], correct: 0 }
+    currentQuizQuestions = [
+        { question: "What is the capital of France?", options: ["London", "Berlin", "Paris", "Madrid"], correct: "Paris" },
+        { question: "Which planet is known as the Red Planet?", options: ["Mars", "Jupiter", "Venus", "Saturn"], correct: "Mars" },
+        { question: "Who painted the Mona Lisa?", options: ["Van Gogh", "Picasso", "Da Vinci", "Rembrandt"], correct: "Da Vinci" },
+        { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: "Pacific" },
+        { question: "What is the fastest land animal?", options: ["Lion", "Cheetah", "Leopard", "Tiger"], correct: "Cheetah" }
     ];
     
-    quizGameIndex = 0;
-    quizGameScore = 0;
-    quizGameActive = true;
-    
-    askQuizQuestion();
+    displayQuizQuestion(container);
 }
 
-function askQuizQuestion() {
-    if (quizGameIndex >= quizGameQuestions.length) {
-        endQuizGame();
+function displayQuizQuestion(container) {
+    if (currentQuizIndex >= currentQuizQuestions.length) {
+        showQuizResults(container);
         return;
     }
     
-    const q = quizGameQuestions[quizGameIndex];
-    const message = `📝 Question ${quizGameIndex + 1}/${quizGameQuestions.length}\n\n${q.question}\n\n${q.options.join('\n')}\n\nType your answer (A, B, C, or D):`;
+    const q = currentQuizQuestions[currentQuizIndex];
+    timeLeft = 30;
     
-    if (typeof displayMessage === 'function') {
-        displayMessage(message, 'bot');
-    } else {
-        alert(message);
-    }
+    if (quizTimer) clearInterval(quizTimer);
     
-    createGameInput("Enter your answer (A, B, C, or D):", (answer) => {
-        let answerIndex = -1;
-        if (answer === 'A') answerIndex = 0;
-        else if (answer === 'B') answerIndex = 1;
-        else if (answer === 'C') answerIndex = 2;
-        else if (answer === 'D') answerIndex = 3;
-        
-        const isCorrect = (answerIndex === q.correct);
-        
-        if (isCorrect) {
-            quizGameScore += 10;
-            showGameResult(`✅ Correct! +10 points. Score: ${quizGameScore}`, 'correct');
-        } else {
-            const correctLetter = String.fromCharCode(65 + q.correct);
-            showGameResult(`❌ Wrong! The correct answer was ${correctLetter}. Score: ${quizGameScore}`, 'wrong');
+    quizTimer = setInterval(() => {
+        timeLeft--;
+        const timerEl = document.getElementById('quizTimer');
+        if (timerEl) {
+            timerEl.textContent = timeLeft;
+            if (timeLeft <= 5) timerEl.style.color = '#ef4444';
+            if (timeLeft <= 0) {
+                clearInterval(quizTimer);
+                moveToNextQuizQuestion(container);
+            }
         }
-        
-        quizGameIndex++;
-        setTimeout(() => askQuizQuestion(), 2000);
+    }, 1000);
+    
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">Question ${currentQuizIndex + 1}/${currentQuizQuestions.length}</div>
+            <div class="game-score">⭐ Score: ${quizScore}</div>
+            <div class="game-timer">⏱️ Time: <span id="quizTimer">30</span>s</div>
+        </div>
+        <div class="game-question-large">${escapeHtml(q.question)}</div>
+        <div class="game-options-grid">
+            ${q.options.map(opt => `<button class="game-option-btn" onclick="checkQuizAnswer('${escapeHtml(opt)}', this)">${escapeHtml(opt)}</button>`).join('')}
+        </div>
+        <div class="game-feedback" id="gameFeedback"></div>
+    `;
+}
+
+window.checkQuizAnswer = function(selected, btnElement) {
+    if (quizTimer) clearInterval(quizTimer);
+    
+    const q = currentQuizQuestions[currentQuizIndex];
+    const feedback = document.getElementById('gameFeedback');
+    
+    // Disable all option buttons
+    document.querySelectorAll('.game-option-btn').forEach(btn => btn.disabled = true);
+    
+    if (selected === q.correct) {
+        quizScore += 10;
+        feedback.innerHTML = `<div class="correct-answer">✅ Correct! +10 points</div>`;
+        showToast("✅ Correct!");
+    } else {
+        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! Correct answer: ${q.correct}</div>`;
+        showToast("❌ Wrong answer!");
+    }
+    
+    setTimeout(() => moveToNextQuizQuestion(document.getElementById('activeGameContainer')), 2000);
+}
+
+function moveToNextQuizQuestion(container) {
+    currentQuizIndex++;
+    if (currentQuizIndex < currentQuizQuestions.length) {
+        displayQuizQuestion(container);
+    } else {
+        showQuizResults(container);
+    }
+}
+
+function showQuizResults(container) {
+    const percentage = Math.round((quizScore / (currentQuizQuestions.length * 10)) * 100);
+    container.innerHTML = `
+        <div class="game-results-large">
+            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
+            <h2>Quiz Complete!</h2>
+            <div class="final-score-large">Final Score: ${quizScore}/${currentQuizQuestions.length * 10}</div>
+            <div class="score-percentage-large">${percentage}%</div>
+            <div class="results-buttons">
+                <button class="play-again-btn" onclick="selectGame('quiz-race')">🔄 Play Again</button>
+                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            </div>
+        </div>
+    `;
+}
+
+// ================= MEMORY MATCH GAME =================
+function loadMemoryMatchGame(container) {
+    const pairs = [
+        { pair1: "HTML", pair2: "Web Page" },
+        { pair1: "CSS", pair2: "Styling" },
+        { pair1: "JS", pair2: "JavaScript" },
+        { pair1: "API", pair2: "Interface" },
+        { pair1: "JSON", pair2: "Data Format" },
+        { pair1: "DOM", pair2: "Document Object" }
+    ];
+    
+    memoryCards = [];
+    pairs.forEach((pair, idx) => {
+        memoryCards.push({ id: idx * 2, value: pair.pair1, matched: false, pairId: idx });
+        memoryCards.push({ id: idx * 2 + 1, value: pair.pair2, matched: false, pairId: idx });
     });
-}
-
-function endQuizGame() {
-    quizGameActive = false;
-    const percentage = (quizGameScore / (quizGameQuestions.length * 10)) * 100;
-    let grade = percentage >= 80 ? 'Excellent! 🎉' : percentage >= 60 ? 'Good job! 👍' : 'Keep practicing! 📚';
     
-    const message = `🏆 GAME OVER! 🏆\n\nFinal Score: ${quizGameScore}/${quizGameQuestions.length * 10}\nPercentage: ${percentage}%\nGrade: ${grade}\n\nThanks for playing!`;
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(message, 'bot');
-    } else {
-        alert(message);
-    }
-    
-    setTimeout(() => openGamesModal(), 3000);
-}
-
-// ========== MEMORY MATCH GAME ==========
-let memoryCards = [];
-let memoryFlipped = [];
-let memoryMatched = 0;
-let memoryGameActive = false;
-
-function startMemoryGame() {
-    closeGamesModal();
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(`🧠 Starting MEMORY MATCH GAME!`, 'bot');
-        displayMessage(`Match the pairs!`, 'bot');
-    } else {
-        alert(`🧠 Starting MEMORY MATCH GAME!`);
-    }
-    
-    const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
-    memoryCards = [...emojis, ...emojis];
-    
+    // Shuffle
     for (let i = memoryCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [memoryCards[i], memoryCards[j]] = [memoryCards[j], memoryCards[i]];
     }
     
     memoryFlipped = [];
-    memoryMatched = 0;
-    memoryGameActive = true;
+    memoryLocked = false;
+    memoryMatches = 0;
     
-    renderMemoryGameUI();
+    renderMemoryGame(container);
 }
 
-function renderMemoryGameUI() {
-    const gameContainer = document.createElement('div');
-    gameContainer.id = 'memoryGameContainer';
-    gameContainer.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0A0717; border: 2px solid #a855f7; border-radius: 20px; padding: 20px; z-index: 200000; width: 90%; max-width: 600px; text-align: center;';
-    
-    gameContainer.innerHTML = `
-        <h2 style="color: #a855f7; margin-bottom: 15px;">🎴 Memory Match Game</h2>
-        <div style="margin-bottom: 15px;">
-            <span style="color: white;">Matches: </span>
-            <span id="memoryMatches" style="color: #22c55e; font-size: 24px;">${memoryMatched}</span>
-            <span style="color: white;"> / ${memoryCards.length / 2}</span>
+function renderMemoryGame(container) {
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">🎴 Memory Match</div>
+            <div class="game-score">Matches: ${memoryMatches}/${memoryCards.length / 2}</div>
         </div>
-        <div id="memoryGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;"></div>
-        <button onclick="closeMemoryGame()" style="padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Close Game</button>
+        <div class="memory-grid-large">
+            ${memoryCards.map((card, idx) => `
+                <div class="memory-card-large ${card.matched ? 'matched' : ''} ${memoryFlipped.includes(idx) ? 'flipped' : ''}" 
+                     onclick="flipMemoryCard(${idx})">
+                    <div class="card-front">❓</div>
+                    <div class="card-back">${card.matched ? '✓' : escapeHtml(card.value)}</div>
+                </div>
+            `).join('')}
+        </div>
+        <div class="game-buttons">
+            <button class="play-again-btn" onclick="selectGame('memory-match')">🔄 New Game</button>
+            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+        </div>
     `;
-    
-    document.body.appendChild(gameContainer);
-    updateMemoryGrid();
 }
 
-function updateMemoryGrid() {
-    const grid = document.getElementById('memoryGrid');
-    if (!grid) return;
-    
-    grid.innerHTML = '';
-    for (let i = 0; i < memoryCards.length; i++) {
-        const isFlipped = memoryFlipped.includes(i);
-        const isMatched = memoryCards[i] === 'matched';
-        
-        const card = document.createElement('div');
-        card.style.cssText = `background: ${isFlipped || isMatched ? '#a855f7' : '#1a162b'}; border: 2px solid #6366f1; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; font-size: 30px; transition: 0.2s;`;
-        card.textContent = (isFlipped || isMatched) ? memoryCards[i] : '?';
-        card.onclick = () => flipMemoryCard(i);
-        grid.appendChild(card);
-    }
-    
-    const matchesSpan = document.getElementById('memoryMatches');
-    if (matchesSpan) matchesSpan.textContent = memoryMatched;
-}
-
-function flipMemoryCard(index) {
-    if (!memoryGameActive) return;
-    if (memoryFlipped.length >= 2) return;
+window.flipMemoryCard = function(index) {
+    if (memoryLocked) return;
+    if (memoryCards[index].matched) return;
     if (memoryFlipped.includes(index)) return;
-    if (memoryCards[index] === 'matched') return;
+    if (memoryFlipped.length === 2) return;
     
     memoryFlipped.push(index);
-    updateMemoryGrid();
+    renderMemoryGame(document.getElementById('activeGameContainer'));
     
     if (memoryFlipped.length === 2) {
         checkMemoryMatch();
@@ -2817,605 +3209,338 @@ function flipMemoryCard(index) {
 }
 
 function checkMemoryMatch() {
-    const card1 = memoryFlipped[0];
-    const card2 = memoryFlipped[1];
+    const card1 = memoryCards[memoryFlipped[0]];
+    const card2 = memoryCards[memoryFlipped[1]];
     
-    if (memoryCards[card1] === memoryCards[card2]) {
-        memoryCards[card1] = 'matched';
-        memoryCards[card2] = 'matched';
-        memoryMatched++;
+    if (card1.pairId === card2.pairId) {
+        card1.matched = true;
+        card2.matched = true;
+        memoryMatches++;
         memoryFlipped = [];
-        updateMemoryGrid();
-        showGameResult('✅ Match found! +10 points', 'correct');
+        renderMemoryGame(document.getElementById('activeGameContainer'));
+        showToast("🎉 Match found!");
         
-        if (memoryMatched === memoryCards.length / 2) {
-            showGameResult('🎉 CONGRATULATIONS! You completed the game! 🎉', 'correct');
-            memoryGameActive = false;
-            setTimeout(() => closeMemoryGame(), 3000);
+        if (memoryMatches === memoryCards.length / 2) {
+            setTimeout(() => showToast("🏆 Congratulations! You completed the game!"), 500);
         }
     } else {
+        memoryLocked = true;
         setTimeout(() => {
             memoryFlipped = [];
-            updateMemoryGrid();
-            showGameResult('❌ No match. Try again!', 'wrong');
+            memoryLocked = false;
+            renderMemoryGame(document.getElementById('activeGameContainer'));
         }, 1000);
     }
 }
 
-function closeMemoryGame() {
-    const container = document.getElementById('memoryGameContainer');
-    if (container) container.remove();
-    openGamesModal();
+// ================= TYPING SPEED GAME =================
+function loadTypingSpeedGame(container) {
+    typingWordsList = ["javascript", "programming", "developer", "computer", "keyboard", "website", "application", "database"];
+    typingRound = 0;
+    typingScore = 0;
+    loadNextTypingWord(container);
 }
 
-// ========== TYPING GAME ==========
-let typingGameActive = false;
-let typingGameScore = 0;
-let typingGameWords = ['Cortexa', 'Artificial', 'Intelligence', 'Machine', 'Learning', 'Algorithm', 'Neural', 'Network', 'Python', 'JavaScript'];
-let currentTypingWord = '';
-
-function startTypingGame() {
-    closeGamesModal();
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(`⌨️ Starting TYPING SPEED GAME!`, 'bot');
-        displayMessage(`Type the words as fast as you can!`, 'bot');
+function loadNextTypingWord(container) {
+    if (typingRound >= typingWordsList.length) {
+        showTypingResults(container);
+        return;
     }
     
-    typingGameActive = true;
-    typingGameScore = 0;
-    nextTypingWord();
-}
-
-function nextTypingWord() {
-    if (!typingGameActive) return;
+    typingCurrentWord = typingWordsList[typingRound];
     
-    currentTypingWord = typingGameWords[Math.floor(Math.random() * typingGameWords.length)];
-    
-    const gameContainer = document.createElement('div');
-    gameContainer.id = 'typingGameContainer';
-    gameContainer.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0A0717; border: 2px solid #a855f7; border-radius: 20px; padding: 30px; z-index: 200000; width: 90%; max-width: 500px; text-align: center;';
-    
-    gameContainer.innerHTML = `
-        <h2 style="color: #a855f7; margin-bottom: 15px;">⌨️ Typing Speed Game</h2>
-        <div style="margin-bottom: 15px;">
-            <span style="color: white;">Score: </span>
-            <span id="typingScore" style="color: #22c55e; font-size: 24px;">${typingGameScore}</span>
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">Word ${typingRound + 1}/${typingWordsList.length}</div>
+            <div class="game-score">⭐ Score: ${typingScore}</div>
         </div>
-        <div style="background: #1a162b; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <p style="color: #a855f7; font-size: 14px;">Type this word:</p>
-            <p style="font-size: 32px; font-weight: bold; color: white;">${currentTypingWord}</p>
+        <div class="typing-word-large">${typingCurrentWord}</div>
+        <input type="text" id="typingInput" class="game-input-large" placeholder="Type the word above..." autofocus>
+        <div class="game-buttons">
+            <button class="game-submit-btn-large" onclick="checkTypingWord()">Submit</button>
+            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button>
         </div>
-        <input type="text" id="typingInput" placeholder="Type the word here..." style="width: 100%; padding: 12px; background: #120d25; border: 1px solid #a855f7; border-radius: 8px; color: white; font-size: 16px; margin-bottom: 15px;">
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button onclick="checkTypingWord()" style="padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Submit</button>
-            <button onclick="closeTypingGame()" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer;">Quit</button>
-        </div>
+        <div class="game-feedback" id="typingFeedback"></div>
     `;
     
-    document.body.appendChild(gameContainer);
-    document.getElementById('typingInput').focus();
+    document.getElementById('typingInput')?.focus();
 }
 
-function checkTypingWord() {
+window.checkTypingWord = function() {
     const input = document.getElementById('typingInput');
-    const userInput = input.value.trim().toLowerCase();
+    const userInput = input?.value.trim().toLowerCase();
+    const feedback = document.getElementById('typingFeedback');
+    const container = document.getElementById('activeGameContainer');
     
-    if (userInput === currentTypingWord.toLowerCase()) {
-        typingGameScore += 10;
-        showGameResult(`✅ Correct! +10 points. Total: ${typingGameScore}`, 'correct');
-        closeTypingGame();
-        setTimeout(() => nextTypingWord(), 500);
+    if (userInput === typingCurrentWord) {
+        typingScore += 10;
+        feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
+        showToast("🎉 Correct!");
     } else {
-        showGameResult(`❌ Wrong! The correct word was "${currentTypingWord}".`, 'wrong');
-        closeTypingGame();
-        setTimeout(() => nextTypingWord(), 1500);
-    }
-}
-
-function closeTypingGame() {
-    const container = document.getElementById('typingGameContainer');
-    if (container) container.remove();
-    if (typingGameActive === false) openGamesModal();
-}
-
-// ========== TRIVIA GAME ==========
-let triviaQuestions = [];
-let triviaIndex = 0;
-let triviaScore = 0;
-
-function startTriviaGame() {
-    closeGamesModal();
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(`🎲 Starting TRIVIA CHALLENGE!`, 'bot');
+        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! The word was: ${typingCurrentWord}</div>`;
+        showToast("❌ Wrong!");
     }
     
-    triviaQuestions = [
-        { question: "What is the capital of France?", options: ["A) London", "B) Berlin", "C) Paris", "D) Madrid"], correct: 2 },
-        { question: "Which planet is known as the Red Planet?", options: ["A) Mars", "B) Jupiter", "C) Venus", "D) Saturn"], correct: 0 },
-        { question: "Who painted the Mona Lisa?", options: ["A) Van Gogh", "B) Picasso", "C) Da Vinci", "D) Rembrandt"], correct: 2 },
-        { question: "What is the largest ocean on Earth?", options: ["A) Atlantic", "B) Indian", "C) Arctic", "D) Pacific"], correct: 3 },
-        { question: "Which year did World War II end?", options: ["A) 1943", "B) 1944", "C) 1945", "D) 1946"], correct: 2 }
-    ];
-    
+    setTimeout(() => {
+        typingRound++;
+        loadNextTypingWord(container);
+    }, 1500);
+}
+
+function showTypingResults(container) {
+    const percentage = Math.round((typingScore / (typingWordsList.length * 10)) * 100);
+    container.innerHTML = `
+        <div class="game-results-large">
+            <div class="results-emoji">⌨️</div>
+            <h2>Typing Speed Complete!</h2>
+            <div class="final-score-large">Score: ${typingScore}/${typingWordsList.length * 10}</div>
+            <div class="score-percentage-large">${percentage}%</div>
+            <div class="results-buttons">
+                <button class="play-again-btn" onclick="selectGame('typing-speed')">🔄 Try Again</button>
+                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            </div>
+        </div>
+    `;
+}
+
+// ================= TRIVIA CHALLENGE =================
+function loadTriviaChallengeGame(container) {
     triviaIndex = 0;
     triviaScore = 0;
-    askTriviaQuestion();
+    
+    triviaQuestions = [
+        { question: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], correct: "Tokyo", funFact: "Tokyo is the most populous metropolitan area in the world" },
+        { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "Jane Austen", "William Shakespeare", "Mark Twain"], correct: "William Shakespeare", funFact: "Written around 1595" },
+        { question: "What is the chemical symbol for Gold?", options: ["Go", "Gd", "Au", "Ag"], correct: "Au", funFact: "Au comes from Latin 'aurum'" },
+        { question: "Which country gifted the Statue of Liberty to the USA?", options: ["England", "Spain", "France", "Germany"], correct: "France", funFact: "Gifted in 1886" },
+        { question: "What is the world's longest river?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], correct: "Nile", funFact: "The Nile is about 6,650 km long" }
+    ];
+    
+    displayTriviaQuestion(container);
 }
 
-function askTriviaQuestion() {
+function displayTriviaQuestion(container) {
     if (triviaIndex >= triviaQuestions.length) {
-        const percentage = (triviaScore / (triviaQuestions.length * 10)) * 100;
-        const message = `🏆 TRIVIA COMPLETE! Final Score: ${triviaScore}/${triviaQuestions.length * 10} (${percentage}%)`;
-        
-        if (typeof displayMessage === 'function') {
-            displayMessage(message, 'bot');
-        } else {
-            alert(message);
-        }
-        setTimeout(() => openGamesModal(), 3000);
+        showTriviaResults(container);
         return;
     }
     
     const q = triviaQuestions[triviaIndex];
-    const message = `📝 Question ${triviaIndex + 1}/${triviaQuestions.length}\n\n${q.question}\n\n${q.options.join('\n')}`;
     
-    if (typeof displayMessage === 'function') {
-        displayMessage(message, 'bot');
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">Question ${triviaIndex + 1}/${triviaQuestions.length}</div>
+            <div class="game-score">⭐ Score: ${triviaScore}</div>
+        </div>
+        <div class="game-question-large">${escapeHtml(q.question)}</div>
+        <div class="game-options-grid">
+            ${q.options.map(opt => `<button class="game-option-btn" onclick="checkTriviaAnswer('${escapeHtml(opt)}', this)">${escapeHtml(opt)}</button>`).join('')}
+        </div>
+        <div class="game-feedback" id="triviaFeedback"></div>
+    `;
+}
+
+window.checkTriviaAnswer = function(selected, btnElement) {
+    const q = triviaQuestions[triviaIndex];
+    const feedback = document.getElementById('triviaFeedback');
+    
+    document.querySelectorAll('.game-option-btn').forEach(btn => btn.disabled = true);
+    
+    if (selected === q.correct) {
+        triviaScore += 10;
+        feedback.innerHTML = `<div class="correct-answer">✅ Correct! ${q.funFact || 'Great job!'}</div>`;
+        showToast("✅ Correct!");
     } else {
-        alert(message);
+        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! Correct: ${q.correct}. ${q.funFact || ''}</div>`;
+        showToast("❌ Wrong!");
     }
     
-    createGameInput("Enter your answer (A, B, C, or D):", (answer) => {
-        let answerIndex = -1;
-        if (answer === 'A') answerIndex = 0;
-        else if (answer === 'B') answerIndex = 1;
-        else if (answer === 'C') answerIndex = 2;
-        else if (answer === 'D') answerIndex = 3;
-        
-        if (answerIndex === triviaQuestions[triviaIndex].correct) {
-            triviaScore += 10;
-            showGameResult(`✅ Correct! +10 points. Score: ${triviaScore}`, 'correct');
-        } else {
-            const correctLetter = String.fromCharCode(65 + triviaQuestions[triviaIndex].correct);
-            showGameResult(`❌ Wrong! The correct answer was ${correctLetter}. Score: ${triviaScore}`, 'wrong');
-        }
-        
+    setTimeout(() => {
         triviaIndex++;
-        setTimeout(() => askTriviaQuestion(), 2000);
-    });
+        displayTriviaQuestion(document.getElementById('activeGameContainer'));
+    }, 2000);
 }
 
-// ========== WORD GUESS GAME ==========
-let wordToGuess = '';
-let guessedLetters = [];
-let attemptsLeft = 6;
-const wordBank = ['PYTHON', 'JAVASCRIPT', 'CORTEXA', 'LEARNING', 'ALGORITHM', 'DATABASE', 'NETWORK'];
-
-function startWordGuessGame() {
-    closeGamesModal();
-    wordToGuess = wordBank[Math.floor(Math.random() * wordBank.length)];
-    guessedLetters = Array(wordToGuess.length).fill('_');
-    attemptsLeft = 6;
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(`🔤 Starting WORD GUESSING GAME!`, 'bot');
-        displayMessage(`Guess the word letter by letter. You have ${attemptsLeft} attempts.`, 'bot');
-    }
-    
-    renderWordGuessUI();
-}
-
-function renderWordGuessUI() {
-    const gameContainer = document.createElement('div');
-    gameContainer.id = 'wordGuessContainer';
-    gameContainer.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0A0717; border: 2px solid #a855f7; border-radius: 20px; padding: 30px; z-index: 200000; width: 90%; max-width: 500px; text-align: center;';
-    
-    gameContainer.innerHTML = `
-        <h2 style="color: #a855f7; margin-bottom: 15px;">🔤 Word Guess Game</h2>
-        <div style="margin-bottom: 15px;">
-            <span style="color: white;">Attempts left: </span>
-            <span id="attemptsLeft" style="color: #ef4444; font-size: 20px;">${attemptsLeft}</span>
-        </div>
-        <div style="background: #1a162b; padding: 25px; border-radius: 12px; margin-bottom: 20px;">
-            <p id="wordDisplay" style="font-size: 28px; letter-spacing: 8px; color: white;">${guessedLetters.join(' ')}</p>
-        </div>
-        <input type="text" id="letterInput" maxlength="1" placeholder="Guess a letter..." style="width: 80%; padding: 12px; background: #120d25; border: 1px solid #a855f7; border-radius: 8px; color: white; font-size: 20px; text-align: center; margin-bottom: 15px;">
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button onclick="checkWordGuess()" style="padding: 10px 20px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Guess</button>
-            <button onclick="closeWordGuessGame()" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer;">Quit</button>
+function showTriviaResults(container) {
+    const percentage = Math.round((triviaScore / (triviaQuestions.length * 10)) * 100);
+    container.innerHTML = `
+        <div class="game-results-large">
+            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
+            <h2>Trivia Complete!</h2>
+            <div class="final-score-large">Score: ${triviaScore}/${triviaQuestions.length * 10}</div>
+            <div class="score-percentage-large">${percentage}%</div>
+            <div class="results-buttons">
+                <button class="play-again-btn" onclick="selectGame('trivia-challenge')">🔄 Play Again</button>
+                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            </div>
         </div>
     `;
-    
-    document.body.appendChild(gameContainer);
-    document.getElementById('letterInput').focus();
 }
 
-function checkWordGuess() {
-    const input = document.getElementById('letterInput');
-    const letter = input.value.trim().toUpperCase();
-    if (!letter) return;
+// ================= WORD SCRAMBLE =================
+function loadWordScrambleGame(container) {
+    scrambleWordsList = [
+        { word: "javascript", hint: "A programming language for web" },
+        { word: "computer", hint: "An electronic device" },
+        { word: "keyboard", hint: "Used for typing" },
+        { word: "monitor", hint: "Displays output" },
+        { word: "internet", hint: "Global network" }
+    ];
     
-    let correct = false;
-    for (let i = 0; i < wordToGuess.length; i++) {
-        if (wordToGuess[i] === letter && guessedLetters[i] === '_') {
-            guessedLetters[i] = letter;
-            correct = true;
-        }
+    scrambleRound = 0;
+    scrambleScore = 0;
+    loadNextScrambleWord(container);
+}
+
+function loadNextScrambleWord(container) {
+    if (scrambleRound >= scrambleWordsList.length) {
+        showScrambleResults(container);
+        return;
     }
     
-    const wordDisplay = document.getElementById('wordDisplay');
-    const attemptsSpan = document.getElementById('attemptsLeft');
+    const wordObj = scrambleWordsList[scrambleRound];
+    scrambleCurrentWord = wordObj.word;
+    scrambleCurrentHint = wordObj.hint;
     
-    if (correct) {
-        showGameResult(`✅ Good guess! "${letter}" is in the word!`, 'correct');
-        if (wordDisplay) wordDisplay.innerHTML = guessedLetters.join(' ');
-        
-        if (!guessedLetters.includes('_')) {
-            showGameResult(`🎉 CONGRATULATIONS! You guessed the word "${wordToGuess}"! 🎉`, 'correct');
-            setTimeout(() => closeWordGuessGame(), 3000);
-        }
-    } else {
-        attemptsLeft--;
-        if (attemptsSpan) attemptsSpan.textContent = attemptsLeft;
-        showGameResult(`❌ Wrong! "${letter}" is not in the word. ${attemptsLeft} attempts left.`, 'wrong');
-        
-        if (attemptsLeft === 0) {
-            showGameResult(`💀 GAME OVER! The word was "${wordToGuess}".`, 'wrong');
-            setTimeout(() => closeWordGuessGame(), 3000);
-        }
+    let scrambled = scrambleCurrentWord.split('');
+    for (let i = scrambled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [scrambled[i], scrambled[j]] = [scrambled[j], scrambled[i]];
     }
     
-    input.value = '';
-    input.focus();
-}
-
-function closeWordGuessGame() {
-    const container = document.getElementById('wordGuessContainer');
-    if (container) container.remove();
-    openGamesModal();
-}
-
-// ========== HELPER FUNCTIONS ==========
-
-function createGameInput(placeholder, callback) {
-    const inputContainer = document.createElement('div');
-    inputContainer.id = 'gameInputContainer';
-    inputContainer.style.cssText = 'position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #0A0717; border: 1px solid #a855f7; border-radius: 12px; padding: 15px; z-index: 200000; width: 300px; text-align: center;';
-    
-    inputContainer.innerHTML = `
-        <p style="color: #a1a1aa; margin-bottom: 10px;">${placeholder}</p>
-        <input type="text" id="gameAnswerInput" style="width: 90%; padding: 10px; background: #120d25; border: 1px solid #a855f7; border-radius: 8px; color: white; text-align: center;">
-        <button id="gameSubmitBtn" style="margin-top: 10px; padding: 8px 16px; background: linear-gradient(90deg,#a855f7,#6366f1); border: none; border-radius: 8px; color: white; cursor: pointer;">Submit</button>
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">Word ${scrambleRound + 1}/${scrambleWordsList.length}</div>
+            <div class="game-score">⭐ Score: ${scrambleScore}</div>
+        </div>
+        <div class="scrambled-word-large">${scrambled.join(' ').toUpperCase()}</div>
+        <div class="game-hint-large">💡 Hint: ${escapeHtml(scrambleCurrentHint)}</div>
+        <input type="text" id="scrambleGuess" class="game-input-large" placeholder="Type your guess..." autofocus>
+        <div class="game-buttons">
+            <button class="game-submit-btn-large" onclick="checkScrambleGuess()">Submit Guess</button>
+            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button>
+        </div>
+        <div class="game-feedback" id="scrambleFeedback"></div>
     `;
     
-    document.body.appendChild(inputContainer);
-    
-    const inputField = document.getElementById('gameAnswerInput');
-    const submitBtn = document.getElementById('gameSubmitBtn');
-    
-    const handleSubmit = () => {
-        const answer = inputField.value.trim().toUpperCase();
-        if (answer) {
-            inputContainer.remove();
-            callback(answer);
-        }
-    };
-    
-    submitBtn.onclick = handleSubmit;
-    inputField.onkeypress = (e) => { if (e.key === 'Enter') handleSubmit(); };
-    inputField.focus();
-    
-    setTimeout(() => {
-        if (document.getElementById('gameInputContainer')) {
-            inputContainer.remove();
-            callback('');
-        }
-    }, 30000);
+    document.getElementById('scrambleGuess')?.focus();
 }
 
-function showGameResult(message, type) {
-    const resultDiv = document.createElement('div');
-    resultDiv.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: ${type === 'correct' ? '#22c55e' : '#ef4444'}; color: white; padding: 15px 25px; border-radius: 12px; z-index: 300000; font-size: 16px; text-align: center; min-width: 250px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);`;
-    resultDiv.textContent = message;
-    document.body.appendChild(resultDiv);
+window.checkScrambleGuess = function() {
+    const input = document.getElementById('scrambleGuess');
+    const guess = input?.value.trim().toLowerCase();
+    const feedback = document.getElementById('scrambleFeedback');
+    const container = document.getElementById('activeGameContainer');
     
-    setTimeout(() => resultDiv.remove(), 2000);
-    
-    if (typeof displayMessage === 'function') {
-        displayMessage(message, 'bot');
-    }
-}
-
-console.log("✅ Games Module Loaded Successfully!");
-// ================= AUDIO EXPLANATION MODULE (ADDED AT END) =================
-// Note: Using existing global variables from top of file:
-// audioModal, isListening, currentUtterance, currentAudio, currentAudioMode, currentAudioText
-
-// Open Audio Modal
-window.openAudioMode = function() {
-    const modal = document.getElementById('audioModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        const responseArea = document.getElementById('audioResponseArea');
-        const queryInput = document.getElementById('audioQueryInput');
-        const micStatus = document.getElementById('micStatus');
-        const micButton = document.getElementById('micButton');
-        if (responseArea) responseArea.style.display = 'none';
-        if (queryInput) queryInput.value = '';
-        if (micStatus) micStatus.innerHTML = 'Click microphone to speak';
-        if (micButton) micButton.classList.remove('listening');
-    }
-}
-
-// Close Audio Modal
-window.closeAudioMode = function() {
-    const modal = document.getElementById('audioModal');
-    if (modal) modal.style.display = 'none';
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (currentAudioUrl) {
-        URL.revokeObjectURL(currentAudioUrl);
-        currentAudioUrl = null;
-    }
-}
-
-// Set Audio Mode
-window.setAudioMode = function(mode, element) {
-    currentAudioMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-    if (element) element.classList.add('active');
-    
-    const micStatus = document.getElementById('micStatus');
-    if (micStatus) {
-        const modeNames = { simple: 'Simple Mode', exam: 'Exam Mode', quick: 'Quick Mode', detailed: 'Detailed Mode' };
-        micStatus.innerHTML = `🎙️ ${modeNames[mode]} activated`;
-        setTimeout(() => {
-            if (micStatus.innerHTML.includes('activated')) 
-                micStatus.innerHTML = 'Click microphone to speak';
-        }, 1500);
-    }
-}
-
-// Toggle Microphone with Web Speech API
-window.toggleMicrophone = function() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('❌ Speech recognition not supported. Please use Chrome or Edge.');
-        return;
-    }
-    
-    const micButton = document.getElementById('micButton');
-    const micStatus = document.getElementById('micStatus');
-    
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    if (micButton) micButton.classList.add('listening');
-    if (micStatus) micStatus.innerHTML = '🎙️ Listening... Speak now';
-    
-    recognition.onstart = () => {
-        console.log('Speech recognition started');
-    };
-    
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        const inputField = document.getElementById('audioQueryInput');
-        if (inputField) {
-            inputField.value = transcript;
-            if (micStatus) micStatus.innerHTML = `✅ "${transcript.substring(0, 50)}${transcript.length > 50 ? '...' : ''}"`;
-            setTimeout(() => {
-                sendAudioQuery();
-            }, 500);
-        }
-    };
-    
-    recognition.onerror = (event) => {
-        console.error('Recognition error:', event.error);
-        if (micStatus) micStatus.innerHTML = `❌ Error: ${event.error}`;
-        if (micButton) micButton.classList.remove('listening');
-        setTimeout(() => {
-            if (micStatus && micStatus.innerHTML.includes('Error')) 
-                micStatus.innerHTML = 'Click microphone to speak';
-        }, 2000);
-    };
-    
-    recognition.onend = () => {
-        if (micButton) micButton.classList.remove('listening');
-        if (micStatus && (micStatus.innerHTML === '🎙️ Listening... Speak now' || micStatus.innerHTML.includes('Listening'))) {
-            micStatus.innerHTML = 'Click microphone to speak';
-        }
-    };
-    
-    recognition.start();
-    
-    setTimeout(() => {
-        try { recognition.stop(); } catch(e) {}
-    }, 10000);
-}
-
-// Send Audio Query - USING EXISTING API_URL and currentDocument
-window.sendAudioQuery = async function() {
-    const inputField = document.getElementById('audioQueryInput');
-    let query = inputField ? inputField.value.trim() : '';
-    
-    if (!query) {
-        const micStatus = document.getElementById('micStatus');
-        if (micStatus) micStatus.innerHTML = '⚠️ Please type or speak a question';
-        return;
-    }
-    
-    const responseArea = document.getElementById('audioResponseArea');
-    const responseText = document.getElementById('responseText');
-    if (responseArea) responseArea.style.display = 'block';
-    if (responseText) responseText.innerHTML = '<div class="loading-spinner"></div> Generating intelligent explanation...';
-    
-    try {
-        let modeInstruction = '';
-        switch(currentAudioMode) {
-            case 'simple':
-                modeInstruction = 'Explain in very simple, beginner-friendly language with analogies.';
-                break;
-            case 'exam':
-                modeInstruction = 'Provide a detailed, exam-oriented explanation with key points and potential questions.';
-                break;
-            case 'quick':
-                modeInstruction = 'Give a very concise, bullet-point style answer (max 3 sentences).';
-                break;
-            case 'detailed':
-                modeInstruction = 'Provide a comprehensive, in-depth explanation with examples and structured format.';
-                break;
-        }
-        
-        const enhancedQuery = `${modeInstruction}\n\nQuestion: ${query}`;
-        
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                message: enhancedQuery,
-                audio_mode: currentAudioMode,
-                generate_audio: true 
-            })
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        
-        if (data.response) {
-            let formattedResponse = data.response;
-            formattedResponse = formattedResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            formattedResponse = formattedResponse.replace(/\n/g, '<br>');
-            if (responseText) responseText.innerHTML = formattedResponse;
-            
-            window.currentAudioText = data.response;
-            
-            if (data.audio_url) {
-                const audioPlayer = document.getElementById('audioPlayer');
-                const playerContainer = document.getElementById('audioPlayerContainer');
-                if (playerContainer) playerContainer.style.display = 'block';
-                if (audioPlayer) {
-                    audioPlayer.src = data.audio_url;
-                    currentAudioUrl = data.audio_url;
-                    audioPlayer.play().catch(e => console.log('Auto-play blocked'));
-                }
-            }
-            
-            const modeBadge = document.createElement('div');
-            modeBadge.style.cssText = 'font-size: 10px; color: #a855f7; margin-top: 8px; text-align: right; opacity: 0.7;';
-            modeBadge.innerHTML = `🎧 ${currentAudioMode.charAt(0).toUpperCase() + currentAudioMode.slice(1)} Mode`;
-            if (responseText) responseText.appendChild(modeBadge);
-            
-        } else {
-            if (responseText) responseText.innerHTML = '⚠️ No response from AI. Please try again.';
-        }
-        
-        if (inputField) inputField.value = '';
-        
-    } catch (error) {
-        console.error("Audio query error:", error);
-        if (responseText) responseText.innerHTML = `⚠️ Connection error. Make sure backend is running on port 8000.<br><br>❌ ${error.message}`;
-    }
-}
-
-// Play Audio Response
-window.playAudioResponse = function() {
-    const audioPlayer = document.getElementById('audioPlayer');
-    if (audioPlayer && audioPlayer.src) {
-        audioPlayer.play().catch(e => console.log('Play error:', e));
-    } else if (window.currentAudioText) {
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            currentUtterance = new SpeechSynthesisUtterance(window.currentAudioText);
-            currentUtterance.rate = 0.95;
-            currentUtterance.pitch = 1.0;
-            window.speechSynthesis.speak(currentUtterance);
-        } else {
-            alert('Audio playback not supported');
-        }
+    if (guess === scrambleCurrentWord.toLowerCase()) {
+        scrambleScore += 10;
+        feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
+        showToast("🎉 Correct!");
     } else {
-        alert('No audio content available. Generate an explanation first.');
+        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! The word was: ${scrambleCurrentWord}</div>`;
+        showToast("❌ Wrong!");
     }
-}
-
-// Pause Audio
-window.pauseAudioResponse = function() {
-    const audioPlayer = document.getElementById('audioPlayer');
-    if (audioPlayer && !audioPlayer.paused) {
-        audioPlayer.pause();
-    } else if (window.speechSynthesis) {
-        window.speechSynthesis.pause();
-    }
-}
-
-// Stop Audio
-window.stopAudioResponse = function() {
-    const audioPlayer = document.getElementById('audioPlayer');
-    if (audioPlayer) {
-        audioPlayer.pause();
-        audioPlayer.currentTime = 0;
-    }
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-    }
-}
-
-// Download Audio Response - Using existing showToastMessage
-window.downloadAudioResponse = async function() {
-    const responseText = document.getElementById('responseText');
-    let textContent = responseText?.innerText || responseText?.textContent;
     
-    if (!textContent || textContent.includes('Generating') || textContent.includes('loading')) {
-        showToastMessage('❌ No audio content available. Generate an explanation first.');
+    setTimeout(() => {
+        scrambleRound++;
+        loadNextScrambleWord(container);
+    }, 1500);
+}
+
+function showScrambleResults(container) {
+    const percentage = Math.round((scrambleScore / (scrambleWordsList.length * 10)) * 100);
+    container.innerHTML = `
+        <div class="game-results-large">
+            <div class="results-emoji">🔤</div>
+            <h2>Word Scramble Complete!</h2>
+            <div class="final-score-large">Score: ${scrambleScore}/${scrambleWordsList.length * 10}</div>
+            <div class="score-percentage-large">${percentage}%</div>
+            <div class="results-buttons">
+                <button class="play-again-btn" onclick="selectGame('word-scramble')">🔄 Play Again</button>
+                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            </div>
+        </div>
+    `;
+}
+
+// ================= TRUE OR FALSE GAME =================
+function loadTrueFalseGame(container) {
+    tfIndex = 0;
+    tfScore = 0;
+    
+    tfQuestions = [
+        { statement: "The sun rises in the east.", answer: true, explanation: "The sun rises in the east and sets in the west" },
+        { statement: "Humans have 5 hearts.", answer: false, explanation: "Humans have 1 heart" },
+        { statement: "Water is H2O.", answer: true, explanation: "Water molecules consist of 2 hydrogen and 1 oxygen atom" },
+        { statement: "Mount Everest is the tallest mountain.", answer: true, explanation: "Mount Everest is 8,848 meters tall" },
+        { statement: "The Earth is flat.", answer: false, explanation: "The Earth is actually round (an oblate spheroid)" }
+    ];
+    
+    displayTrueFalseQuestion(container);
+}
+
+function displayTrueFalseQuestion(container) {
+    if (tfIndex >= tfQuestions.length) {
+        showTrueFalseResults(container);
         return;
     }
     
-    textContent = textContent.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
+    const q = tfQuestions[tfIndex];
     
-    try {
-        const response = await fetch('https://cortexa-2-2ydr.onrender.com/api/chat', {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: textContent, mode: currentAudioMode })
-        });
-        
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `cortexa_audio_${Date.now()}.mp3`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToastMessage('✅ Audio downloaded successfully!');
-        } else {
-            alert('Audio download requires backend TTS service.');
-        }
-    } catch (err) {
-        console.error('Download error:', err);
-        alert('❌ Download failed. Make sure backend is running on port 8000');
-    }
+    container.innerHTML = `
+        <div class="game-header-info">
+            <div class="game-progress">Question ${tfIndex + 1}/${tfQuestions.length}</div>
+            <div class="game-score">⭐ Score: ${tfScore}</div>
+        </div>
+        <div class="game-question-large">${escapeHtml(q.statement)}</div>
+        <div class="truefalse-buttons-large">
+            <button class="true-btn-large" onclick="checkTrueFalseAnswer(true)">✓ True</button>
+            <button class="false-btn-large" onclick="checkTrueFalseAnswer(false)">✗ False</button>
+        </div>
+        <div class="game-feedback" id="tfFeedback"></div>
+    `;
 }
 
-// Close modal when clicking outside
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('audioModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) window.closeAudioMode();
-        });
+window.checkTrueFalseAnswer = function(selected) {
+    const q = tfQuestions[tfIndex];
+    const feedback = document.getElementById('tfFeedback');
+    const isCorrect = (selected === q.answer);
+    
+    document.querySelectorAll('.true-btn-large, .false-btn-large').forEach(btn => btn.disabled = true);
+    
+    if (isCorrect) {
+        tfScore += 10;
+        feedback.innerHTML = `<div class="correct-answer">✅ Correct! ${q.explanation}</div>`;
+        showToast("✅ Correct!");
+    } else {
+        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! ${q.explanation}</div>`;
+        showToast("❌ Wrong!");
     }
     
-    // Keyboard shortcut: Ctrl+Shift+A to open audio mode
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-            e.preventDefault();
-            window.openAudioMode();
-        }
-    });
-});
+    setTimeout(() => {
+        tfIndex++;
+        displayTrueFalseQuestion(document.getElementById('activeGameContainer'));
+    }, 2000);
+}
 
-console.log("✅ Audio Explanation Module Loaded - Use Ctrl+Shift+A to open");
+function showTrueFalseResults(container) {
+    const percentage = Math.round((tfScore / (tfQuestions.length * 10)) * 100);
+    container.innerHTML = `
+        <div class="game-results-large">
+            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
+            <h2>True or False Complete!</h2>
+            <div class="final-score-large">Score: ${tfScore}/${tfQuestions.length * 10}</div>
+            <div class="score-percentage-large">${percentage}%</div>
+            <div class="results-buttons">
+                <button class="play-again-btn" onclick="selectGame('true-false')">🔄 Play Again</button>
+                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
+            </div>
+        </div>
+    `;
+}
+
+// Helper functions
+window.startGame = function(gameType) {
+    window.openGamesModal();
+    setTimeout(() => window.selectGame(gameType), 100);
+}
