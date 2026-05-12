@@ -13,6 +13,22 @@
       "dest": "dashboard.html"
     },
     {
+      "src": "/login",
+      "dest": "login.html"
+    },
+    {
+      "src": "/register",
+      "dest": "register.html"
+    },
+    {
+      "src": "/profile",
+      "dest": "profile.html"
+    },
+    {
+      "src": "/index",
+      "dest": "index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/$1"
     }

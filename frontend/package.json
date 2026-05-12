@@ -1,0 +1,17 @@
+{
+  "name": "cortexa-frontend",
+  "version": "1.0.0",
+  "description": "Cortexa AI Assistant Frontend",
+  "main": "dashboard.html",
+  "scripts": {
+    "start": "serve .",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "keywords": ["cortexa", "ai", "assistant", "frontend"],
+  "author": "Darshita",
+  "license": "MIT"
+}
