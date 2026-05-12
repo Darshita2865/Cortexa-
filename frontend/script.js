@@ -840,6 +840,7 @@ function loadSavedDocument() {
 loadSavedDocument();
 
 
+
 // ================= VIDEO EXPLANATION MODULE - UPDATED =================
 let videoModal = null;
 let currentVideoData = null;
@@ -864,8 +865,21 @@ window.openVideoMode = function() {
     const modal = document.getElementById('videoModal');
     if (modal) {
         modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        modal.style.zIndex = '10000';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        
+        // Load video library and switch to YouTube tab
         loadVideoLibrary();
-        handleVideoSourceChange();
+        switchVideoTab('youtube');
+        
+        console.log("Video modal opened successfully");
     } else {
         console.error("videoModal element not found!");
         alert("Video modal not found. Please check your HTML for element with id='videoModal'");
