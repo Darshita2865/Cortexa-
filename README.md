@@ -60,8 +60,8 @@ Upload and process:
 
 Cortexa intelligently switches between:
 
-* ⚡ **Gemini API** → Fast, high-quality responses
-* 🖥️ **Ollama (Local Model)** → Free fallback
+* ⚡ Grok API → Fast, high-quality responses
+* 🖥️ Ollama (Llama3) → Free fallback
 
 ---
 
@@ -150,11 +150,6 @@ uvicorn backend:app --reload
 
 ## 🔑 Environment Variables
 
-Create a `.env` file:
-
-```
-GEMINI_API_KEY=your_api_key_here
-```
 
 ---
 
