@@ -74,7 +74,7 @@ Backend (FastAPI)
         ↓
 Document Processing
         ↓
-AI Response Layer (Gemini + Ollama)
+AI Response Layer (Groq + Ollama)
 ```
 
 ---
@@ -82,7 +82,7 @@ AI Response Layer (Gemini + Ollama)
 ## ⚙️ Tech Stack
 
 * **Backend:** FastAPI
-* **AI Models:** Gemini API, Ollama
+* **AI Models:** Groq API, Ollama
 * **Text-to-Speech:** gTTS
 * **Document Parsing:** PyPDF2, python-docx
 * **Language:** Python
@@ -123,33 +123,6 @@ Retrieve generated audio response
 
 Check system status
 
----
-
-## 🚀 Getting Started
-
-### 1️⃣ Clone the repository
-
-```bash
-git clone https://github.com/your-username/cortexa
-cd cortexa
-```
-
-### 2️⃣ Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3️⃣ Run the server
-
-```bash
-uvicorn backend:app --reload
-```
-
----
-
-## 🔑 Environment Variables
-
 
 ---
 
@@ -170,8 +143,6 @@ uvicorn backend:app --reload
 ---
 
 ## 🛣️ Roadmap
-
-* [ ] Vector database integration (FAISS / Pinecone)
 * [ ] Multi-agent system
 * [ ] Knowledge graph visualization
 * [ ] Web search integration
