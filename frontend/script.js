@@ -11,7 +11,6 @@ let isRecording = false;
 let currentAudio = null;
 let currentAudioText = null;
 
-// API URL - CHANGE THIS FOR PRODUCTION
 const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
 
 // ================= USER-SPECIFIC STORAGE =================
@@ -111,7 +110,6 @@ function displayMessage(text, sender) {
 
     chatBox.appendChild(msgDiv);
     
-    // Auto-scroll to bottom
     chatBox.scrollTo({
         top: chatBox.scrollHeight,
         behavior: 'smooth'
@@ -146,11 +144,9 @@ window.performSearch = async function() {
         return;
     }
     
-    // Display user message
     displayMessage(query, 'user');
     queryInput.value = '';
     
-    // Show loading indicator
     const loadingId = displayMessage('<span class="typing-dots">Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>', 'bot');
     
     try {
@@ -335,7 +331,6 @@ window.startNewChat = function(e) {
     showToast("✨ New chat started!");
 }
 
-// Dropdown functions
 window.toggleChatMenu = function(event, chatId) {
     event.stopPropagation();
     
@@ -528,7 +523,6 @@ window.sendAudioQuery = async function() {
         currentAudioText = data.response;
         responseText.innerHTML = formatContent(data.response);
         
-        // Generate audio
         const audioResponse = await fetch('https://cortexa-2-2ydr.onrender.com/generate-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -621,7 +615,6 @@ window.switchVideoTab = function(tab) {
     }
 }
 
-// Search YouTube and display videos
 window.searchYouTube = async function() {
     const query = document.getElementById('youtubeSearchQuery').value;
     if (!query) {
@@ -650,7 +643,6 @@ window.searchYouTube = async function() {
             return;
         }
         
-        // Display video results in a beautiful grid
         resultsDiv.innerHTML = `
             <div class="search-header">
                 <h3>📹 Search Results (${data.videos.length} videos)</h3>
@@ -688,7 +680,6 @@ window.searchYouTube = async function() {
     }
 }
 
-// Get video info and generate AI summary
 window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     showToast("📹 Getting video information and generating AI summary...");
     
@@ -699,7 +690,6 @@ window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     infoDiv.innerHTML = '<div class="loading-spinner">🧠 Analyzing video content...</div>';
     
     try {
-        // First get video info
         const infoResponse = await fetch(`https://cortexa-2-2ydr.onrender.com/youtube-video-info?videoid=${videoId}`);
         const videoInfo = await infoResponse.json();
         
@@ -708,7 +698,6 @@ window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
             return;
         }
         
-        // Generate AI summary using chat API
         const summaryPrompt = `Please provide a comprehensive summary of this YouTube video:
         
 Title: ${videoTitle || videoInfo.title}
@@ -792,14 +781,12 @@ window.closeVideoInfo = function() {
     if (infoDiv) infoDiv.style.display = 'none';
 }
 
-// Open video in YouTube
 window.openInYouTube = function(videoId) {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     window.open(youtubeUrl, '_blank');
     showToast("📺 Opening YouTube in new tab...");
 }
 
-// Copy summary to clipboard
 window.copySummaryToClipboard = function() {
     const summaryText = document.querySelector('.summary-text')?.innerText;
     if (summaryText) {
@@ -810,7 +797,6 @@ window.copySummaryToClipboard = function() {
     }
 }
 
-// Download summary as file
 window.downloadSummaryAsFile = function() {
     const summaryText = document.querySelector('.summary-text')?.innerText;
     if (summaryText) {
@@ -827,7 +813,6 @@ window.downloadSummaryAsFile = function() {
     }
 }
 
-// Save video to library
 window.saveVideoToLibrary = function(videoId, videoTitle) {
     const user = getCurrentUser();
     const savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
@@ -849,7 +834,6 @@ window.saveVideoToLibrary = function(videoId, videoTitle) {
     }
 }
 
-// Load video library
 function loadVideoLibrary() {
     const user = getCurrentUser();
     const libraryDiv = document.getElementById('videoLibraryList');
@@ -892,668 +876,7 @@ window.removeFromLibrary = function(videoId) {
     showToast("🗑️ Video removed from library");
 }
 
-// ================= COMPLETE FIXED MIND MAP - WORKING VERSION =================
-
-// Global variables
-let currentMindMapData = null;
-let mindMapZoom = 1;
-let mindMapOffsetX = 0;
-let mindMapOffsetY = 0;
-let isDraggingMindMap = false;
-let dragStartX = 0;
-let dragStartY = 0;
-
-// ================= OPEN/CLOSE MODAL FUNCTIONS =================
-window.openMindMapMode = function() {
-    console.log("Opening Mind Map Modal");
-    const modal = document.getElementById('mindMapModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
-        modal.style.zIndex = '100000';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-    }
-    switchMindMapTab('create');
-}
-
-window.closeMindMapMode = function() {
-    const modal = document.getElementById('mindMapModal');
-    if (modal) modal.style.display = 'none';
-}
-
-window.switchMindMapTab = function(tab) {
-    const createTab = document.getElementById('mindmapCreateTab');
-    const libraryTab = document.getElementById('mindmapLibraryTab');
-    const btns = document.querySelectorAll('.mindmap-tab-btn');
-    
-    btns.forEach(btn => btn.classList.remove('active'));
-    
-    if (tab === 'create') {
-        if (createTab) createTab.style.display = 'block';
-        if (libraryTab) libraryTab.style.display = 'none';
-        if (btns[0]) btns[0].classList.add('active');
-    } else {
-        if (createTab) createTab.style.display = 'none';
-        if (libraryTab) libraryTab.style.display = 'block';
-        if (btns[1]) btns[1].classList.add('active');
-        loadMindMapLibrary();
-    }
-}
-
-// ================= GENERATE AND DRAW MIND MAP =================
-window.generateAndDrawMindMap = function() {
-    const topic = document.getElementById('mindmapTopicInput').value;
-    if (!topic) {
-        showMindMapToast("Please enter a topic", "error");
-        return;
-    }
-    
-    const progressDiv = document.getElementById('mindmapProgress');
-    const progressFill = document.getElementById('mindmapProgressFill');
-    const progressStatus = document.getElementById('mindmapProgressStatus');
-    const displayDiv = document.getElementById('mindmapDisplay');
-    
-    if (progressDiv) {
-        progressDiv.style.display = 'block';
-        if (progressFill) progressFill.style.width = '0%';
-        if (progressStatus) progressStatus.textContent = 'Generating mind map...';
-    }
-    
-    let width = 0;
-    const interval = setInterval(() => {
-        width += 10;
-        if (progressFill) progressFill.style.width = width + '%';
-        if (width >= 100) clearInterval(interval);
-    }, 150);
-    
-    setTimeout(() => {
-        clearInterval(interval);
-        if (progressFill) progressFill.style.width = '100%';
-        
-        setTimeout(() => {
-            if (progressDiv) progressDiv.style.display = 'none';
-            if (displayDiv) displayDiv.style.display = 'block';
-            
-            const mindMapData = generateSimpleMindMap(topic);
-            
-            currentMindMapData = {
-                id: Date.now(),
-                title: mindMapData.main,
-                data: mindMapData,
-                created_at: new Date().toISOString()
-            };
-            
-            drawSimpleMindMap(mindMapData);
-            showMindMapToast("✅ Mind map generated successfully!");
-            
-        }, 500);
-    }, 2000);
-}
-
-// ================= GENERATE MIND MAP DATA =================
-function generateSimpleMindMap(topic) {
-    const lowerTopic = topic.toLowerCase();
-    
-    // Pre-defined mind maps with CORRECT hierarchical structure
-    const mindMaps = {
-        'machine learning': {
-            main: 'Machine Learning',
-            children: [
-                { name: 'Definition', expanded: true, children: [
-                    { name: 'Subset of Artificial Intelligence', children: [] },
-                    { name: 'Learn from data without explicit programming', children: [] },
-                    { name: 'Improves with experience', children: [] }
-                ]},
-                { name: 'Types of Learning', expanded: true, children: [
-                    { name: 'Supervised Learning', children: [
-                        { name: 'Labeled data', children: [] },
-                        { name: 'Classification', children: [] },
-                        { name: 'Regression', children: [] }
-                    ] },
-                    { name: 'Unsupervised Learning', children: [
-                        { name: 'Unlabeled data', children: [] },
-                        { name: 'Clustering', children: [] },
-                        { name: 'Association', children: [] }
-                    ] },
-                    { name: 'Reinforcement Learning', children: [
-                        { name: 'Reward-based', children: [] },
-                        { name: 'Agent & Environment', children: [] }
-                    ] }
-                ]},
-                { name: 'Applications', expanded: true, children: [
-                    { name: 'Recommendation Systems', children: [] },
-                    { name: 'Fraud Detection', children: [] },
-                    { name: 'Speech Recognition', children: [] },
-                    { name: 'Self-driving Cars', children: [] },
-                    { name: 'Healthcare Diagnostics', children: [] }
-                ]},
-                { name: 'Challenges', expanded: true, children: [
-                    { name: 'Data Privacy', children: [] },
-                    { name: 'Bias in Algorithms', children: [] },
-                    { name: 'High Computational Requirements', children: [] }
-                ]}
-            ]
-        },
-        'turing machine': {
-            main: 'Turing Machine (Unit-5)',
-            children: [
-                { name: 'Introduction', expanded: true, children: [
-                    { name: 'Alan Turing (1936)', children: [] },
-                    { name: 'Theoretical model of computation', children: [] },
-                    { name: 'Comparison of Automata', children: [] }
-                ]},
-                { name: 'TM Components', expanded: true, children: [
-                    { name: 'Q: Finite set of states', children: [] },
-                    { name: 'Σ: Input alphabet', children: [] },
-                    { name: 'Γ: Tape alphabet', children: [] },
-                    { name: 'δ: Transition function', children: [] },
-                    { name: 'q₀: Start state', children: [] },
-                    { name: 'B: Blank symbol', children: [] },
-                    { name: 'F: Final states', children: [] }
-                ]},
-                { name: 'Operations', expanded: true, children: [
-                    { name: 'Read symbol', children: [] },
-                    { name: 'Write/Modify symbol', children: [] },
-                    { name: 'Shift Head (Left/Right/Stay)', children: [] }
-                ]},
-                { name: 'Formal Definition', expanded: false, children: [
-                    { name: '(Q, Σ, Γ, δ, q₀, B, F) - 7-tuple', children: [] }
-                ]},
-                { name: 'Universal Turing Machine', expanded: false, children: [
-                    { name: 'Simulates any Turing Machine', children: [] }
-                ]}
-            ]
-        }
-    };
-    
-    for (const [key, value] of Object.entries(mindMaps)) {
-        if (lowerTopic.includes(key)) {
-            return JSON.parse(JSON.stringify(value));
-        }
-    }
-    
-    // Dynamic mind map for other topics
-    return {
-        main: topic.substring(0, 50),
-        children: [
-            { name: 'Introduction', expanded: true, children: [{ name: 'Basic concepts', children: [] }] },
-            { name: 'Key Concepts', expanded: true, children: [{ name: 'Main ideas', children: [] }] },
-            { name: 'Applications', expanded: true, children: [{ name: 'Real-world uses', children: [] }] },
-            { name: 'Conclusion', expanded: false, children: [{ name: 'Summary', children: [] }] }
-        ]
-    };
-}
-
-function countNodes(node) {
-    let count = 1;
-    if (node.expanded && node.children) {
-        for (const child of node.children) {
-            count += countNodes(child);
-        }
-    }
-    return count;
-}
-
-// ================= DRAW MIND MAP - VERTICAL TREE STYLE =================
-
-function calculateNodePositions(node, nodes, x, y, level, levelWidths) {
-    node.x = x;
-    node.y = y;
-    node.level = level;
-    nodes.push(node);
-    
-    if (!node.expanded || !node.children || node.children.length === 0) return;
-    
-    const childStartY = y + 70;
-    const totalChildren = node.children.length;
-    const levelWidth = levelWidths[level + 1] || 600;
-    const startX = x - (levelWidth / 2);
-    const stepX = levelWidth / (totalChildren + 1);
-    
-    for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
-        const childX = startX + stepX * (i + 1);
-        const childY = childStartY;
-        
-        calculateNodePositions(child, nodes, childX, childY, level + 1, levelWidths);
-    }
-}
-
-function drawNodeBox(ctx, node) {
-    const isRoot = node.level === 0;
-    const hasChildren = node.children && node.children.length > 0;
-    
-    ctx.font = isRoot ? 'bold 15px Arial' : '13px Arial';
-    const textWidth = ctx.measureText(node.name).width;
-    const boxWidth = Math.min(Math.max(170, textWidth + 60), 280);
-    const boxHeight = isRoot ? 48 : 42;
-    
-    // Draw box
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(node.x - boxWidth/2, node.y - boxHeight/2, boxWidth, boxHeight);
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(node.x - boxWidth/2, node.y - boxHeight/2, boxWidth, boxHeight);
-    
-    // Expand/collapse button
-    if (hasChildren) {
-        const btnX = node.x + boxWidth/2 - 18;
-        const btnY = node.y;
-        
-        ctx.fillStyle = '#666666';
-        ctx.beginPath();
-        ctx.arc(btnX, btnY, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(node.expanded ? '−' : '+', btnX, btnY);
-    }
-    
-    // Draw text
-    ctx.fillStyle = '#000000';
-    ctx.font = isRoot ? 'bold 14px Arial' : '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    let displayName = node.name;
-    const maxWidth = boxWidth - 50;
-    if (ctx.measureText(displayName).width > maxWidth) {
-        while (ctx.measureText(displayName + '...').width > maxWidth && displayName.length > 4) {
-            displayName = displayName.slice(0, -1);
-        }
-        displayName += '...';
-    }
-    ctx.fillText(displayName, node.x, node.y);
-}
-
-function drawSimpleMindMap(data) {
-    const canvas = document.getElementById('mindmapCanvas');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    
-    // Calculate canvas size based on node count
-    const rootNode = { expanded: true, children: data.children };
-    const totalNodes = countNodes(rootNode);
-    const maxDepth = getMaxDepth(rootNode);
-    
-    canvas.width = Math.max(1200, totalNodes * 100);
-    canvas.height = Math.max(800, (maxDepth + 1) * 85);
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw light grid
-    ctx.strokeStyle = '#e8e8e8';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < canvas.width; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-        ctx.stroke();
-    }
-    
-    // Calculate level widths
-    const levelWidths = {};
-    for (let i = 0; i <= maxDepth; i++) {
-        levelWidths[i] = Math.max(400, canvas.width - (i * 150));
-    }
-    
-    const root = {
-        name: data.main,
-        children: data.children,
-        x: canvas.width / 2,
-        y: 50,
-        level: 0,
-        expanded: true,
-        parent: null
-    };
-    
-    const nodes = [];
-    calculateNodePositions(root, nodes, root.x, root.y, 0, levelWidths);
-    
-    // Set parent references
-    for (let i = 0; i < nodes.length; i++) {
-        for (let j = 0; j < nodes.length; j++) {
-            if (nodes[j].level === nodes[i].level + 1 && 
-                Math.abs(nodes[j].x - nodes[i].x) < 200 && 
-                nodes[j].y > nodes[i].y) {
-                nodes[j].parent = nodes[i];
-                break;
-            }
-        }
-    }
-    
-    // Draw lines
-    for (const node of nodes) {
-        if (node.parent) {
-            ctx.beginPath();
-            ctx.moveTo(node.parent.x, node.parent.y + 24);
-            ctx.lineTo(node.x, node.y - 21);
-            ctx.strokeStyle = '#555555';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
-    }
-    
-    // Draw horizontal lines between siblings
-    const siblingsByParent = {};
-    for (const node of nodes) {
-        if (node.parent) {
-            const parentId = node.parent.name;
-            if (!siblingsByParent[parentId]) siblingsByParent[parentId] = [];
-            siblingsByParent[parentId].push(node);
-        }
-    }
-    
-    for (const siblings of Object.values(siblingsByParent)) {
-        if (siblings.length > 1) {
-            const firstX = siblings[0].x;
-            const lastX = siblings[siblings.length - 1].x;
-            const y = siblings[0].y;
-            
-            ctx.beginPath();
-            ctx.moveTo(firstX, y);
-            ctx.lineTo(lastX, y);
-            ctx.strokeStyle = '#aaaaaa';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        }
-    }
-    
-    // Draw nodes
-    for (const node of nodes) {
-        drawNodeBox(ctx, node);
-    }
-    
-    // Footer
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '10px Arial';
-    ctx.fillText('Cortexa AI Mind Map', canvas.width - 120, canvas.height - 12);
-    
-    window.mindMapNodes = nodes;
-}
-
-function getMaxDepth(node, currentDepth = 1) {
-    if (!node.expanded || !node.children || node.children.length === 0) {
-        return currentDepth;
-    }
-    let maxDepth = currentDepth;
-    for (const child of node.children) {
-        const childDepth = getMaxDepth(child, currentDepth + 1);
-        maxDepth = Math.max(maxDepth, childDepth);
-    }
-    return maxDepth;
-}
-
-// ================= CLICK HANDLER =================
-function setupCanvasClick() {
-    const canvas = document.getElementById('mindmapCanvas');
-    if (!canvas) return;
-    
-    canvas.addEventListener('click', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
-        
-        if (window.mindMapNodes) {
-            for (const node of window.mindMapNodes) {
-                const ctx = canvas.getContext('2d');
-                ctx.font = node.level === 0 ? 'bold 15px Arial' : '13px Arial';
-                const textWidth = ctx.measureText(node.name).width;
-                const boxWidth = Math.min(Math.max(170, textWidth + 60), 280);
-                const boxHeight = node.level === 0 ? 48 : 42;
-                
-                const left = node.x - boxWidth/2;
-                const right = node.x + boxWidth/2;
-                const top = node.y - boxHeight/2;
-                const bottom = node.y + boxHeight/2;
-                
-                if (mouseX >= left && mouseX <= right && mouseY >= top && mouseY <= bottom) {
-                    if (node.children && node.children.length > 0) {
-                        const btnX = node.x + boxWidth/2 - 18;
-                        const btnY = node.y;
-                        const isOnButton = Math.hypot(mouseX - btnX, mouseY - btnY) <= 12;
-                        
-                        if (isOnButton) {
-                            node.expanded = !node.expanded;
-                            if (currentMindMapData) {
-                                drawSimpleMindMap(currentMindMapData.data);
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    });
-}
-
-// ================= ZOOM & PAN CONTROLS =================
-function applyMindMapZoom() {
-    const canvas = document.getElementById('mindmapCanvas');
-    if (canvas) {
-        canvas.style.transform = `scale(${mindMapZoom}) translate(${mindMapOffsetX}px, ${mindMapOffsetY}px)`;
-        canvas.style.transformOrigin = 'top left';
-        canvas.style.transition = 'transform 0.2s ease';
-    }
-}
-
-window.zoomMindMap = function(direction) {
-    if (direction === 'in') {
-        mindMapZoom = Math.min(mindMapZoom + 0.1, 2);
-    } else {
-        mindMapZoom = Math.max(mindMapZoom - 0.1, 0.5);
-    }
-    applyMindMapZoom();
-    showMindMapToast(`Zoom ${direction === 'in' ? 'in' : 'out'} to ${Math.round(mindMapZoom * 100)}%`);
-}
-
-window.resetMindMapView = function() {
-    mindMapZoom = 1;
-    mindMapOffsetX = 0;
-    mindMapOffsetY = 0;
-    applyMindMapZoom();
-    showMindMapToast('View reset to original size');
-}
-
-window.exportMindMapAsPNG = function() {
-    const canvas = document.getElementById('mindmapCanvas');
-    if (canvas) {
-        const link = document.createElement('a');
-        link.download = `mindmap_${Date.now()}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-        showMindMapToast('✅ Mind map exported as PNG!');
-    }
-}
-
-window.exportMindMapAsJSON = function() {
-    if (currentMindMapData) {
-        const blob = new Blob([JSON.stringify(currentMindMapData, null, 2)], { type: 'application/json' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `mindmap_${Date.now()}.json`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        showMindMapToast('✅ Mind map exported as JSON!');
-    } else {
-        showMindMapToast('No mind map to export!', 'error');
-    }
-}
-
-window.saveMindMapToLibrary = function() {
-    if (currentMindMapData) {
-        let mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
-        const existingIndex = mindMaps.findIndex(m => m.id === currentMindMapData.id);
-        if (existingIndex !== -1) {
-            mindMaps[existingIndex] = currentMindMapData;
-        } else {
-            mindMaps.unshift(currentMindMapData);
-        }
-        localStorage.setItem('mindMaps', JSON.stringify(mindMaps));
-        showMindMapToast('✅ Mind map saved to library!');
-        loadMindMapLibrary();
-    } else {
-        showMindMapToast('No mind map to save!', 'error');
-    }
-}
-
-window.shareMindMap = function() {
-    if (currentMindMapData) {
-        navigator.clipboard.writeText(`🧠 Mind Map: ${currentMindMapData.title}\nCreated: ${currentMindMapData.created_at}\n\nGenerated by Cortexa AI`);
-        showMindMapToast('✅ Mind map info copied to clipboard!');
-    } else {
-        showMindMapToast('No mind map to share!', 'error');
-    }
-}
-
-// ================= LIBRARY FUNCTIONS =================
-function loadMindMapLibrary() {
-    const mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
-    const libraryDiv = document.getElementById('mindmapLibraryList');
-    if (!libraryDiv) return;
-    
-    if (mindMaps.length === 0) {
-        libraryDiv.innerHTML = '<div class="empty-library">🧠 No mind maps yet. Create your first mind map!</div>';
-        return;
-    }
-    
-    libraryDiv.innerHTML = '';
-    mindMaps.forEach(mindMap => {
-        const date = new Date(mindMap.created_at).toLocaleString();
-        libraryDiv.innerHTML += `
-            <div class="mindmap-library-item">
-                <div class="library-info">
-                    <strong>🧠 ${escapeHtml(mindMap.title)}</strong>
-                    <small>📅 ${date}</small>
-                </div>
-                <div class="library-buttons">
-                    <button onclick="loadMindMapFromLibrary(${mindMap.id})">👁️ Load</button>
-                    <button onclick="deleteMindMapFromLibrary(${mindMap.id})">🗑️ Delete</button>
-                </div>
-            </div>
-        `;
-    });
-}
-
-window.loadMindMapFromLibrary = function(id) {
-    const mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
-    const mindMap = mindMaps.find(m => m.id === id);
-    if (mindMap) {
-        currentMindMapData = mindMap;
-        document.getElementById('mindmapDisplay').style.display = 'block';
-        drawSimpleMindMap(mindMap.data);
-        showMindMapToast(`📂 Loaded: ${mindMap.title}`);
-    } else {
-        showMindMapToast('Mind map not found!', 'error');
-    }
-}
-
-window.deleteMindMapFromLibrary = function(id) {
-    if (confirm('Delete this mind map permanently?')) {
-        let mindMaps = JSON.parse(localStorage.getItem('mindMaps')) || [];
-        mindMaps = mindMaps.filter(m => m.id !== id);
-        localStorage.setItem('mindMaps', JSON.stringify(mindMaps));
-        loadMindMapLibrary();
-        showMindMapToast('✅ Mind map deleted');
-    }
-}
-
-// ================= DRAG FUNCTIONALITY =================
-function setupMindMapDrag() {
-    const canvas = document.getElementById('mindmapCanvas');
-    if (!canvas) return;
-    
-    canvas.addEventListener('mousedown', (e) => {
-        isDraggingMindMap = true;
-        dragStartX = e.clientX - mindMapOffsetX;
-        dragStartY = e.clientY - mindMapOffsetY;
-        canvas.style.cursor = 'grabbing';
-    });
-    
-    window.addEventListener('mousemove', (e) => {
-        if (isDraggingMindMap) {
-            mindMapOffsetX = e.clientX - dragStartX;
-            mindMapOffsetY = e.clientY - dragStartY;
-            applyMindMapZoom();
-        }
-    });
-    
-    window.addEventListener('mouseup', () => {
-        isDraggingMindMap = false;
-        if (canvas) canvas.style.cursor = 'grab';
-    });
-}
-
-// ================= UTILITIES =================
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showMindMapToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${type === 'error' ? '#ef4444' : 'linear-gradient(90deg, #a855f7, #6366f1)'};
-        color: white;
-        padding: 10px 20px;
-        border-radius: 25px;
-        font-size: 14px;
-        z-index: 35001;
-        animation: fadeInOut 3s ease;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-// Add CSS animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fadeInOut {
-        0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-        15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-        85% { opacity: 1; transform: translateX(-50%) translateY(0); }
-        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-    }
-`;
-document.head.appendChild(style);
-
-// ================= INITIALIZATION =================
-document.addEventListener('DOMContentLoaded', () => {
-    setupMindMapDrag();
-    setupCanvasClick();
-    loadMindMapLibrary();
-    
-    const canvas = document.getElementById('mindmapCanvas');
-    if (canvas) canvas.style.cursor = 'grab';
-});
-
-
-// ================= REPORT MODE (FULL FEATURED) =================
+// ================= REPORT MODE  =================//
 
 
 window.openReportMode = function() {
@@ -1584,10 +907,8 @@ window.generateReport = async function() {
         return;
     }
     
-    // Get format
     const format = document.getElementById('reportFormat')?.value || 'PDF Document';
     
-    // Get selected report options
     const includeCharts = document.getElementById('includeCharts')?.checked || false;
     const includeTables = document.getElementById('includeTables')?.checked || false;
     const includeExecutive = document.getElementById('includeExecutive')?.checked || true;
@@ -1644,7 +965,6 @@ Use markdown formatting.`;
         const data = await response.json();
         let reportContent = data.response || "Failed to generate report.";
         
-        // Format the report with proper HTML styling
         reportContent = reportContent.replace(/## (.*?)$/gm, '<h2>$1</h2>');
         reportContent = reportContent.replace(/### (.*?)$/gm, '<h3>$1</h3>');
         reportContent = reportContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -1655,7 +975,6 @@ Use markdown formatting.`;
         if (progressDiv) progressDiv.style.display = 'none';
         if (displayDiv) displayDiv.style.display = 'block';
         
-        // Store report data for later use
         window.currentReport = {
             topic: topic,
             content: reportContent,
@@ -1696,7 +1015,6 @@ Use markdown formatting.`;
     }
 }
 
-// Download Report as PDF
 window.downloadReportAsPDF = function() {
     const reportContainer = document.getElementById('reportContainer');
     if (!reportContainer) {
@@ -1767,7 +1085,6 @@ window.downloadReportAsPDF = function() {
     showToast("📄 Report sent to printer (save as PDF)");
 }
 
-// Download Report as DOCX
 window.downloadReportAsDOCX = function() {
     if (!window.currentReport) {
         showToast("No report to download! Generate a report first.", "error");
@@ -1803,7 +1120,6 @@ Generated by Cortexa AI Report Generator
     showToast("📄 Report downloaded as DOCX!");
 }
 
-// Copy Report to Clipboard
 window.copyReportToClipboard = function() {
     if (!window.currentReport) {
         showToast("No report to copy! Generate a report first.", "error");
@@ -1821,8 +1137,6 @@ window.copyReportToClipboard = function() {
         showToast("No content to copy", "error");
     }
 }
-
-// Share Report
 window.shareReport = function() {
     if (!window.currentReport) {
         showToast("No report to share! Generate a report first.", "error");
@@ -1838,7 +1152,6 @@ window.shareReport = function() {
     });
 }
 
-// Save Report to Library
 window.saveReportToLibrary = function() {
     if (!window.currentReport) {
         showToast("No report to save! Generate a report first.", "error");
@@ -1864,7 +1177,6 @@ window.saveReportToLibrary = function() {
     showToast(`✅ Report "${window.currentReport.topic}" saved to library!`);
 }
 
-// Print Report
 window.printReport = function() {
     const reportContainer = document.getElementById('reportContainer');
     if (!reportContainer) {
@@ -1918,7 +1230,6 @@ window.printReport = function() {
     showToast("🖨️ Report sent to printer!");
 }
 
-// Load Report from Library (optional feature)
 window.loadReportFromLibrary = function(reportId) {
     const user = getCurrentUser();
     const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
@@ -1962,7 +1273,6 @@ window.loadReportFromLibrary = function(reportId) {
     }
 }
 
-// View saved reports library
 window.openReportLibrary = function() {
     const user = getCurrentUser();
     const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
@@ -1986,7 +1296,6 @@ window.openReportLibrary = function() {
     });
     libraryHTML += '</div><button onclick="closeReportLibrary()">Close</button></div>';
     
-    // Create modal for library
     let modal = document.getElementById('reportLibraryModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -2027,7 +1336,6 @@ window.generateReport = async function() {
         return;
     }
     
-    // Get selected report options
     const includeCharts = document.getElementById('includeCharts')?.checked || false;
     const includeTables = document.getElementById('includeTables')?.checked || false;
     const includeExecutive = document.getElementById('includeExecutive')?.checked || true;
@@ -2074,7 +1382,6 @@ Make it professional, well-structured, and suitable for business/academic audien
         const data = await response.json();
         let reportContent = data.response || "Failed to generate report.";
         
-        // Format the report with proper styling
         reportContent = reportContent.replace(/#{3,}/g, '##');
         reportContent = reportContent.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
         reportContent = reportContent.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
@@ -2209,7 +1516,7 @@ window.printReport = function() {
     }
 }
 
-// ================= LEARNING TOOLS MODE (QUIZ + NOTES) =================
+// ================= LEARNING TOOLS MODE  =================//
 window.openLearningTools = function() {
     const modal = document.getElementById('learningToolsModal');
     if (modal) modal.style.display = 'flex';
@@ -2239,7 +1546,7 @@ window.switchLearningTab = function(tab) {
     }
 }
 
-// =================  QUIZ FUNCTIONS =================
+// =================  QUIZ FUNCTIONS =================//
 
 window.generateQuiz = async function() {
     const topic = document.getElementById('quizTopicInput').value;
@@ -2323,7 +1630,7 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
         if (displayDiv) displayDiv.style.display = 'block';
         
         window.currentQuizData = quizData;
-        window.quizAnswers = {}; // Store user answers
+        window.quizAnswers = {}; 
         
         let quizHTML = `
             <div class="quiz-header">
@@ -2381,19 +1688,16 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
     }
 }
 
-// Save individual answer when selected
 window.saveQuizAnswer = function(questionNum, answer) {
     if (!window.quizAnswers) window.quizAnswers = {};
     window.quizAnswers[questionNum] = answer;
     
-    // Visual feedback that answer is saved
     const questionCard = document.querySelector(`.quiz-question-card[data-question-id="${questionNum}"]`);
     if (questionCard) {
         questionCard.style.borderLeft = '4px solid #10b981';
     }
 }
 
-// Submit all answers and show results
 window.submitQuizAnswers = function() {
     if (!window.currentQuizData || !window.currentQuizData.questions) {
         showToast("No quiz loaded!", "error");
@@ -2404,7 +1708,6 @@ window.submitQuizAnswers = function() {
     const totalQuestions = window.currentQuizData.questions.length;
     const results = [];
     
-    // Calculate score and prepare results
     window.currentQuizData.questions.forEach((q, idx) => {
         const qNum = idx + 1;
         const userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
@@ -2423,7 +1726,6 @@ window.submitQuizAnswers = function() {
             explanation: q.explanation
         });
         
-        // Show feedback for this question
         const feedbackDiv = document.getElementById(`feedback-${qNum}`);
         if (feedbackDiv) {
             if (userAnswer) {
@@ -2480,7 +1782,6 @@ window.submitQuizAnswers = function() {
         gradeIcon = '⭐';
     }
     
-    // Display overall results
     const resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) {
         resultsContainer.style.display = 'block';
@@ -2519,40 +1820,32 @@ window.submitQuizAnswers = function() {
         `;
     }
     
-    // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     showToast(`Quiz completed! Score: ${score}/${totalQuestions} (${percentage}%)`);
 }
 
-// Reset all answers
 window.resetQuizAnswers = function() {
-    // Clear stored answers
     window.quizAnswers = {};
     
-    // Clear all radio inputs
     document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(radio => {
         radio.checked = false;
     });
     
-    // Clear all feedback
     document.querySelectorAll('.quiz-feedback').forEach(feedback => {
         feedback.style.display = 'none';
         feedback.innerHTML = '';
     });
     
-    // Reset question card borders
     document.querySelectorAll('.quiz-question-card').forEach(card => {
         card.style.borderLeft = '';
     });
     
-    // Hide results container
     const resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) resultsContainer.style.display = 'none';
     
     showToast("Quiz reset! You can try again.");
 }
 
-// Scroll to wrong answers only
 window.scrollToWrongAnswers = function() {
     const wrongFeedbacks = document.querySelectorAll('.wrong-feedback');
     if (wrongFeedbacks.length > 0) {
@@ -2563,7 +1856,6 @@ window.scrollToWrongAnswers = function() {
     }
 }
 
-// Export quiz results
 window.exportQuizResults = function() {
     if (!window.currentQuizData || !window.quizAnswers) {
         showToast("No quiz results to export!", "error");
@@ -2598,7 +1890,6 @@ window.exportQuizResults = function() {
     exportText += `FINAL SCORE: ${score}/${window.currentQuizData.questions.length} (${percentage}%)\n`;
     exportText += `Grade: ${percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT'}\n`;
     
-    // Download as text file
     const blob = new Blob([exportText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2610,13 +1901,10 @@ window.exportQuizResults = function() {
     showToast("Quiz results exported!");
 }
 
-// Remove the old startQuiz function and replace with submitQuizAnswers
 window.startQuiz = function() {
-    // This function is deprecated - now using submitQuizAnswers
     showToast("Please answer the questions and click 'Submit Quiz'", "info");
 }
 
-// Study Notes Generation
 window.generateStudyNotes = async function() {
     const topic = document.getElementById('notesTopicInput').value;
     if (!topic) {
@@ -2689,7 +1977,6 @@ Make it organized and educational.`;
     }
 }
 
-// Quiz helper functions
 window.startQuiz = function() {
     if (!window.currentQuizData || !window.currentQuizData.questions) {
         showToast("No quiz loaded. Generate a quiz first!", "error");
@@ -2797,7 +2084,6 @@ window.saveQuizToLibrary = function() {
     showToast("Quiz saved to library!");
 }
 
-// Notes helper functions
 window.exportNotesAsPDF = function() {
     const content = document.getElementById('notesContent')?.innerHTML;
     if (content) {
@@ -2851,7 +2137,6 @@ window.useChatForLearning = async function(type) {
         return;
     }
     
-    // Get the last few messages for context
     const lastMessages = chat.messages.slice(-5);
     const chatContent = lastMessages.map(m => `${m.role}: ${m.content}`).join('\n\n');
     
@@ -2875,9 +2160,8 @@ window.uploadForLearning = function(type) {
     input.click();
 }
 
-// ================= COMPLETE GAMES MODULE WITH BIG BOXES =================
+// ================= GAMES MODULE  =================//
 
-// Game state variables
 let currentGameType = null;
 let currentQuizQuestions = [];
 let currentQuizIndex = 0;
@@ -2909,7 +2193,6 @@ let tfQuestions = [];
 let tfIndex = 0;
 let tfScore = 0;
 
-// Open Games Modal
 window.openGamesModal = function() {
     console.log("Opening Games Modal");
     const modal = document.getElementById('gamesModal');
@@ -2925,18 +2208,15 @@ window.openGamesModal = function() {
         modal.style.justifyContent = 'center';
         modal.style.alignItems = 'center';
     }
-    // Show game selection by default
     showGameSelectionScreen();
 }
 
-// Close Games Modal
 window.closeGamesModal = function() {
     const modal = document.getElementById('gamesModal');
     if (modal) modal.style.display = 'none';
     if (quizTimer) clearInterval(quizTimer);
 }
 
-// Show game selection screen with big boxes
 function showGameSelectionScreen() {
     const gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
@@ -2988,13 +2268,11 @@ function showGameSelectionScreen() {
     `;
 }
 
-// Select and start a game
 window.selectGame = function(gameType) {
     currentGameType = gameType;
     const gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
     
-    // Add back button
     gameContent.innerHTML = `
         <div class="game-header-bar">
             <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
@@ -3005,7 +2283,6 @@ window.selectGame = function(gameType) {
     
     const activeContainer = document.getElementById('activeGameContainer');
     
-    // Load the selected game
     switch(gameType) {
         case 'quiz-race':
             loadQuizRaceGame(activeContainer);
@@ -3042,7 +2319,7 @@ function getGameTitle(gameType) {
     return titles[gameType] || 'Game';
 }
 
-// ================= QUIZ RACE GAME =================
+// ================= QUIZ RACE GAME =================//
 function loadQuizRaceGame(container) {
     currentQuizIndex = 0;
     quizScore = 0;
@@ -3102,7 +2379,6 @@ window.checkQuizAnswer = function(selected, btnElement) {
     const q = currentQuizQuestions[currentQuizIndex];
     const feedback = document.getElementById('gameFeedback');
     
-    // Disable all option buttons
     document.querySelectorAll('.game-option-btn').forEach(btn => btn.disabled = true);
     
     if (selected === q.correct) {
@@ -3142,7 +2418,7 @@ function showQuizResults(container) {
     `;
 }
 
-// ================= MEMORY MATCH GAME =================
+// ================= MEMORY MATCH GAME =================//
 function loadMemoryMatchGame(container) {
     const pairs = [
         { pair1: "HTML", pair2: "Web Page" },
@@ -3158,9 +2434,7 @@ function loadMemoryMatchGame(container) {
         memoryCards.push({ id: idx * 2, value: pair.pair1, matched: false, pairId: idx });
         memoryCards.push({ id: idx * 2 + 1, value: pair.pair2, matched: false, pairId: idx });
     });
-    
-    // Shuffle
-    for (let i = memoryCards.length - 1; i > 0; i--) {
+        for (let i = memoryCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [memoryCards[i], memoryCards[j]] = [memoryCards[j], memoryCards[i]];
     }
@@ -3233,7 +2507,7 @@ function checkMemoryMatch() {
     }
 }
 
-// ================= TYPING SPEED GAME =================
+// ================= TYPING SPEED GAME =================//
 function loadTypingSpeedGame(container) {
     typingWordsList = ["javascript", "programming", "developer", "computer", "keyboard", "website", "application", "database"];
     typingRound = 0;
@@ -3303,7 +2577,7 @@ function showTypingResults(container) {
     `;
 }
 
-// ================= TRIVIA CHALLENGE =================
+// ================= TRIVIA CHALLENGE =================//
 function loadTriviaChallengeGame(container) {
     triviaIndex = 0;
     triviaScore = 0;
@@ -3377,7 +2651,7 @@ function showTriviaResults(container) {
     `;
 }
 
-// ================= WORD SCRAMBLE =================
+// ================= WORD SCRAMBLE =================//
 function loadWordScrambleGame(container) {
     scrambleWordsList = [
         { word: "javascript", hint: "A programming language for web" },
@@ -3463,7 +2737,7 @@ function showScrambleResults(container) {
     `;
 }
 
-// ================= TRUE OR FALSE GAME =================
+// ================= TRUE OR FALSE GAME =================//
 function loadTrueFalseGame(container) {
     tfIndex = 0;
     tfScore = 0;
@@ -3539,7 +2813,6 @@ function showTrueFalseResults(container) {
     `;
 }
 
-// Helper functions
 window.startGame = function(gameType) {
     window.openGamesModal();
     setTimeout(() => window.selectGame(gameType), 100);
