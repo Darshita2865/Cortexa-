@@ -4,9 +4,6 @@
 
 > Think of it as: *NotebookLM + Research Assistant + Knowledge Graph + AI Agents*
 
----
-## 🚀 Live Demo
-https://cortexa9.netlify.app
 
 ## 🚀 Overview
 
