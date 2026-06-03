@@ -16,10 +16,9 @@ from typing import Optional
 app = FastAPI()
 
 
-# ================= LOAD ENVIRONMENT VARIABLES =================
+# ================= LOAD ENVIRONMENT VARIABLES =================//
 load_dotenv()
 
-# Get API keys from environment - NO API KEYS IN CODE
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
@@ -38,7 +37,7 @@ else:
     print("=" * 50)
 
 
-# ================= CORS =================
+# ================= CORS =================//
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,13 +46,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ================= MODELS =================
+# ================= MODELS =================//
 class Message(BaseModel):
     message: str
     document_content: Optional[str] = None
     audio: bool = False
 
-# ================= AVAILABLE MODELS =================
+# ================= AVAILABLE MODELS =================//
 MODELS = {
     "fast": "llama-3.1-8b-instant",
     "balanced": "llama-3.3-70b-versatile",
@@ -63,7 +62,7 @@ MODELS = {
 
 PREFERRED_MODEL = MODELS["balanced"]
 
-# ================= SYSTEM PROMPT =================
+# ================= SYSTEM PROMPT =================//
 SYSTEM_PROMPT = """You are Cortexa, a powerful AI assistant. 
 
 IMPORTANT RULES:
@@ -75,7 +74,7 @@ IMPORTANT RULES:
 
 Never respond with generic phrases. Always provide specific, helpful answers."""
 
-# ================= HELPER FUNCTION =================
+# ================= HELPER FUNCTION =================//
 def extract_video_id(url: str) -> str:
     """Extract YouTube video ID from URL"""
     patterns = [
@@ -90,7 +89,7 @@ def extract_video_id(url: str) -> str:
             return match.group(1)
     return None
 
-# ================= AI RESPONSE FUNCTION =================
+# ================= AI RESPONSE FUNCTION =================//
 async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     """Get intelligent response from Groq API"""
     
@@ -152,7 +151,7 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         
         return f"⚠️ Error: {error_msg[:200]}"
 
-# ================= CHAT ENDPOINT =================
+# ================= CHAT ENDPOINT =================//
 @app.post("/chat")
 async def chat(data: Message):
     try:
@@ -171,7 +170,7 @@ async def chat(data: Message):
         print(f"❌ Error: {e}")
         return {"response": f"Error: {str(e)}. Please try again."}
 
-# ================= YOUTUBE ENDPOINTS =================
+# ================= YOUTUBE ENDPOINTS =================//
 
 @app.get("/youtube-search")
 async def youtube_search(query: str, max_results: int = 10):
@@ -283,7 +282,7 @@ async def youtube_summary(data: dict):
     except Exception as e:
         return {"error": str(e)}
 
-# ================= DOCUMENT UPLOAD =================
+# ================= DOCUMENT UPLOAD =================//
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...)):
     try:
@@ -311,7 +310,7 @@ async def upload_document(file: UploadFile = File(...)):
         print(f"❌ Upload error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# ================= AUDIO GENERATION =================
+# ================= AUDIO GENERATION =================//
 @app.post("/generate-audio")
 async def generate_audio(data: dict):
     try:
@@ -346,7 +345,7 @@ async def get_audio(filename: str):
         return JSONResponse(status_code=404, content={"error": "Not found"})
     return FileResponse(filepath, media_type="audio/mpeg")
 
-# ================= HEALTH CHECK =================
+# ================= HEALTH CHECK =================//
 @app.get("/health")
 async def health():
     groq_status = "not_configured"
