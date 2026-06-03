@@ -6,7 +6,7 @@ Cortexa is a modern web application designed to provide an efficient and user-fr
 ## Screenshots
 
 
-![Home Page](1.png)
+![Home Page](./1.png)
 
 
 ![Dashboard](2.png)
