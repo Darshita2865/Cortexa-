@@ -1,45 +1,75 @@
 # REVIEW OF CORTEXA
 
 ## Project Overview
+
 Cortexa is a modern web application designed to provide an efficient and user-friendly experience.
 
 ## Screenshots
 
+### Home Page
 
-![Home Page](./1.png)
+![](1.png)
 
+### Dashboard
 
-![Dashboard](2.png)
+![](2.png)
 
+### Registration Form
 
-![Feature 1](3.png)
+![](3.png)
 
+### Login Page
 
-![Feature 2](4.png)
+![](4.png)
 
-![Feature 3](5.png)
+### User Profile
 
-![Screen 6](6.png)
+![](5.png)
 
-![Screen 7](7.png)
+### Feature Screen 1
 
-![Screen 8](8.png)
+![](6.png)
 
-![Screen 9](9.png)
+### Feature Screen 2
 
-![Screen 10](10.png)
+![](7.png)
 
-![Screen 11](11.png)
+### Feature Screen 3
 
-![Screen 12](12.png)
+![](8.png)
 
-![Screen 13](13.png)
+### Feature Screen 4
 
-![Screen 14](14.png)
+![](9.png)
 
-![Screen 15](15.png)
+### Feature Screen 5
 
-![Screen 16](16.png)
+![](10.png)
+
+### Feature Screen 6
+
+![](11.png)
+
+### Feature Screen 7
+
+![](12.png)
+
+### Feature Screen 8
+
+![](13.png)
+
+### Feature Screen 9
+
+![](14.png)
+
+### Feature Screen 10
+
+![](15.png)
+
+### Feature Screen 11
+
+![](16.png)
 
 ## Conclusion
+
 The screenshots demonstrate the application's interface, features, and overall user experience. Cortexa provides a clean design, responsive layout, and functional workflow.
