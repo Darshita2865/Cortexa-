@@ -1,6 +1,6 @@
 console.log("Cortexa JS Loaded - Full Version");
 
-// ================= GLOBAL VARIABLES =================
+// ================= GLOBAL VARIABLES =================//
 let currentChatId = null;
 let currentProjectId = null;
 let currentDocument = null;
@@ -13,7 +13,7 @@ let currentAudioText = null;
 
 const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
 
-// ================= USER-SPECIFIC STORAGE =================
+// ================= USER-SPECIFIC STORAGE =================//
 function getCurrentUser() {
     return localStorage.getItem("email") || "guest";
 }
@@ -38,7 +38,7 @@ function saveProjects(projects) {
     localStorage.setItem(`projects_${user}`, JSON.stringify(projects));
 }
 
-// ================= HELPER FUNCTIONS =================
+// ================= HELPER FUNCTIONS =================//
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -76,7 +76,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// ================= FORMAT FUNCTION =================
+// ================= FORMAT FUNCTION =================//
 function formatContent(content) {
     if (!content) return '';
     let formatted = content.replace(/\n/g, '<br>');
@@ -86,7 +86,7 @@ function formatContent(content) {
     return formatted;
 }
 
-// ================= DISPLAY MESSAGE FUNCTION =================
+// ================= DISPLAY MESSAGE FUNCTION =================//
 function displayMessage(text, sender) {
     const chatBox = document.getElementById("searchResults");
     if (!chatBox) {
@@ -128,7 +128,7 @@ function updateMessage(id, newText) {
     }
 }
 
-// ================= MAIN CHAT FUNCTION =================
+// ================= MAIN CHAT FUNCTION =================//
 window.performSearch = async function() {
     console.log("performSearch called");
     
@@ -188,7 +188,7 @@ window.performSearch = async function() {
     }
 }
 
-// ================= SAVE CHAT =================
+// ================= SAVE CHAT =================//
 function saveCurrentChat(userMessage, aiResponse) {
     let chats = getChats();
     
@@ -221,7 +221,7 @@ function saveCurrentChat(userMessage, aiResponse) {
     loadChats();
 }
 
-// ================= ADD WELCOME MESSAGE =================
+// ================= ADD WELCOME MESSAGE =================//
 function addWelcomeMessage() {
     const container = document.getElementById("searchResults");
     if (!container) return;
@@ -231,7 +231,7 @@ function addWelcomeMessage() {
     }
 }
 
-// ================= LOAD CHATS =================
+// ================= LOAD CHATS =================//
 function loadChats() {
     const container = document.getElementById("chatList");
     if (!container) return;
@@ -260,7 +260,7 @@ function loadChats() {
     });
 }
 
-// ================= LOAD PROJECTS =================
+// ================= LOAD PROJECTS =================//
 function loadProjects() {
     const container = document.getElementById("projectListRight");
     if (!container) return;
@@ -281,7 +281,7 @@ function loadProjects() {
     });
 }
 
-// ================= CHAT MANAGEMENT =================
+// ================= CHAT MANAGEMENT =================//
 window.loadChatById = function(chatId) {
     let chats = getChats();
     const chat = chats.find(c => c.id === chatId);
@@ -409,7 +409,7 @@ window.createProject = function() {
     }
 }
 
-// ================= DOCUMENT CHAT =================
+// ================= DOCUMENT CHAT =================//
 window.documentChat = function() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -439,7 +439,7 @@ window.documentChat = function() {
     input.click();
 }
 
-// ================= AUDIO MODE =================
+// ================= AUDIO MODE =================//
 window.openAudioMode = function() {
     const modal = document.getElementById('audioModal');
     if (modal) modal.style.display = 'flex';
@@ -577,7 +577,7 @@ window.downloadAudioResponse = function() {
     }
 }
 
-// ================= VIDEO MODE (FULL FEATURED) =================
+// ================= VIDEO MODE =================//
 window.openVideoMode = function() {
     const modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'flex';
