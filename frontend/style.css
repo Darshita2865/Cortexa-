@@ -904,6 +904,7 @@ body.logged-in #signinBtn {
         padding: 30px 20px;
     }
 }
+
 /* ================= DASHBOARD PAGE ================= */
 .dashboard-page {
     display: flex;
@@ -984,6 +985,7 @@ body.logged-in #signinBtn {
     color: white;
     cursor: pointer;
 }
+
 /* ================= RIGHT SIDEBAR CHAT LIST ================= */
 .right-sidebar {
     width: 280px;
@@ -1044,6 +1046,7 @@ body.logged-in #signinBtn {
     text-align: left;
     cursor: pointer;
 }
+
 /* ================= MAIN CHAT AREA ================= */
 .main {
     margin-left: 220px;
@@ -1775,6 +1778,7 @@ body.logged-in #signinBtn {
     font-weight: 600;
     cursor: pointer;
 }
+
 /* ================= DOCUMENT CHAT STYLES ================= */
 .document-indicator {
     position: fixed;
@@ -1938,6 +1942,7 @@ body.logged-in #signinBtn {
     display: block;
     animation: dropdownFadeIn 0.2s ease;
 }
+
 /* ================= LEARNING TOOLS - STUDY NOTES STYLES ================= */
 .notes-content {
     background: rgba(0, 0, 0, 0.3);
@@ -2019,6 +2024,7 @@ body.logged-in #signinBtn {
     color: #cbd5f5;
     font-style: italic;
 }
+
 /* ================= THREE-DOT BUTTON - RIGHT SIDEBAR ONLY ================= */
 
 /* Chat and Project items container */
@@ -2169,6 +2175,7 @@ body.logged-in #signinBtn {
         transform: translateY(0);
     }
 }
+
 /* ================= GAMES MODAL ================= */
 .games-modal-overlay {
     position: fixed;
@@ -2351,6 +2358,7 @@ body.logged-in #signinBtn {
         font-size: 12px;
     }
 }
+
 /* ================= LOGOUT BUTTON STYLES ================= */
 .logout {
     margin-top: auto;
@@ -2418,6 +2426,7 @@ body.logged-in #homepageProfileBtn {
 body.logged-in .nav-btn.signin-btn {
     display: none;
 }
+
 /* ================= HIDE SCROLLBARS GLOBALLY ================= */
 * {
     scrollbar-width: none;
