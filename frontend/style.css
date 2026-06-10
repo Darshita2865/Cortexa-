@@ -12,7 +12,31 @@ body {
     color: white;
     overflow-x: hidden; /* FIXED */
 }
+/* Navbar button visibility */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
+#signinBtn {
+    display: flex;
+}
+
+#homepageProfileBtn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+/* When user is logged in - hide Sign In button, show Profile button */
+body.logged-in #signinBtn {
+    display: none !important;
+}
+
+body.logged-in #homepageProfileBtn {
+    display: flex !important;
+}
 /* ================= NAVBAR ================= */
 .navbar {
     position: fixed;
