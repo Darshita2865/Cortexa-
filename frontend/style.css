@@ -995,7 +995,93 @@ body.logged-in #signinBtn {
     box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
     background: linear-gradient(90deg, #dc2626, #b91c1c);
 }
+/* ================= GAMES BUTTON - PROPER ALIGNMENT ================= */
+/* Make sure games button is inside the same nav container */
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #d1d1e0;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 12px 12px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.sidebar nav a svg {
+    width: 18px;
+    height: 18px;
+    stroke: #a855f7;
+    transition: all 0.3s ease;
+}
+
+.sidebar nav a:hover {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.15));
+    color: white;
+    transform: translateX(6px);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.sidebar nav a:hover svg {
+    stroke: white;
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.5));
+}
+
+.sidebar nav a.active {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.2));
+    color: white;
+    border-left: 2px solid #c084fc;
+}
+
+/* Games Button Specific Styles - Must match other nav buttons */
+.sidebar nav .games-nav-btn,
+.sidebar .games-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #d1d1e0;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 12px 12px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    margin: 0;
+    background: transparent;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+}
+
+.sidebar nav .games-nav-btn svg,
+.sidebar .games-nav-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: #a855f7;
+    transition: all 0.3s ease;
+}
+
+.sidebar nav .games-nav-btn:hover,
+.sidebar .games-nav-btn:hover {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.15));
+    color: white;
+    transform: translateX(6px);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.sidebar nav .games-nav-btn:hover svg,
+.sidebar .games-nav-btn:hover svg {
+    stroke: white;
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.5));
+}
 /* ================= GAMES BUTTON ALIGNMENT ================= */
 .sidebar nav a.games-nav-btn {
     display: flex;
