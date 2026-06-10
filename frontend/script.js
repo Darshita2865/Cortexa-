@@ -2817,3 +2817,201 @@ window.startGame = function(gameType) {
     window.openGamesModal();
     setTimeout(() => window.selectGame(gameType), 100);
 }
+// ================= LOGOUT FUNCTION - FIXED =================
+window.logout = function() {
+    if (confirm("Are you sure you want to logout?")) {
+        // Clear all user data from localStorage
+        localStorage.removeItem("email");
+        localStorage.removeItem("username");
+        localStorage.removeItem("isLoggedIn");
+        
+        // Clear session-specific data
+        currentChatId = null;
+        currentProjectId = null;
+        currentDocument = null;
+        
+        // Redirect to home page
+        window.location.href = "index.html";
+    }
+}
+// ================= CHECK LOGIN STATUS ON HOMEPAGE =================
+function checkHomepageLoginStatus() {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const userEmail = localStorage.getItem("email");
+    const signInBtn = document.querySelector('.nav-btn');
+    const profileBtn = document.getElementById('homepageProfileBtn');
+    
+    if (isLoggedIn && userEmail) {
+        if (signInBtn) signInBtn.style.display = 'none';
+        if (profileBtn) {
+            profileBtn.style.display = 'flex';
+            // Update profile icon with user initial
+            const initial = userEmail.charAt(0).toUpperCase();
+            const profileIcon = profileBtn.querySelector('.profile-icon-text');
+            if (profileIcon) {
+                profileIcon.textContent = initial;
+            }
+        }
+        document.body.classList.add('logged-in');
+    } else {
+        if (signInBtn) signInBtn.style.display = 'flex';
+        if (profileBtn) profileBtn.style.display = 'none';
+        document.body.classList.remove('logged-in');
+    }
+}
+
+// ================= REDIRECT TO REGISTER PAGE =================
+window.goToRegister = function() {
+    window.location.href = "register.html";
+}
+
+// ================= REDIRECT TO LOGIN PAGE =================
+window.goToLogin = function() {
+    window.location.href = "login.html";
+}
+
+// ================= HANDLE REGISTRATION =================
+window.handleRegister = function(event) {
+    if (event) event.preventDefault();
+    
+    const username = document.getElementById('regUsername')?.value;
+    const email = document.getElementById('regEmail')?.value;
+    const password = document.getElementById('regPassword')?.value;
+    const confirmPassword = document.getElementById('regConfirmPassword')?.value;
+    
+    if (!username || !email || !password) {
+        showToast("Please fill all fields", "error");
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showToast("Passwords do not match", "error");
+        return;
+    }
+    
+    // Get existing users or create new array
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    
+    // Check if user already exists
+    if (users.find(u => u.email === email)) {
+        showToast("User already exists! Please login.", "error");
+        return;
+    }
+    
+    // Add new user
+    users.push({ username, email, password });
+    localStorage.setItem("users", JSON.stringify(users));
+    
+    // Auto login after registration
+    localStorage.setItem("email", email);
+    localStorage.setItem("username", username);
+    localStorage.setItem("isLoggedIn", "true");
+    
+    showToast("✅ Registration successful! Redirecting to dashboard...");
+    
+    setTimeout(() => {
+        window.location.href = "dashboard.html";
+    }, 1500);
+}
+
+// ================= HANDLE LOGIN =================
+window.handleLogin = function(event) {
+    if (event) event.preventDefault();
+    
+    const email = document.getElementById('loginEmail')?.value;
+    const password = document.getElementById('loginPassword')?.value;
+    
+    if (!email || !password) {
+        showToast("Please fill all fields", "error");
+        return;
+    }
+    
+    // Get users from localStorage
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    
+    // Find user
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+        localStorage.setItem("email", user.email);
+        localStorage.setItem("username", user.username);
+        localStorage.setItem("isLoggedIn", "true");
+        
+        showToast("✅ Login successful! Redirecting to dashboard...");
+        
+        setTimeout(() => {
+            window.location.href = "dashboard.html";
+        }, 1500);
+    } else {
+        showToast("❌ Invalid email or password", "error");
+    }
+}
+
+// ================= GO TO PROFILE PAGE =================
+window.goToProfile = function() {
+    window.location.href = "profile.html";
+}
+
+// ================= GO TO DASHBOARD =================
+window.goToDashboard = function() {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    if (isLoggedIn) {
+        window.location.href = "dashboard.html";
+    } else {
+        window.location.href = "login.html";
+    }
+}
+
+// ================= GET STARTED BUTTON =================
+window.getStarted = function() {
+    window.location.href = "register.html";
+}
+
+// ================= UPDATE PROFILE PAGE WITH USER DATA =================
+function loadUserProfile() {
+    const email = localStorage.getItem("email");
+    const username = localStorage.getItem("username");
+    
+    if (!email) {
+        window.location.href = "login.html";
+        return;
+    }
+    
+    document.getElementById('profileName').value = username || '';
+    document.getElementById('profileEmail').value = email || '';
+}
+
+// ================= SAVE PROFILE =================
+window.saveProfile = function() {
+    const newName = document.getElementById('profileName')?.value;
+    const newEmail = document.getElementById('profileEmail')?.value;
+    
+    if (newName) localStorage.setItem("username", newName);
+    if (newEmail) {
+        // Update email in users array as well
+        let users = JSON.parse(localStorage.getItem("users")) || [];
+        const oldEmail = localStorage.getItem("email");
+        const userIndex = users.findIndex(u => u.email === oldEmail);
+        if (userIndex !== -1) {
+            users[userIndex].email = newEmail;
+            users[userIndex].username = newName;
+            localStorage.setItem("users", JSON.stringify(users));
+        }
+        localStorage.setItem("email", newEmail);
+    }
+    
+    showToast("✅ Profile saved successfully!");
+}
+
+// ================= INITIALIZE HOMEPAGE =================
+document.addEventListener('DOMContentLoaded', function() {
+    // Check login status on homepage
+    if (window.location.pathname.includes("index.html") || window.location.pathname === "/") {
+        checkHomepageLoginStatus();
+    }
+    
+    // Load user profile on profile page
+    if (window.location.pathname.includes("profile.html")) {
+        loadUserProfile();
+    }
+});
