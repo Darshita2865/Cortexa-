@@ -2240,7 +2240,73 @@ body {
         font-size: 12px;
     }
 }
+/* ================= LOGOUT BUTTON STYLES ================= */
+.logout {
+    margin-top: auto;
+    padding: 10px;
+}
 
+.logout button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.logout button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+    background: linear-gradient(90deg, #dc2626, #b91c1c);
+}
+
+/* ================= GAMES BUTTON ALIGNMENT ================= */
+.sidebar nav a.games-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    margin: 8px 0;
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.2), rgba(99, 102, 241, 0.1));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    transition: all 0.3s ease;
+}
+
+.sidebar nav a.games-nav-btn:hover {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    transform: translateX(6px);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+.sidebar nav a.games-nav-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+/* ================= PROFILE BUTTON IN HOMEPAGE ================= */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#homepageProfileBtn {
+    display: none;
+}
+
+body.logged-in #homepageProfileBtn {
+    display: flex;
+}
+
+body.logged-in .nav-btn.signin-btn {
+    display: none;
+}
 /* ================= HIDE SCROLLBARS GLOBALLY ================= */
 * {
     scrollbar-width: none;
