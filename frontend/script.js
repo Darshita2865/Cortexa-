@@ -3103,7 +3103,66 @@ window.saveProfile = function() {
     
     showToast("✅ Profile saved successfully!");
 }
+// Toggle chat dropdown menu
+window.toggleChatMenu = function(event, chatId) {
+    event.stopPropagation();
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        if (dropdown.id !== `chat-dropdown-${chatId}`) {
+            dropdown.classList.remove('show');
+        }
+    });
+    
+    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
 
+// Toggle project dropdown menu
+window.toggleProjectMenu = function(event, projectId) {
+    event.stopPropagation();
+    
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        if (dropdown.id !== `project-dropdown-${projectId}`) {
+            dropdown.classList.remove('show');
+        }
+    });
+    
+    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function() {
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        dropdown.classList.remove('show');
+    });
+});
+
+// Delete chat function
+window.deleteChatById = function(chatId) {
+    if (confirm('Delete this chat?')) {
+        // Your delete logic here
+        console.log('Deleting chat:', chatId);
+        // Close dropdown after delete
+        const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+        if (dropdown) dropdown.classList.remove('show');
+    }
+}
+
+// Delete project function
+window.deleteProjectById = function(projectId) {
+    if (confirm('Delete this project?')) {
+        // Your delete logic here
+        console.log('Deleting project:', projectId);
+        const dropdown = document.getElementById(`project-dropdown-${projectId}`);
+        if (dropdown) dropdown.classList.remove('show');
+    }
+}
 // ================= INITIALIZE PAGES =================
 document.addEventListener('DOMContentLoaded', function() {
     // Check login status on homepage
