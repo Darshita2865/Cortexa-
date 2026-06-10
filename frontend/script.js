@@ -2947,20 +2947,31 @@ window.handleLogin = function(event) {
     }
 }
 
-// ================= GO TO PROFILE PAGE =================
+// Go to Register page (which then goes to Login)
+window.goToRegister = function() {
+    window.location.href = "register.html";
+}
+
+// Go to Profile page
 window.goToProfile = function() {
     window.location.href = "profile.html";
 }
 
-// ================= GO TO DASHBOARD =================
-window.goToDashboard = function() {
+// Check login status on page load
+function checkNavbarLoginStatus() {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    
     if (isLoggedIn) {
-        window.location.href = "dashboard.html";
+        document.body.classList.add('logged-in');
     } else {
-        window.location.href = "login.html";
+        document.body.classList.remove('logged-in');
     }
 }
+
+// Call this when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    checkNavbarLoginStatus();
+});
 
 // ================= GET STARTED BUTTON =================
 window.getStarted = function() {
