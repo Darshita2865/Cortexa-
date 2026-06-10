@@ -12,19 +12,23 @@
 
 <!-- ===== NAVBAR ===== -->
 <div class="navbar">
-  <div class="logo">
-    <img src="logo.png" alt="Cortexa Logo">
-  </div>
-  <nav>
-    <a href="#home">Home</a>
-    <a href="#features">Features</a>
-    <a href="#about">About</a>
-    <a href="#contact">Contact</a>
-    <a href="#blog">Blog</a>
-  </nav>
-  <div class="nav-right">
-    <button class="nav-btn" id="signupBtn">Sign Up</button>
-  </div>
+    <div class="logo">
+        <img src="logo.png" alt="Cortexa Logo">
+    </div>
+    <nav>
+        <a href="#home">Home</a>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+        <a href="#blog">Blog</a>
+    </nav>
+    <div class="nav-right">
+        <button class="nav-btn" id="signupBtn" onclick="goToRegister()">Sign Up</button>
+        <button class="nav-btn" id="signinBtn" onclick="goToLogin()">Sign In</button>
+        <div id="homepageProfileBtn" class="profile-icon" onclick="goToDashboard()" style="display: none; cursor: pointer;">
+            <span class="profile-icon-text" style="color: white; font-weight: bold;"></span>
+        </div>
+    </div>
 </div>
 
 <!-- ===== HERO SECTION ===== -->
@@ -51,10 +55,6 @@
     <div class="feature-card">
       <h3>🎵 Audio/Video Explanation</h3>
       <p>Convert text to audio/video explanations</p>
-    </div>
-    <div class="feature-card">
-      <h3>🟢 Mind Map & Reports</h3>
-      <p>Create mind maps, slide decks, and reports easily</p>
     </div>
     <div class="feature-card">
       <h3>🔍 Learning Tools</h3>
@@ -114,6 +114,7 @@
       <p>Maximize productivity using AI workflows.</p>
     </div>
   </div>
+  
 </section>
 
 <script>
