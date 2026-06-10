@@ -335,28 +335,13 @@
         </div>
     </div>
 </div>
-<!-- Chat Item with Three-Dot Button -->
+<!-- Right sidebar chat item structure -->
 <div class="chat-item" data-chat-id="123">
     <span class="chat-title" onclick="loadChatById('123')">💬 My Chat Title</span>
     <div class="chat-menu-container">
         <button class="chat-menu-btn" onclick="toggleChatMenu(event, '123')">⋯</button>
         <div class="chat-dropdown" id="chat-dropdown-123">
-            <div class="dropdown-item delete" onclick="deleteChatById('123')">
-                🗑️ Delete Chat
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Project Item with Three-Dot Button -->
-<div class="project-item" data-project-id="456">
-    <span class="project-title" onclick="loadProjectById('456')">📁 My Project</span>
-    <div class="project-menu-container">
-        <button class="project-menu-btn" onclick="toggleProjectMenu(event, '456')">⋯</button>
-        <div class="project-dropdown" id="project-dropdown-456">
-            <div class="dropdown-item delete" onclick="deleteProjectById('456')">
-                🗑️ Delete Project
-            </div>
+            <div class="dropdown-item delete" onclick="deleteChatById('123')">🗑️ Delete</div>
         </div>
     </div>
 </div>
