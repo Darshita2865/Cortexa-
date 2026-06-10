@@ -2911,3 +2911,225 @@ body.logged-in #signinBtn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+/* ================= RIGHT SIDEBAR CHAT LIST - THREE DOT BUTTONS ONLY HERE ================= */
+.right-sidebar {
+    width: 280px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 20px;
+    background: rgba(20, 17, 34, 0.95);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(168, 85, 247, 0.15);
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.right-sidebar h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: #a1a1aa;
+    margin: 20px 0 12px 8px;
+    text-transform: uppercase;
+}
+
+/* Chat items in RIGHT SIDEBAR only */
+.chat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin: 4px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: #e4e4e7;
+    position: relative;
+    width: 100%;
+}
+
+.chat-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.chat-item.active {
+    background: rgba(168, 85, 247, 0.15);
+    border-left: 2px solid #a855f7;
+}
+
+/* Chat title in sidebar */
+.chat-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #e4e4e7;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* ================= THREE-DOT BUTTON - ONLY IN RIGHT SIDEBAR ================= */
+.chat-menu-container {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.chat-menu-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #a1a1aa !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    opacity: 0 !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px;
+    height: 28px;
+}
+
+/* Show three-dot button ONLY when hovering over the chat item in sidebar */
+.chat-item:hover .chat-menu-btn {
+    opacity: 1 !important;
+}
+
+.chat-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    transform: scale(1.05);
+}
+
+/* Dropdown menu */
+.chat-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: #2a2a3a;
+    border-radius: 10px;
+    width: 130px;
+    z-index: 99999;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: none;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.chat-dropdown.show {
+    display: block;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+.dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    transition: all 0.2s;
+    color: #e4e4e7;
+    background: #2a2a3a;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: rgba(168, 85, 247, 0.2);
+}
+
+.dropdown-item.delete {
+    color: #ef4444;
+}
+
+.dropdown-item.delete:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================= MAIN CHAT AREA - NO THREE-DOT BUTTONS HERE ================= */
+.main {
+    margin-left: 220px;
+    margin-right: 280px;
+    min-height: 100vh;
+    height: 100vh;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Chat bubbles container - NO three-dot buttons */
+#searchResults {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 10px;
+    margin-bottom: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: transparent;
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Chat bubbles - NO menus here */
+.user-bubble {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+    max-width: 70%;
+    word-wrap: break-word;
+    margin-left: auto;
+    margin-right: 0;
+    position: relative;
+}
+
+.ai-bubble {
+    align-self: flex-start;
+    background: #2a1a4a;
+    color: #e5e5e5;
+    padding: 10px 16px;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    max-width: 70%;
+    word-wrap: break-word;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    margin-left: 0;
+    margin-right: auto;
+    position: relative;
+}
+
+/* Make sure NO three-dot buttons appear in chat bubbles */
+.user-bubble .chat-menu-container,
+.ai-bubble .chat-menu-container,
+.user-bubble .chat-menu-btn,
+.ai-bubble .chat-menu-btn {
+    display: none !important;
+}
