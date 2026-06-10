@@ -19,7 +19,7 @@ body {
     gap: 15px;
 }
 
-#signinBtn {
+#signupBtn {
     display: flex;
 }
 
@@ -27,6 +27,14 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
+}
+
+body.logged-in #signupBtn {
+    display: none !important;
+}
+
+body.logged-in #homepageProfileBtn {
+    display: flex !important;
 }
 
 /* When user is logged in - hide Sign In button, show Profile button */
