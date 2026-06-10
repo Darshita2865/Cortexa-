@@ -17,80 +17,73 @@
 <!-- Right Sidebar Toggle Button -->
 <button class="right-sidebar-toggle" onclick="toggleRightSidebar()">📋</button>
 
-<!-- ===== SIDEBAR ===== -->
-<div class="sidebar">
-  <div class="logo">
-    <img src="logo.png" alt="Logo">
-  </div>
-
-  <nav>
+<nav>
     <a href="#" onclick="startNewChat(event)">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4-4 8-9 8a9 9 0 01-6 2l2-3a9 9 0 01-2-6c0-4 4-8 9-8s9 4 9 8z"/>
-      </svg>
-      New Chats
+        <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4-4 8-9 8a9 9 0 01-6 2l2-3a9 9 0 01-2-6c0-4 4-8 9-8s9 4 9 8z"/>
+        </svg>
+        New Chats
     </a>
      
     <a href="#" onclick="createProject()">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path d="M3 7h5l3 3h10v10H3z"/>
-      </svg>
-      New Projects
+        <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M3 7h5l3 3h10v10H3z"/>
+        </svg>
+        New Projects
     </a>  
     
     <a href="#" onclick="documentChat(); return false;">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path d="M9 12h6M9 16h6M4 6h16v12H4z"/>
-      </svg>
-      Document Chat
+        <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M9 12h6M9 16h6M4 6h16v12H4z"/>
+        </svg>
+        Document Chat
     </a>
     
     <a href="#" onclick="openAudioMode(); return false;">
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2z"/>
-        <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
-    </svg>
-    Audio Explanation
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2z"/>
+            <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+        </svg>
+        Audio Explanation
     </a>
 
     <a href="#" onclick="openVideoMode(); return false;">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path d="M15 10l4-2v8l-4-2M4 6h12v12H4z"/>
-      </svg>
-      Video Explanation
+        <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M15 10l4-2v8l-4-2M4 6h12v12H4z"/>
+        </svg>
+        Video Explanation
     </a>
     
-            
     <a href="#" onclick="openReportMode(); return false;">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path d="M9 17v-6M13 17V9M17 17v-4M3 21h18"/>
-      </svg>
-      Report
+        <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M9 17v-6M13 17V9M17 17v-4M3 21h18"/>
+        </svg>
+        Report
     </a>
     
     <a href="#" onclick="openLearningTools(); return false;">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5"/>
-        <path d="M2 12l10 5 10-5"/>
-      </svg>
-      Learning Tools
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+        </svg>
+        Learning Tools
     </a>
-  </nav>
 
-   <!-- 🎮 GAMES BUTTON -->
-<a href="#" class="games-nav-btn" onclick="openGamesModal()" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 6.5L21 12L15 17.5" />
-        <path d="M9 6.5L3 12L9 17.5" />
-        <rect x="2" y="12" width="20" height="12" rx="2" />
-        <circle cx="6" cy="14" r="1" />
-        <circle cx="18" cy="14" r="1" />
-        <circle cx="12" cy="16" r="2" />
-    </svg>
-    <span>Play Games</span>
-</a>
+    <!-- 🎮 GAMES BUTTON - INSIDE NAV FOR PROPER ALIGNMENT -->
+    <a href="#" class="games-nav-btn" onclick="openGamesModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 6.5L21 12L15 17.5" />
+            <path d="M9 6.5L3 12L9 17.5" />
+            <rect x="2" y="12" width="20" height="12" rx="2" />
+            <circle cx="6" cy="14" r="1" />
+            <circle cx="18" cy="14" r="1" />
+            <circle cx="12" cy="16" r="2" />
+        </svg>
+        <span>Play Games</span>
+    </a>
+</nav>
 
   <div class="logout">
     <button onclick="logout()">Logout</button>
