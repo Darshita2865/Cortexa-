@@ -1,3 +1,4 @@
+
 /* ================= GENERAL RESET ================= */
 * {
     margin: 0;
@@ -5637,10 +5638,6 @@ body::before, body::after {
     border: 1px solid rgba(168, 85, 247, 0.15) !important;
 }
 
-* {
-    border-color: rgba(168, 85, 247, 0.15) !important;
-}
-
     html, body {
     margin: 0;
     padding: 0;
@@ -6660,12 +6657,214 @@ body::after {
     filter: none !important;
 }
 
-.dashboard-page::before,
+.dashboard-page::before, 
 .dashboard-page::after,
 .sidebar::before,
 .sidebar::after {
     display: none !important;
     content: none !important;
     opacity: 0 !important;
+} 
+
+/* ================= ADDITIONAL FIXES FOR PLUS BUTTON & FEATURE MODALS ================= */
+
+/* Plus button hover and active states */
+.plus-btn {
+    transition: all 0.2s ease;
 }
 
+.plus-btn:hover {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    transform: scale(1.05);
+}
+
+/* Ensure dropdown menu items have proper styling */
+.plus-dropdown a {
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+/* Fix for audio modal responsiveness */
+@media (max-width: 640px) {
+    .audio-modal {
+        width: 94%;
+        border-radius: 32px;
+    }
+    .audio-modal-header {
+        padding: 18px 22px;
+    }
+    .audio-modal-header h2 {
+        font-size: 1.35rem;
+    }
+    .audio-modal-body {
+        padding: 24px 20px;
+    }
+    .mic-button {
+        width: 96px;
+        height: 96px;
+    }
+    .mic-icon {
+        font-size: 46px;
+    }
+    .input-group {
+        flex-direction: column;
+        gap: 14px;
+    }
+    .send-audio-btn {
+        width: 100%;
+        padding: 12px;
+    }
+    .audio-controls button {
+        padding: 7px 16px;
+        font-size: 0.74rem;
+    }
+}
+
+/* Fix for video modal tabs on mobile */
+@media (max-width: 768px) {
+    .video-tabs {
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Fix for report modal include options on mobile */
+@media (max-width: 640px) {
+    .include-options {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .include-options label {
+        font-size: 12px;
+    }
+}
+
+/* Fix for learning tools tabs on mobile */
+@media (max-width: 640px) {
+    .learning-tabs {
+        flex-wrap: wrap;
+    }
+    .learning-tab-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    .learning-options {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+/* Fix for games modal on mobile */
+@media (max-width: 768px) {
+    .games-grid-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    .game-card-large {
+        padding: 25px 20px;
+    }
+    .game-card-large h3 {
+        font-size: 22px;
+    }
+    .game-question-large {
+        font-size: 20px;
+        padding: 25px;
+    }
+    .game-options-grid {
+        grid-template-columns: 1fr;
+    }
+    .memory-grid-large {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    .game-header-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+/* Ensure all modal close buttons have proper hover effects */
+.close-audio-modal:hover,
+.close-video-modal:hover,
+.close-report-modal:hover,
+.close-learning-modal:hover,
+.close-games-modal:hover,
+.close-mindmap-modal:hover {
+    background: #ef4444;
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Fix for chat bubbles on very small screens */
+@media (max-width: 480px) {
+    .user-bubble, .ai-bubble {
+        max-width: 90%;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    .chat-content {
+        font-size: 12px;
+    }
+    .chat-title {
+        font-size: 9px;
+    }
+}
+
+/* Ensure proper z-index for modals */
+.audio-modal-overlay { z-index: 20000; }
+.video-modal-overlay { z-index: 30000; }
+.report-modal-overlay { z-index: 45000; }
+.learning-modal-overlay { z-index: 50000; }
+.games-modal-overlay { z-index: 200000; }
+.mindmap-modal-overlay { z-index: 100000; }
+
+/* Fix for input focus states */
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Fix for button active states */
+button:active {
+    transform: scale(0.98);
+}
+
+/* Ensure proper text colors in modals */
+.audio-modal h2, .video-modal h2, .report-modal h2, .learning-modal h2, .games-modal h2 {
+    color: #c084fc !important;
+}
+
+/* Fix for response text area in audio modal */
+.response-text {
+    color: #e2e2e8 !important;
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+/* Fix for video script display */
+.video-script-display {
+    background: rgba(0, 0, 0, 0.3) !important;
+    color: #cbd5f5 !important;
+}
+
+/* Ensure report content is readable */
+.report-content {
+    background: rgba(10, 7, 23, 0.6) !important;
+}
+
+.report-content h1, .report-content h2 {
+    color: #a855f7 !important;
+}
+
+.report-content p, .report-content li {
+    color: #e5e7eb !important;
+    line-height: 1.7;
+}
