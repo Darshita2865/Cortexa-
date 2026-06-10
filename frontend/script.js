@@ -2946,10 +2946,56 @@ window.handleLogin = function(event) {
         showToast("❌ Invalid email or password", "error");
     }
 }
+// Toggle chat dropdown
+window.toggleChatMenu = function(event, chatId) {
+    event.stopPropagation();
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        if (dropdown.id !== `chat-dropdown-${chatId}`) {
+            dropdown.classList.remove('show');
+        }
+    });
+    
+    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
 
-// Go to Register page (which then goes to Login)
+// Toggle project dropdown
+window.toggleProjectMenu = function(event, projectId) {
+    event.stopPropagation();
+    
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        if (dropdown.id !== `project-dropdown-${projectId}`) {
+            dropdown.classList.remove('show');
+        }
+    });
+    
+    const dropdown = document.getElementById(`project-dropdown-${projectId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function() {
+    document.querySelectorAll('.chat-dropdown.show, .project-dropdown.show').forEach(dropdown => {
+        dropdown.classList.remove('show');
+    });
+});
+
+// ================= NAVIGATION FUNCTIONS =================
+
+// Go to Register page (Sign Up / Get Started button)
 window.goToRegister = function() {
     window.location.href = "register.html";
+}
+
+// Go to Login page
+window.goToLogin = function() {
+    window.location.href = "login.html";
 }
 
 // Go to Profile page
@@ -2957,6 +3003,15 @@ window.goToProfile = function() {
     window.location.href = "profile.html";
 }
 
+// Go to Dashboard
+window.goToDashboard = function() {
+    window.location.href = "dashboard.html";
+}
+
+// Get Started button on homepage
+window.getStarted = function() {
+    window.location.href = "register.html";
+}
 // Check login status on page load
 function checkNavbarLoginStatus() {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -2972,12 +3027,44 @@ function checkNavbarLoginStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     checkNavbarLoginStatus();
 });
-
-// ================= GET STARTED BUTTON =================
-window.getStarted = function() {
-    window.location.href = "register.html";
+// ================= LOGOUT FUNCTION =================
+window.logout = function() {
+    if (confirm("Are you sure you want to logout?")) {
+        // Clear all user data from localStorage
+        localStorage.removeItem("email");
+        localStorage.removeItem("username");
+        localStorage.removeItem("isLoggedIn");
+        
+        // Clear session-specific data
+        currentChatId = null;
+        currentProjectId = null;
+        currentDocument = null;
+        
+        // Redirect to home page
+        window.location.href = "index.html";
+    }
 }
-
+// ================= CHECK LOGIN STATUS ON HOMEPAGE =================
+function checkHomepageLoginStatus() {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const userEmail = localStorage.getItem("email");
+    const signupBtn = document.getElementById('signupBtn');
+    const profileBtn = document.getElementById('homepageProfileBtn');
+    
+    if (isLoggedIn && userEmail) {
+        // User is logged in - hide Sign Up button, show Profile button
+        if (signupBtn) signupBtn.style.display = 'none';
+        if (profileBtn) {
+            profileBtn.style.display = 'flex';
+        }
+        document.body.classList.add('logged-in');
+    } else {
+        // User is not logged in - show Sign Up button, hide Profile button
+        if (signupBtn) signupBtn.style.display = 'flex';
+        if (profileBtn) profileBtn.style.display = 'none';
+        document.body.classList.remove('logged-in');
+    }
+}
 // ================= UPDATE PROFILE PAGE WITH USER DATA =================
 function loadUserProfile() {
     const email = localStorage.getItem("email");
@@ -2988,8 +3075,11 @@ function loadUserProfile() {
         return;
     }
     
-    document.getElementById('profileName').value = username || '';
-    document.getElementById('profileEmail').value = email || '';
+    const nameInput = document.getElementById('profileName');
+    const emailInput = document.getElementById('profileEmail');
+    
+    if (nameInput) nameInput.value = username || '';
+    if (emailInput) emailInput.value = email || '';
 }
 
 // ================= SAVE PROFILE =================
@@ -3014,15 +3104,23 @@ window.saveProfile = function() {
     showToast("✅ Profile saved successfully!");
 }
 
-// ================= INITIALIZE HOMEPAGE =================
+// ================= INITIALIZE PAGES =================
 document.addEventListener('DOMContentLoaded', function() {
     // Check login status on homepage
-    if (window.location.pathname.includes("index.html") || window.location.pathname === "/") {
+    const currentPath = window.location.pathname;
+    
+    if (currentPath.includes("index.html") || currentPath === "/" || currentPath === "") {
         checkHomepageLoginStatus();
     }
     
     // Load user profile on profile page
-    if (window.location.pathname.includes("profile.html")) {
+    if (currentPath.includes("profile.html")) {
         loadUserProfile();
+    }
+    
+    // If user is already logged in and tries to access register/login page, redirect to dashboard
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    if (isLoggedIn && (currentPath.includes("register.html") || currentPath.includes("login.html"))) {
+        window.location.href = "dashboard.html";
     }
 });
