@@ -2082,6 +2082,153 @@ body {
     color: #cbd5f5;
     font-style: italic;
 }
+/* ================= THREE-DOT BUTTON STYLES ================= */
+
+/* Container for three-dot button */
+.chat-menu-container,
+.project-menu-container {
+    position: relative;
+    margin-left: 8px;
+}
+
+/* Three-dot button - hidden by default, shows on hover */
+.chat-menu-btn,
+.project-menu-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #a1a1aa !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    padding: 4px 6px !important;
+    border-radius: 6px !important;
+    opacity: 0 !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px;
+    height: 28px;
+}
+
+/* Show three-dot button ONLY when hovering over the chat/project item */
+.chat-item:hover .chat-menu-btn,
+.project-item:hover .project-menu-btn {
+    opacity: 1 !important;
+}
+
+/* Three-dot button hover effect */
+.chat-menu-btn:hover,
+.project-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    transform: scale(1.05);
+}
+
+/* ================= DROPDOWN MENU ================= */
+.chat-dropdown,
+.project-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: #2a2a3a;
+    border-radius: 10px;
+    width: 140px;
+    z-index: 99999;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: none;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* Show dropdown when active class is added */
+.chat-dropdown.show,
+.project-dropdown.show {
+    display: block;
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+/* Dropdown items */
+.dropdown-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    transition: all 0.2s;
+    color: #e4e4e7;
+    background: #2a2a3a;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: rgba(168, 85, 247, 0.2);
+}
+
+/* Delete option special styling */
+.dropdown-item.delete {
+    color: #ef4444;
+}
+
+.dropdown-item.delete:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* Dropdown animation */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================= CHAT & PROJECT ITEMS ================= */
+.chat-item,
+.project-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin: 4px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: #e4e4e7;
+    position: relative;
+}
+
+.chat-item:hover,
+.project-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.chat-title,
+.project-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #e4e4e7;
+}
+
+/* Active chat/item styling */
+.chat-item.active,
+.project-item.active {
+    background: rgba(168, 85, 247, 0.15);
+    border-left: 2px solid #a855f7;
+}
 /* ================= GAMES MODAL ================= */
 .games-modal-overlay {
     position: fixed;
