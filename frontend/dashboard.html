@@ -156,31 +156,324 @@
     <!-- YouTube Player Container -->
     <div id="youtubePlayerContainer" class="youtube-player-container" style="display: none;"></div>
 
-    <!-- ================= MODALS (Keep your existing modal HTML here) ================= -->
+    <!-- ================= MODALS  ================= -->
     <!-- Audio Modal -->
-    <div id="audioModal" class="audio-modal-overlay" style="display: none;">
-        <!-- Your existing audio modal content -->
-    </div>
+<div id="audioModal" class="audio-modal-overlay" style="display: none;">
+    <div class="audio-modal">
+        <div class="audio-modal-header">
+            <h2>
+                <span>🎤</span> Audio Explanation Mode
+            </h2>
+            <button class="close-audio-modal" onclick="closeAudioMode()">×</button>
+        </div>
+        <div class="audio-modal-body">
+            <!-- Mode Selection -->
+            <div class="modes">
+                <button class="mode-btn active" data-mode="simple" onclick="setAudioMode('simple', this)">👶 Simple</button>
+                <button class="mode-btn" data-mode="exam" onclick="setAudioMode('exam', this)">🎓 Exam</button>
+                <button class="mode-btn" data-mode="quick" onclick="setAudioMode('quick', this)">⚡ Quick</button>
+                <button class="mode-btn" data-mode="detailed" onclick="setAudioMode('detailed', this)">🧑‍🏫 Detailed</button>
+            </div>
 
-    <!-- Video Modal -->
-    <div id="videoModal" class="video-modal-overlay" style="display: none;">
-        <!-- Your existing video modal content -->
+            <!-- Microphone Section -->
+            <div class="mic-container">
+                <button class="mic-button" id="micButton" onclick="toggleMicrophone()">
+                    <span class="mic-icon">🎤</span>
+                </button>
+                <div class="status-text" id="micStatus">Click microphone to speak</div>
+            </div>
+
+            <!-- Input Group -->
+            <div class="input-group">
+                <input type="text" id="audioQueryInput" class="audio-input" 
+                       placeholder="Type your question here..." 
+                       onkeypress="if(event.key==='Enter') sendAudioQuery()">
+                <button class="send-audio-btn" onclick="sendAudioQuery()">Send</button>
+            </div>
+
+            <!-- Response Area -->
+            <div id="audioResponseArea" class="audio-response-area" style="display: none;">
+                <div class="response-text" id="responseText"></div>
+                <div class="audio-controls">
+                    <button onclick="playAudioResponse()">▶️ Play</button>
+                    <button onclick="pauseAudioResponse()">⏸️ Pause</button>
+                    <button onclick="stopAudioResponse()">⏹️ Stop</button>
+                    <button onclick="downloadAudioResponse()">💾 Download</button>
+                </div>
+                <div id="audioPlayerContainer" style="display: none;">
+                    <audio id="audioPlayer" controls></audio>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
+
+   <!-- Video Modal -->
+<div id="videoModal" class="video-modal-overlay" style="display: none;">
+    <div class="video-modal">
+        <div class="video-modal-header">
+            <h2>🎥 Video Explanation Generator</h2>
+            <button class="close-video-modal" onclick="closeVideoMode()">×</button>
+        </div>
+        
+        <div class="video-tabs">
+            <button class="tab-btn" onclick="switchVideoTab('youtube')">YouTube Videos</button>
+            <button class="tab-btn" onclick="switchVideoTab('library')">My Videos</button>
+        </div>
+        
+        <!-- YOUTUBE TAB -->
+        <div id="youtubeTab" class="video-tab-content" style="display: none;">
+            <div class="youtube-input-section">
+                <label>YouTube URL:</label>
+                <div class="youtube-url-input">
+                    <input type="text" id="youtubeUrl" placeholder="https://youtube.com/watch?v=...">
+                    <button onclick="fetchYouTubeVideo()">Fetch Video</button>
+                </div>
+                <div style="text-align: center; margin: 15px 0;">OR</div>
+                <label>Search YouTube:</label>
+                <div class="youtube-search-input">
+                    <input type="text" id="youtubeSearchQuery" placeholder="Search for educational videos...">
+                    <button onclick="searchYouTube()">Search</button>
+                </div>
+            </div>
+            <div id="youtubeResults" class="youtube-results"></div>
+            <div id="youtubeVideoInfo" class="youtube-video-info" style="display: none;"></div>
+            <div class="youtube-options" id="youtubeOptions" style="display: none;">
+                <h3>What would you like to create?</h3>
+                <div class="youtube-action-buttons">
+                    <button onclick="createVideoFromYouTube('summary')">📹 Summary Video (3-5 min)</button>
+                    <button onclick="createVideoFromYouTube('deepdive')">🎓 Educational Deep Dive</button>
+                    <button onclick="createVideoFromYouTube('shorts')">📱 Create YouTube Shorts</button>
+                    <button onclick="extractYouTubeTranscript()">📝 Extract Transcript</button>
+                    <button onclick="translateYouTubeVideo()">🌐 Translate Explanation</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LIBRARY TAB -->
+        <div id="libraryTab" class="video-tab-content" style="display: none;">
+            <div id="videoLibraryList" class="video-library">
+                <div class="empty-library">No videos yet. Create your first video!</div>
+            </div>
+        </div>
+        
+        <!-- VIDEO PLAYER -->
+        <div id="videoPlayerContainer" class="video-player-container" style="display: none;">
+            <h3>Your Generated Video</h3>
+            <video id="generatedVideo" controls style="width: 100%; border-radius: 10px;"></video>
+            <div class="video-export-buttons">
+                <button onclick="downloadVideo()">💾 Download MP4</button>
+                <button onclick="shareVideo()">🔗 Share Link</button>
+                <button onclick="uploadToYouTube()">📤 Upload to YouTube</button>
+                <button onclick="saveVideoToLibrary()">💾 Save to Library</button>
+            </div>
+            <div id="videoScriptDisplay" class="video-script-display"></div>
+        </div>
+    </div>
+</div>
 
     <!-- Games Modal -->
-    <div id="gamesModal" class="games-modal-overlay" style="display: none;">
-        <!-- Your existing games modal content -->
+<div id="gamesModal" class="games-modal-overlay" style="display: none;">
+    <div class="games-modal">
+        <div class="games-modal-header">
+            <h2>🎮 Game Zone</h2>
+            <button class="close-games-modal" onclick="closeGamesModal()">&times;</button>
+        </div>
+        
+        <div class="game-types-container">
+            <button class="game-type-btn" onclick="selectGame('quiz-race')">🏆 Quiz Race</button>
+            <button class="game-type-btn" onclick="selectGame('memory-match')">🎴 Memory Match</button>
+            <button class="game-type-btn" onclick="selectGame('typing-speed')">⌨️ Typing Speed</button>
+            <button class="game-type-btn" onclick="selectGame('trivia-challenge')">❓ Trivia Challenge</button>
+            <button class="game-type-btn" onclick="selectGame('word-scramble')">🔤 Word Scramble</button>
+            <button class="game-type-btn" onclick="selectGame('true-false')">✓✗ True or False</button>
+        </div>
+        
+        <div id="gameContent" class="game-container"></div>
     </div>
-
+</div>
     <!-- Report Modal -->
-    <div id="reportModal" class="report-modal-overlay" style="display: none;">
-        <!-- Your existing report modal content -->
+<div id="reportModal" class="report-modal-overlay" style="display: none;">
+    <div class="report-modal">
+        <div class="report-modal-header">
+            <h2>📊 Report Generator</h2>
+            <button class="close-report-modal" onclick="closeReportMode()">×</button>
+        </div>
+        
+        <div id="reportCreateTab" class="report-tab-content active">
+            <div class="report-input-section">
+                <label>📝 What would you like to report on?</label>
+                <textarea id="reportTopicInput" rows="5" placeholder="Enter your topic, lecture notes, or content here..."></textarea>
+            </div>
+            
+            <div class="report-options">
+                <div class="report-option-group">
+                    <label>📄 Format:</label>
+                    <select id="reportFormat">
+                        <option value="pdf">PDF Document</option>
+                        <option value="docx">DOCX (Word)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="report-include-section">
+                <label>Include in Report:</label>
+                <div class="include-options">
+                    <label><input type="checkbox" id="includeCharts" checked> 📈 Charts & Graphs</label>
+                    <label><input type="checkbox" id="includeTables" checked> 📊 Tables</label>
+                    <label><input type="checkbox" id="includeSummary" checked> 📝 Executive Summary</label>
+                    <label><input type="checkbox" id="includeRecommendations" checked> 💡 Recommendations</label>
+                    <label><input type="checkbox" id="includeAppendix"> 📎 Appendix</label>
+                </div>
+            </div>
+            
+            <div class="report-actions">
+                <button class="generate-report-btn" onclick="generateReport()">✨ Generate Report</button>
+            </div>
+            
+            <div id="reportProgress" class="report-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="reportProgressFill"></div>
+                </div>
+                <div id="reportProgressStatus" class="progress-status">Analyzing content...</div>
+            </div>
+        </div>
+        
+        <div id="reportDisplay" class="report-display" style="display: none;">
+            <div class="report-toolbar">
+                <button onclick="downloadReportAsPDF()">📥 Download PDF</button>
+                <button onclick="downloadReportAsDOCX()">📄 Download DOCX</button>
+                <button onclick="copyReportToClipboard()">📋 Copy</button>
+                <button onclick="shareReport()">🔗 Share</button>
+                <button onclick="saveReportToLibrary()">💾 Save to Library</button>
+                <button onclick="printReport()">🖨️ Print</button>
+            </div>
+            <div id="reportContent" class="report-content"></div>
+        </div>
     </div>
+</div>
 
-    <!-- Learning Tools Modal -->
-    <div id="learningToolsModal" class="learning-modal-overlay" style="display: none;">
-        <!-- Your existing learning tools modal content -->
+   <!-- Learning Tools Modal -->
+<div id="learningToolsModal" class="learning-modal-overlay" style="display: none;">
+    <div class="learning-modal">
+        <div class="learning-modal-header">
+            <h2>🎓 Learning Tools</h2>
+            <button class="close-learning-modal" onclick="closeLearningTools()">×</button>
+        </div>
+        
+        <div class="learning-tabs">
+            <button class="learning-tab-btn active" onclick="switchLearningTab('quiz')">📝 Quiz Generator</button>
+            <button class="learning-tab-btn" onclick="switchLearningTab('notes')">📖 Study Notes</button>
+        </div>
+        
+        <!-- QUIZ TAB -->
+        <div id="quizTab" class="learning-tab-content active">
+            <div class="learning-input-section">
+                <label>📚 Topic or Content:</label>
+                <textarea id="quizTopicInput" rows="3" placeholder="Enter a topic or paste your study material..."></textarea>
+            </div>
+            
+            <div class="learning-options">
+                <div class="learning-option-group">
+                    <label>📊 Number of Questions:</label>
+                    <select id="quizCount">
+                        <option value="5">5 Questions</option>
+                        <option value="10" selected>10 Questions</option>
+                        <option value="15">15 Questions</option>
+                        <option value="20">20 Questions</option>
+                    </select>
+                </div>
+                <div class="learning-option-group">
+                    <label>🎯 Difficulty:</label>
+                    <select id="quizDifficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="learning-option-group">
+                    <label>📋 Question Type:</label>
+                    <select id="quizType">
+                        <option value="mixed" selected>Mixed (MCQ + True/False)</option>
+                        <option value="mcq">Multiple Choice Only</option>
+                        <option value="truefalse">True/False Only</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="learning-actions">
+                <button class="generate-learning-btn" onclick="generateQuiz()">✨ Generate Quiz</button>
+                <button class="use-chat-learning-btn" onclick="useChatForLearning('quiz')">💬 Use Current Chat</button>
+                <button class="upload-learning-btn" onclick="uploadForLearning('quiz')">📄 Upload Document</button>
+            </div>
+            
+            <div id="quizProgress" class="learning-progress" style="display: none;">
+                <div class="progress-bar"><div class="progress-fill" id="quizProgressFill"></div></div>
+                <div id="quizProgressStatus" class="progress-status">Generating quiz questions...</div>
+            </div>
+            
+            <div id="quizDisplay" class="learning-display" style="display: none;">
+                <div class="learning-toolbar">
+                    <h3>📝 Generated Quiz</h3>
+                    <button onclick="resetQuiz()">🔄 Reset</button>
+                    <button onclick="exportQuizAsPDF()">📥 Export PDF</button>
+                    <button onclick="copyQuizToClipboard()">📋 Copy</button>
+                    <button onclick="saveQuizToLibrary()">💾 Save to Library</button>
+                </div>
+                <div id="quizContent" class="quiz-content"></div>
+                <div id="quizResult" class="quiz-result" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- STUDY NOTES TAB -->
+        <div id="notesTab" class="learning-tab-content" style="display: none;">
+            <div class="learning-input-section">
+                <label>📚 Enter your Content:</label>
+                <textarea id="notesTopicInput" rows="3" placeholder="Enter a topic to generate study notes..."></textarea>
+            </div>
+            
+            <div class="learning-options">
+                <div class="learning-option-group">
+                    <label>📏 Notes Length:</label>
+                    <select id="notesLength">
+                        <option value="short">Short (Key Points)</option>
+                        <option value="medium" selected>Medium (Detailed)</option>
+                        <option value="long">Long (Comprehensive)</option>
+                    </select>
+                </div>
+                <div class="learning-option-group">
+                    <label>🎨 Notes Style:</label>
+                    <select id="notesStyle">
+                        <option value="bullet">Bullet Points</option>
+                        <option value="outline">Outline Format</option>
+                        <option value="paragraph">Paragraph Style</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="learning-actions">
+                <button class="generate-learning-btn" onclick="generateStudyNotes()">✨ Generate Study Notes</button>
+                <button class="use-chat-learning-btn" onclick="useChatForLearning('notes')">💬 Use Current Chat</button>
+                <button class="upload-learning-btn" onclick="uploadForLearning('notes')">📄 Upload Document</button>
+            </div>
+            
+            <div id="notesProgress" class="learning-progress" style="display: none;">
+                <div class="progress-bar"><div class="progress-fill" id="notesProgressFill"></div></div>
+                <div id="notesProgressStatus" class="progress-status">Generating study notes...</div>
+            </div>
+            
+            <div id="notesDisplay" class="learning-display" style="display: none;">
+                <div class="learning-toolbar">
+                    <button onclick="exportNotesAsPDF()">📥 Export PDF</button>
+                    <button onclick="copyNotesToClipboard()">📋 Copy</button>
+                    <button onclick="saveNotesToLibrary()">💾 Save to Library</button>
+                    <button onclick="printNotes()">🖨️ Print</button>
+                </div>
+                <div id="notesContent" class="notes-content"></div>
+            </div>
+        </div>
     </div>
+</div>
 
     <script>
     // Toggle Functions for Mobile
