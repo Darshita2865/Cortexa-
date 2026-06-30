@@ -5,3 +5,8 @@ python-dotenv
 pydantic
 python-multipart
 gtts
+
+# RAG Dependencies 
+sentence-transformers
+chromadb
+rank-bm25
