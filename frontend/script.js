@@ -11,8 +11,8 @@ let isRecording = false;
 let currentAudio = null;
 let currentAudioText = null;
 
-// API URL - CHANGE THIS FOR PRODUCTION
-const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
+// API URL 
+const API_URL = "/api/chat";
 
 // ================= USER-SPECIFIC STORAGE =================
 function getCurrentUser() {
