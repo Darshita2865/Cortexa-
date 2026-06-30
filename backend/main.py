@@ -12,11 +12,147 @@ from dotenv import load_dotenv
 import requests
 import re
 from typing import Optional
-
+from rag.chunker import DocumentChunker
+from rag.search import KeywordSearch
+from rag.embedder import Embedder 
+from rag.vector_store import VectorStore  
 app = FastAPI()
 
+# ================= RAG SETUP =================
 
-# ================= LOAD ENVIRONMENT VARIABLES =================//
+chunker = DocumentChunker(chunk_size=500, overlap=50)
+search_engine = KeywordSearch()
+
+# Document store (in-memory for now)
+document_store = {}  # {doc_id: {'filename': str, 'text': str, 'chunks': list}}
+
+# ================= UPDATE UPLOAD ENDPOINT =================
+@app.post("/upload-document")
+async def upload_document(file: UploadFile = File(...)):
+    try:
+        content = ""
+        filename = file.filename
+        
+        if filename.lower().endswith(".txt"):
+            content = (await file.read()).decode("utf-8")
+        else:
+            try:
+                content = (await file.read()).decode("utf-8")
+            except:
+                content = f"File uploaded: {filename} (binary file)"
+        
+        # Generate a unique document ID
+        doc_id = f"doc_{uuid.uuid4().hex[:8]}"
+        
+        # Chunk the document
+        chunks = chunker.chunk_text(content)
+        
+        # Store document
+        document_store[doc_id] = {
+            'filename': filename,
+            'text': content,
+            'chunks': chunks,
+            'total_chunks': len(chunks),
+            'char_count': len(content)
+        }
+        
+        # Index chunks for search
+        search_engine.index_chunks(chunks)
+        
+        print(f"📄 Document stored: {filename} (ID: {doc_id}, Chunks: {len(chunks)})")
+        
+        return {
+            "doc_id": doc_id,
+            "filename": filename,
+            "status": "success",
+            "total_chunks": len(chunks),
+            "char_count": len(content),
+            "preview": content[:500] + ("..." if len(content) > 500 else "")
+        }
+        
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ================= NEW SEARCH ENDPOINT =================
+@app.post("/search-document")
+async def search_document(data: dict):
+    """Search for relevant chunks in the document"""
+    query = data.get("query", "")
+    top_k = data.get("top_k", 3)
+    
+    if not query:
+        return {"error": "No query provided"}
+    
+    if not document_store:
+        return {"error": "No documents uploaded yet"}
+    
+    # Search for relevant chunks
+    results = search_engine.search_with_preview(query, top_k)
+    
+    return {
+        "query": query,
+        "results": results,
+        "total_results": len(results)
+    }
+
+# ================= UPDATE CHAT ENDPOINT =================
+@app.post("/chat")
+async def chat(data: Message):
+    try:
+        user_msg = data.message.strip()
+        print(f"\n📥 Received: {user_msg}")
+        
+        if not user_msg:
+            return {"response": "Please enter a message! 💙"}
+        
+        # Check if we have a document to search
+        context = ""
+        if document_store:
+            # Search for relevant chunks
+            results = search_engine.search(user_msg, top_k=3)
+            
+            if results:
+                # Build context from top results
+                context_parts = []
+                for i, result in enumerate(results, 1):
+                    context_parts.append(f"[Source {i}]\n{result['text']}")
+                context = "\n\n".join(context_parts)
+                print(f"📚 Found {len(results)} relevant chunks")
+        
+        # Get AI response with context
+        reply = await get_ai_response(user_msg, context)
+        print(f"✅ Response sent\n")
+        
+        return {"role": "assistant", "response": reply}
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"response": f"Error: {str(e)}. Please try again."}
+
+# ================= NEW DOCUMENT MANAGEMENT ENDPOINTS =================
+@app.get("/documents")
+async def list_documents():
+    """List all uploaded documents"""
+    docs = []
+    for doc_id, doc in document_store.items():
+        docs.append({
+            'id': doc_id,
+            'filename': doc['filename'],
+            'total_chunks': doc['total_chunks'],
+            'char_count': doc['char_count']
+        })
+    return {"documents": docs}
+
+@app.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    """Delete a document"""
+    if doc_id in document_store:
+        del document_store[doc_id]
+        return {"status": "success", "message": f"Document {doc_id} deleted"}
+    return JSONResponse(status_code=404, content={"error": "Document not found"})
+
+# ================= LOAD ENVIRONMENT VARIABLES =================
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -385,4 +521,3 @@ async def root():
         "current_model": PREFERRED_MODEL,
         "endpoints": ["/chat", "/upload-document", "/generate-audio", "/youtube-search", "/health", "/models"]
     }
-
