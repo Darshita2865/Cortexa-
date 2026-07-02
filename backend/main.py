@@ -20,15 +20,10 @@ from rag.search import KeywordSearch
 from rag.embedder import Embedder 
 from rag.vector_store import VectorStore  
 
-# ============================================
 # APP INITIALIZATION
-# ============================================
 app = FastAPI(title="Cortexa AI", version="2.0")
 
-# ============================================
 # SECURITY & AUTHENTICATION SETUP
-# ============================================
-
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -39,9 +34,8 @@ JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 security = HTTPBearer()
 
-# ============================================
+
 # LOAD ENVIRONMENT VARIABLES
-# ============================================
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -59,9 +53,7 @@ else:
     client = Groq(api_key=GROQ_API_KEY)
     print("✅ Groq API key loaded successfully!")
 
-# ============================================
 # CORS
-# ============================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,10 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============================================
 # MODELS
-# ============================================
-
 # -------- Auth Models --------
 class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
@@ -124,10 +113,7 @@ class DocumentUpload(BaseModel):
     content: str
     status: str
 
-# ============================================
-# USER DATABASE (In-memory - Replace with PostgreSQL for production)
-# ============================================
-
+# USER DATABASE 
 class UserDatabase:
     def __init__(self):
         self.users = {}  # email -> user_data
@@ -244,10 +230,7 @@ class UserDatabase:
 # Initialize database
 db = UserDatabase()
 
-# ============================================
 # HELPER FUNCTIONS
-# ============================================
-
 def generate_otp() -> str:
     import random
     import string
@@ -267,18 +250,13 @@ def get_current_user(token: str = Depends(security)) -> Optional[Dict[str, Any]]
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return user
 
-# ============================================
-# RAG SETUP
-# ============================================
 
+# RAG SETUP
 chunker = DocumentChunker(chunk_size=500, overlap=50)
 search_engine = KeywordSearch()
 document_store = {}  # {doc_id: {'filename': str, 'text': str, 'chunks': list}}
 
-# ============================================
 # AVAILABLE MODELS
-# ============================================
-
 MODELS = {
     "fast": "llama-3.1-8b-instant",
     "balanced": "llama-3.3-70b-versatile",
@@ -299,10 +277,7 @@ IMPORTANT RULES:
 
 Never respond with generic phrases. Always provide specific, helpful answers."""
 
-# ============================================
 # AI RESPONSE FUNCTION
-# ============================================
-
 async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     if not client:
         return "⚠️ API key not configured. Please check your .env file."
@@ -364,10 +339,7 @@ def extract_video_id(url: str) -> str:
             return match.group(1)
     return None
 
-# ============================================
 # AUTHENTICATION ENDPOINTS
-# ============================================
-
 @app.post("/api/register")
 async def register(user: UserRegister):
     """Register a new user with email and phone verification"""
@@ -393,12 +365,12 @@ async def register(user: UserRegister):
     # Generate and store email OTP
     email_otp = generate_otp()
     db.store_verification_otp(user.email, email_otp)
-    print(f"📧 Email OTP for {user.email}: {email_otp}")  # In production, send via email
+    print(f"📧 Email OTP for {user.email}: {email_otp}")  
     
     # Generate and store phone OTP
     phone_otp = generate_otp()
     db.store_verification_otp(user.phone, phone_otp)
-    print(f"📱 Phone OTP for {user.phone}: {phone_otp}")  # In production, send via SMS
+    print(f"📱 Phone OTP for {user.phone}: {phone_otp}")
     
     return {
         "message": "Registration successful! Check your email and phone for verification codes.",
@@ -529,10 +501,8 @@ async def auth_status():
         "stats": db.get_stats()
     }
 
-# ============================================
-# CHAT ENDPOINT
-# ============================================
 
+# CHAT ENDPOINT
 @app.post("/chat")
 async def chat(data: Message, current_user: Optional[dict] = Depends(get_current_user)):
     """Chat with Cortexa AI (protected endpoint)"""
@@ -562,10 +532,8 @@ async def chat(data: Message, current_user: Optional[dict] = Depends(get_current
         print(f"❌ Error: {e}")
         return {"response": f"Error: {str(e)}. Please try again."}
 
-# ============================================
-# DOCUMENT ENDPOINTS
-# ============================================
 
+# DOCUMENT ENDPOINTS
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     """Upload a document for RAG processing (protected)"""
@@ -654,10 +622,8 @@ async def delete_document(doc_id: str, current_user: dict = Depends(get_current_
         return {"status": "success", "message": f"Document {doc_id} deleted"}
     return JSONResponse(status_code=404, content={"error": "Document not found"})
 
-# ============================================
-# YOUTUBE ENDPOINTS
-# ============================================
 
+# YOUTUBE ENDPOINTS
 @app.get("/youtube-search")
 async def youtube_search(query: str, max_results: int = 10):
     """Search YouTube videos"""
@@ -768,10 +734,8 @@ async def youtube_summary(data: dict):
     except Exception as e:
         return {"error": str(e)}
 
-# ============================================
-# AUDIO GENERATION
-# ============================================
 
+# AUDIO GENERATION
 @app.post("/generate-audio")
 async def generate_audio(data: dict):
     try:
@@ -806,10 +770,8 @@ async def get_audio(filename: str):
         return JSONResponse(status_code=404, content={"error": "Not found"})
     return FileResponse(filepath, media_type="audio/mpeg")
 
-# ============================================
-# HEALTH CHECK
-# ============================================
 
+# HEALTH CHECK
 @app.get("/health")
 async def health():
     groq_status = "not_configured"
@@ -872,10 +834,6 @@ async def root():
         ],
         "auth_required": ["/chat", "/upload-document", "/search-document", "/documents", "/api/me"]
     }
-
-# ============================================
-# RUN APP
-# ============================================
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
