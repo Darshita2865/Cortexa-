@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Verify Email - Cortexa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .verify-box {
+            max-width: 450px;
+            margin: 40px auto;
+            padding: 40px;
+            background: rgba(26, 22, 43, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            text-align: center;
+        }
+        .verify-box h2 {
+            color: #a855f7;
+        }
+        .verify-box .code-input {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .verify-box .code-input input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            background: rgba(18, 13, 37, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 10px;
+            color: white;
+        }
+        .verify-box .code-input input:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+        .verify-box button {
+            padding: 14px 40px;
+            background: linear-gradient(90deg, #a855f7, #6366f1);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="verify-box">
+            <h2>📧 Verify Your Email</h2>
+            <p style="color: #9ca3af;">We sent a 6-digit code to your email</p>
+            <div class="code-input" id="codeInput">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+                <input type="text" maxlength="1" pattern="[0-9]" oninput="moveNext(this)">
+            </div>
+            <button onclick="verifyEmail()">Verify Email</button>
+            <p style="margin-top: 15px; color: #9ca3af; font-size: 13px;">
+                Didn't receive the code? <a href="#" onclick="resendCode()" style="color: #a855f7;">Resend</a>
+            </p>
+            <div id="message" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        function moveNext(input) {
+            if (input.value.length >= 1) {
+                const next = input.nextElementSibling;
+                if (next) next.focus();
+            }
+        }
+
+        function getCode() {
+            const inputs = document.querySelectorAll('#codeInput input');
+            return Array.from(inputs).map(i => i.value).join('');
+        }
+
+        function verifyEmail() {
+            const code = getCode();
+            if (code.length !== 6) {
+                document.getElementById('message').innerHTML = '❌ Please enter all 6 digits.';
+                return;
+            }
+            alert('Code submitted: ' + code + ' (backend integration coming soon)');
+        }
+
+        function resendCode() {
+            alert('Resending verification code... (backend integration coming soon)');
+        }
+
+        // Auto-submit on complete
+        document.querySelectorAll('#codeInput input').forEach((input, index, arr) => {
+            input.addEventListener('input', function() {
+                if (index === arr.length - 1 && this.value.length === 1) {
+                    verifyEmail();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
