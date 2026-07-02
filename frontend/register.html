@@ -1,68 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Register - Cortexa</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Register - Cortexa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additional styles specific to register page */
+        .register-box {
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 40px;
+            background: rgba(26, 22, 43, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        .register-box h2 {
+            color: #a855f7;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 28px;
+        }
+        .register-box input {
+            width: 100%;
+            padding: 14px 16px;
+            margin: 8px 0;
+            background: rgba(18, 13, 37, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .register-box input:focus {
+            outline: none;
+            border-color: #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+        }
+        .register-box input::placeholder {
+            color: #6b7280;
+        }
+        .register-box button {
+            width: 100%;
+            padding: 14px;
+            margin: 15px 0 10px;
+            background: linear-gradient(90deg, #a855f7, #6366f1);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .register-box button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+        }
+        .register-box button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .register-box p {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        .register-box a {
+            color: #a855f7;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .register-box a:hover {
+            text-decoration: underline;
+        }
+        .captcha-container {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+        }
+        .password-strength {
+            margin: 5px 0 15px;
+            font-size: 12px;
+        }
+        .password-strength .bar {
+            height: 4px;
+            border-radius: 2px;
+            background: #2a2445;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .password-strength .bar .fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .password-strength .bar .fill.weak { width: 25%; background: #ef4444; }
+        .password-strength .bar .fill.medium { width: 50%; background: #f59e0b; }
+        .password-strength .bar .fill.strong { width: 75%; background: #10b981; }
+        .password-strength .bar .fill.very-strong { width: 100%; background: #8b5cf6; }
+        .terms-check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        .terms-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #a855f7;
+            margin: 0;
+            flex-shrink: 0;
+        }
+        .terms-check a {
+            color: #a855f7;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 13px;
+            margin: 5px 0;
+            display: none;
+        }
+        .success-message {
+            color: #10b981;
+            font-size: 13px;
+            margin: 5px 0;
+            display: none;
+        }
+        .loader {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 
 <body class="register-page">
 
 <div class="container">
-  <form class="register-box" onsubmit="event.preventDefault(); registerUser();">
-    <h2>Register to Cortexa</h2>
+    <form class="register-box" id="registerForm" onsubmit="event.preventDefault(); registerUser();">
 
-    <input type="text" id="regFirstName" placeholder="First Name" required>
-    <input type="text" id="regLastName" placeholder="Last Name" required>
-    <input type="email" id="regEmail" placeholder="Email" required>
-    <input type="tel" id="regPhone" placeholder="Phone Number" required>
-    <input type="date" id="regDob" required>
-    <input type="password" id="regPassword" placeholder="Password" required>
-    <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required>
+        <h2>🧠 Create Account</h2>
+        <p style="text-align: center; color: #9ca3af; font-size: 14px; margin-bottom: 20px;">Join Cortexa AI - Your Knowledge Partner</p>
 
-    <button type="submit">Register</button>
+        <!-- Name Fields -->
+        <input type="text" id="regFirstName" placeholder="First Name" required>
+        <input type="text" id="regLastName" placeholder="Last Name" required>
 
-    <p>Already have an account? <a href="login.html">Login</a></p>
-  </form>
+        <!-- Email -->
+        <input type="email" id="regEmail" placeholder="Email Address" required>
+        <div id="emailError" class="error-message"></div>
+
+        <!-- Phone -->
+        <input type="tel" id="regPhone" placeholder="Phone Number (with country code, e.g., +91)" required>
+        <div id="phoneError" class="error-message"></div>
+
+        <!-- Date of Birth -->
+        <input type="date" id="regDob" required>
+
+        <!-- Password -->
+        <input type="password" id="regPassword" placeholder="Password (min 8 characters)" required oninput="checkPasswordStrength()">
+        <div class="password-strength">
+            <span id="passwordStrengthText">Password strength</span>
+            <div class="bar"><div class="fill" id="passwordStrengthBar"></div></div>
+        </div>
+
+        <!-- Confirm Password -->
+        <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required oninput="checkPasswordMatch()">
+        <div id="passwordMatchError" class="error-message"></div>
+
+        <!-- Terms -->
+        <div class="terms-check">
+            <input type="checkbox" id="termsCheck" required>
+            <label for="termsCheck">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+        </div>
+
+        <!-- CAPTCHA -->
+        <div class="captcha-container">
+            <genuine-captcha name="signup-captcha" onverified="onCaptchaVerified()" onreset="onCaptchaReset()"></genuine-captcha>
+        </div>
+
+        <input type="hidden" id="captchaVerified" value="false">
+        <input type="hidden" id="captchaSolution" value="">
+        <input type="hidden" id="captchaSecret" value="">
+
+        <!-- Submit Button -->
+        <button type="submit" id="submitBtn" disabled>
+            <span id="submitText">Create Account</span>
+            <span id="submitLoader" style="display: none;"><span class="loader"></span>Creating...</span>
+        </button>
+
+        <div id="submitError" class="error-message"></div>
+        <div id="submitSuccess" class="success-message"></div>
+
+        <p>Already have an account? <a href="login.html">Login</a></p>
+    </form>
 </div>
 
+<script src="https://unpkg.com/@genuine-captcha/web-components@1.0.23/dist/index.js" defer></script>
+
 <script>
-function registerUser() {
-    const firstName = document.getElementById('regFirstName').value;
-    const lastName = document.getElementById('regLastName').value;
-    const email = document.getElementById('regEmail').value;
-    const phone = document.getElementById('regPhone').value;
-    const dob = document.getElementById('regDob').value;
-    const password = document.getElementById('regPassword').value;
-    const confirmPassword = document.getElementById('regConfirmPassword').value;
-    
-    if (!firstName || !lastName || !email || !phone || !dob || !password) {
-        alert('Please fill all fields!');
-        return;
+    // ============================================
+    // CAPTCHA HANDLERS
+    // ============================================
+    function onCaptchaVerified() {
+        // Get the CAPTCHA element
+        const captchaEl = document.querySelector('genuine-captcha');
+        if (captchaEl) {
+            document.getElementById('captchaSolution').value = captchaEl.getSolution();
+            document.getElementById('captchaSecret').value = captchaEl.getSecret();
+        }
+        document.getElementById('captchaVerified').value = 'true';
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitError').style.display = 'none';
+        console.log('✅ CAPTCHA verified successfully');
     }
-    
-    if (password !== confirmPassword) {
-        alert('Passwords do not match!');
-        return;
+
+    function onCaptchaReset() {
+        document.getElementById('captchaVerified').value = 'false';
+        document.getElementById('captchaSolution').value = '';
+        document.getElementById('captchaSecret').value = '';
+        document.getElementById('submitBtn').disabled = true;
+        console.log('🔄 CAPTCHA reset');
     }
-    
-    const userData = {
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        dob: dob,
-        password: password
-    };
-    
-    localStorage.setItem('registeredUser', JSON.stringify(userData));
-    alert('Registration successful! Please login.');
-    window.location.href = 'login.html';
-}
+
+    // ============================================
+    // PASSWORD STRENGTH
+    // ============================================
+    function checkPasswordStrength() {
+        const password = document.getElementById('regPassword').value;
+        const bar = document.getElementById('passwordStrengthBar');
+        const text = document.getElementById('passwordStrengthText');
+
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (password.match(/[a-z]/)) strength++;
+        if (password.match(/[A-Z]/)) strength++;
+        if (password.match(/[0-9]/)) strength++;
+        if (password.match(/[^a-zA-Z0-9]/)) strength++;
+
+        let level = 'weak';
+        let label = 'Weak';
+        if (strength >= 4) { level = 'very-strong'; label = 'Very Strong 💪'; }
+        else if (strength >= 3) { level = 'strong'; label = 'Strong ✅'; }
+        else if (strength >= 2) { level = 'medium'; label = 'Medium ⚠️'; }
+        else { level = 'weak'; label = 'Weak ❌'; }
+
+        bar.className = 'fill ' + level;
+        text.textContent = 'Password strength: ' + label;
+
+        // Check password match
+        checkPasswordMatch();
+    }
+
+    function checkPasswordMatch() {
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regConfirmPassword').value;
+        const errorEl = document.getElementById('passwordMatchError');
+
+        if (confirm.length > 0 && password !== confirm) {
+            errorEl.textContent = '❌ Passwords do not match';
+            errorEl.style.display = 'block';
+            return false;
+        } else {
+            errorEl.style.display = 'none';
+            return true;
+        }
+    }
+
+    // ============================================
+    // VALIDATION HELPERS
+    // ============================================
+    function validateEmail(email) {
+        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return re.test(email);
+    }
+
+    function validatePhone(phone) {
+        // Basic E.164 format validation: + followed by digits
+        const re = /^\+[1-9]\d{1,14}$/;
+        return re.test(phone);
+    }
+
+    // ============================================
+    // REGISTER USER
+    // ============================================
+    async function registerUser() {
+        // Get form values
+        const firstName = document.getElementById('regFirstName').value.trim();
+        const lastName = document.getElementById('regLastName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const phone = document.getElementById('regPhone').value.trim();
+        const dob = document.getElementById('regDob').value;
+        const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
+        const termsChecked = document.getElementById('termsCheck').checked;
+        const captchaVerified = document.getElementById('captchaVerified').value === 'true';
+
+        // Reset error/success messages
+        document.getElementById('submitError').style.display = 'none';
+        document.getElementById('submitSuccess').style.display = 'none';
+
+        // ===== VALIDATION =====
+
+        // 1. Basic fields
+        if (!firstName || !lastName || !email || !phone || !dob || !password) {
+            showError('Please fill in all required fields!');
+            return;
+        }
+
+        // 2. Name validation
+        if (firstName.length < 2 || lastName.length < 2) {
+            showError('First and last name must be at least 2 characters.');
+            return;
+        }
+
+        // 3. Email validation
+        if (!validateEmail(email)) {
+            showError('Please enter a valid email address.');
+            return;
+        }
+
+        // 4. Phone validation
+        if (!validatePhone(phone)) {
+            showError('Please enter a valid phone number with country code (e.g., +91XXXXXXXXXX).');
+            return;
+        }
+
+        // 5. Password validation
+        if (password.length < 8) {
+            showError('Password must be at least 8 characters long.');
+            return;
+        }
+
+        // 6. Password match
+        if (password !== confirmPassword) {
+            showError('Passwords do not match!');
+            return;
+        }
+
+        // 7. Terms
+        if (!termsChecked) {
+            showError('Please agree to the Terms of Service and Privacy Policy.');
+            return;
+        }
+
+        // 8. CAPTCHA
+        if (!captchaVerified) {
+            showError('Please complete the CAPTCHA verification.');
+            return;
+        }
+
+        // ===== SUBMIT =====
+
+        // Show loading
+        document.getElementById('submitText').style.display = 'none';
+        document.getElementById('submitLoader').style.display = 'inline';
+        document.getElementById('submitBtn').disabled = true;
+
+        try {
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: firstName + ' ' + lastName,
+                    email: email,
+                    phone: phone,
+                    dob: dob,
+                    password: password,
+                    captcha_solution: document.getElementById('captchaSolution').value,
+                    captcha_secret: document.getElementById('captchaSecret').value
+                })
+            });
+
+            const data = await response.json();
+
+            // Hide loading
+            document.getElementById('submitText').style.display = 'inline';
+            document.getElementById('submitLoader').style.display = 'none';
+            document.getElementById('submitBtn').disabled = false;
+
+            if (response.ok) {
+                // Success
+                document.getElementById('submitSuccess').textContent = '✅ ' + data.message;
+                document.getElementById('submitSuccess').style.display = 'block';
+
+                // Store email for verification page
+                localStorage.setItem('pendingVerificationEmail', email);
+                localStorage.setItem('pendingVerificationPhone', phone);
+
+                // Redirect to verification page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'verify-email.html?email=' + encodeURIComponent(email);
+                }, 2000);
+
+            } else {
+                showError(data.error || 'Registration failed. Please try again.');
+            }
+
+        } catch (error) {
+            console.error('Registration error:', error);
+            showError('Network error. Please check your connection and try again.');
+            document.getElementById('submitText').style.display = 'inline';
+            document.getElementById('submitLoader').style.display = 'none';
+            document.getElementById('submitBtn').disabled = false;
+        }
+    }
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function showError(message) {
+        const errorEl = document.getElementById('submitError');
+        errorEl.textContent = '❌ ' + message;
+        errorEl.style.display = 'block';
+        document.getElementById('submitSuccess').style.display = 'none';
+    }
+
+    // ============================================
+    // REAL-TIME VALIDATION
+    // ============================================
+
+    // Email validation on blur
+    document.getElementById('regEmail').addEventListener('blur', function() {
+        const email = this.value.trim();
+        const errorEl = document.getElementById('emailError');
+        if (email && !validateEmail(email)) {
+            errorEl.textContent = 'Please enter a valid email address';
+            errorEl.style.display = 'block';
+        } else {
+            errorEl.style.display = 'none';
+        }
+    });
+
+    // Phone validation on blur
+    document.getElementById('regPhone').addEventListener('blur', function() {
+        const phone = this.value.trim();
+        const errorEl = document.getElementById('phoneError');
+        if (phone && !validatePhone(phone)) {
+            errorEl.textContent = 'Use format: +[country code][number] (e.g., +91XXXXXXXXXX)';
+            errorEl.style.display = 'block';
+        } else {
+            errorEl.style.display = 'none';
+        }
+    });
+
+    // Confirm password real-time
+    document.getElementById('regConfirmPassword').addEventListener('input', checkPasswordMatch);
+
+    // Enter key support
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const form = document.getElementById('registerForm');
+            const active = document.activeElement;
+            if (form.contains(active)) {
+                e.preventDefault();
+                registerUser();
+            }
+        }
+    });
+
+    console.log('🔐 Cortexa Registration Page with CAPTCHA loaded');
 </script>
+
 </body>
 </html>
