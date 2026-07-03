@@ -12,7 +12,7 @@ let currentAudio = null;
 let currentAudioText = null;
 
 // API URL 
-const API_URL = "https://cortexa-2-2ydr.onrender.com/chat";
+const API_URL = "https://cortexa-64a6.onrender.com/chat";
 // ================= USER-SPECIFIC STORAGE =================
 function getCurrentUser() {
     return localStorage.getItem("email") || "guest";
@@ -427,7 +427,7 @@ window.documentChat = function() {
             showToast("📄 Uploading document...");
             
             try {
-                const response = await fetch('https://cortexa-2-2ydr.onrender.com/upload-document', {
+                const response = await fetch('https://cortexa-64a6.onrender.com/upload-document', {
                     method: 'POST',
                     body: formData
                 });
@@ -528,7 +528,7 @@ window.sendAudioQuery = async function() {
         responseText.innerHTML = formatContent(data.response);
         
         // Generate audio
-        const audioResponse = await fetch('https://cortexa-2-2ydr.onrender.com/generate-audio', {
+        const audioResponse = await fetch('https://cortexa-64a6.onrender.com/generate-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: data.response })
@@ -537,7 +537,7 @@ window.sendAudioQuery = async function() {
         
         if (audioData.audio_url) {
             const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.src = `https://cortexa-2-2ydr.onrender.com${audioData.audio_url}`;
+            audioPlayer.src = `https://cortexa-64a6.onrender.com${audioData.audio_url}`;
             document.getElementById('audioPlayerContainer').style.display = 'block';
         }
         
@@ -635,7 +635,7 @@ window.searchYouTube = async function() {
     resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
     
     try {
-        const response = await fetch(`https://cortexa-2-2ydr.onrender.com/youtube-search?query=${encodeURIComponent(query)}&max_results=12`);
+        const response = await fetch(`https://cortexa-64a6.onrender.com/youtube-search?query=${encodeURIComponent(query)}&max_results=12`);
         const data = await response.json();
         
         if (data.error) {
@@ -699,7 +699,7 @@ window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     
     try {
         // First get video info
-        const infoResponse = await fetch(`https://cortexa-2-2ydr.onrender.com/youtube-video-info?videoid=${videoId}`);
+        const infoResponse = await fetch(`https://cortexa-64a6.onrender.com/youtube-video-info?videoid=${videoId}`);
         const videoInfo = await infoResponse.json();
         
         if (videoInfo.error) {
