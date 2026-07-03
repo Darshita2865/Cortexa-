@@ -15,10 +15,10 @@ import re
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
-from rag.chunker import DocumentChunker
-from rag.search import KeywordSearch
-from rag.embedder import Embedder 
-from rag.vector_store import VectorStore
+from .rag.chunker import DocumentChunker
+from .rag.search import KeywordSearch
+from .rag.embedder import Embedder 
+from .rag.vector_store import VectorStore
 
 app = FastAPI()
 
