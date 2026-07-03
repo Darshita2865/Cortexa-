@@ -38,6 +38,7 @@
         color: white;
         font-size: 14px;
         transition: all 0.3s ease;
+        box-sizing: border-box;
     }
     .register-box input:focus, .register-box select:focus {
         outline: none;
@@ -213,7 +214,7 @@
 
 <script>
     // PASSWORD STRENGTH
-]    function checkPasswordStrength() {
+    function checkPasswordStrength() {
         const password = document.getElementById('regPassword').value;
         const bar = document.getElementById('passwordStrengthBar');
         const text = document.getElementById('passwordStrengthText');
@@ -257,12 +258,14 @@
         const msg = document.getElementById('message');
         msg.textContent = text;
         msg.className = 'message ' + type;
+        msg.style.display = 'block';
     }
 
     function hideMessage() {
         const msg = document.getElementById('message');
         msg.className = 'message';
         msg.textContent = '';
+        msg.style.display = 'none';
     }
 
     // REGISTER USER
@@ -330,7 +333,8 @@
 
         try {
             // ===== CALL BACKEND API =====
-            const response = await fetch('/api/register', {
+            // ✅ FIXED: Using full Render URL
+            const response = await fetch('https://cortexa-2-2ydr.onrender.com/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
