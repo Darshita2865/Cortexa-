@@ -1,66 +1,284 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Login - Cortexa</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Login - Cortexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+    .login-page {
+        background: radial-gradient(circle at center, #1a162b, #0A0717);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .login-box {
+        background: rgba(26, 22, 43, 0.95);
+        padding: 40px 35px;
+        border-radius: 20px;
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .login-box h2 {
+        color: #a855f7;
+        text-align: center;
+        margin-bottom: 5px;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .login-box .sub-title {
+        text-align: center;
+        color: #9ca3af;
+        font-size: 14px;
+        margin-bottom: 25px;
+    }
+
+    .login-box input {
+        width: 100%;
+        padding: 14px 16px;
+        margin: 8px 0;
+        background: rgba(18, 13, 37, 0.8);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 12px;
+        color: white;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .login-box input::placeholder {
+        color: #6b7280;
+    }
+
+    .login-box input:focus {
+        outline: none;
+        border-color: #a855f7;
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+    }
+
+    .login-box .password-wrapper {
+        position: relative;
+        margin: 8px 0;
+        width: 100%;
+    }
+
+    .login-box .password-wrapper input {
+        margin: 0;
+        padding-right: 50px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .login-box .password-wrapper .toggle-password {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        font-size: 20px;
+        padding: 0;
+        z-index: 10;
+        pointer-events: auto;
+    }
+
+    .login-box .password-wrapper .toggle-password:hover {
+        color: #a855f7;
+    }
+
+    .login-box .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 15px 0 20px;
+        font-size: 13px;
+        color: #9ca3af;
+    }
+
+    .login-box .form-options label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .login-box .form-options input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #a855f7;
+        margin: 0;
+    }
+
+    .login-box .form-options a {
+        color: #a855f7;
+        text-decoration: none;
+    }
+
+    .login-box .form-options a:hover {
+        text-decoration: underline;
+    }
+
+    .login-box button[type="submit"] {
+        width: 100%;
+        padding: 14px;
+        margin: 10px 0 15px;
+        background: linear-gradient(90deg, #a855f7, #6366f1);
+        border: none;
+        border-radius: 30px;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .login-box button[type="submit"]:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+    }
+
+    .login-box button[type="submit"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .login-box .register-link {
+        text-align: center;
+        color: #9ca3af;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    .login-box .register-link a {
+        color: #a855f7;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .login-box .register-link a:hover {
+        text-decoration: underline;
+    }
+
+    .login-box .message {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin: 10px 0;
+        display: none;
+        font-size: 14px;
+    }
+
+    .login-box .message.error {
+        display: block;
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .login-box .message.success {
+        display: block;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .login-box .message.warning {
+        display: block;
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .loader {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 480px) {
+        .login-box {
+            padding: 25px 18px;
+        }
+        .login-box .form-options {
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .login-box h2 {
+            font-size: 24px;
+        }
+    }
+</style>
 </head>
 
-<body class="register-page">
+<body class="login-page">
 
 <div class="container">
     <form class="login-box" id="loginForm" onsubmit="event.preventDefault(); loginUser();">
 
         <h2>🧠 Welcome Back</h2>
-        <p class="sub-title" style="text-align: center; color: #9ca3af; font-size: 14px; margin-bottom: 25px;">
-            Login to your Cortexa account
-        </p>
+        <p class="sub-title">Login to your Cortexa account</p>
 
         <!-- Email -->
         <input type="email" id="loginEmail" placeholder="Email Address" required autofocus>
 
         <!-- Password -->
-        <div class="password-wrapper" style="position: relative;">
+        <div class="password-wrapper">
             <input type="password" id="loginPassword" placeholder="Password" required>
-            <button type="button" class="toggle-password" onclick="togglePassword()" 
-                    style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #6b7280; cursor: pointer; font-size: 18px;">
-                👁️
-            </button>
+            <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
         </div>
 
         <!-- Options -->
-        <div class="form-options" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 18px; font-size: 13px; color: #9ca3af;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="rememberMe" style="width: 16px; height: 16px; accent-color: #a855f7; margin: 0;">
+        <div class="form-options">
+            <label>
+                <input type="checkbox" id="rememberMe">
                 Remember me
             </label>
-            <a href="#" onclick="showMessage('📧 Password reset feature coming soon!', 'warning')" style="color: #a855f7; text-decoration: none;">
-                Forgot password?
-            </a>
+            <a href="#" onclick="showMessage('📧 Password reset coming soon!', 'warning')">Forgot password?</a>
         </div>
 
         <!-- Message Area -->
-        <div id="message" class="message" style="padding: 12px 16px; border-radius: 10px; margin: 10px 0; display: none; font-size: 14px;"></div>
+        <div id="message" class="message"></div>
 
         <!-- Login Button -->
         <button type="submit" id="loginBtn">
             <span id="btnText">Login</span>
-            <span id="btnLoader" style="display: none;">
-                <span class="loader" style="display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px;"></span>
-                Logging in...
-            </span>
+            <span id="btnLoader" style="display: none;"><span class="loader"></span>Logging in...</span>
         </button>
 
-        <p class="register-link" style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: 10px;">
-            Don't have an account? <a href="register.html" style="color: #a855f7; text-decoration: none; font-weight: 600;">Create Account</a>
+        <p class="register-link">
+            Don't have an account? <a href="register.html">Create Account</a>
         </p>
     </form>
 </div>
 
 <script>
-    // TOGGLE PASSWORD VISIBILITY
     function togglePassword() {
         const passwordInput = document.getElementById('loginPassword');
         const toggleBtn = document.querySelector('.toggle-password');
@@ -73,22 +291,18 @@
         }
     }
 
-    // SHOW MESSAGE
-    function showMessage(text, type) {
+    function showMessage(text, type = 'error') {
         const msg = document.getElementById('message');
         msg.textContent = text;
         msg.className = 'message ' + type;
-        msg.style.display = 'block';
     }
 
     function hideMessage() {
         const msg = document.getElementById('message');
         msg.className = 'message';
         msg.textContent = '';
-        msg.style.display = 'none';
     }
 
-    // LOGIN USER
     async function loginUser() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -96,7 +310,6 @@
 
         hideMessage();
 
-        // Validation
         if (!email || !password) {
             showMessage('Please enter both email and password.', 'error');
             return;
@@ -113,13 +326,12 @@
             return;
         }
 
-        // Show loading
         document.getElementById('btnText').style.display = 'none';
         document.getElementById('btnLoader').style.display = 'inline';
         document.getElementById('loginBtn').disabled = true;
 
         try {
-            const response = await fetch('/api/login', {
+            const response = await fetch('https://cortexa-2-2ydr.onrender.com/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -129,7 +341,6 @@
 
             if (response.ok) {
                 showMessage('✅ Login successful! Redirecting...', 'success');
-
                 localStorage.setItem('accessToken', data.access_token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
                 localStorage.setItem('isLoggedIn', 'true');
@@ -145,19 +356,9 @@
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1500);
-
             } else {
-                const errorMsg = data.error || 'Invalid credentials. Please try again.';
-
-                if (errorMsg.includes('verify your email')) {
-                    showMessage('📧 Please verify your email before logging in.', 'warning');
-                } else if (errorMsg.includes('verify your phone')) {
-                    showMessage('📱 Please verify your phone number before logging in.', 'warning');
-                } else {
-                    showMessage('❌ ' + errorMsg, 'error');
-                }
+                showMessage('❌ ' + (data.error || 'Invalid credentials'), 'error');
             }
-
         } catch (error) {
             console.error('Login error:', error);
             showMessage('❌ Network error. Please check your connection.', 'error');
@@ -168,7 +369,6 @@
         }
     }
 
-    // ENTER KEY SUPPORT
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             const form = document.getElementById('loginForm');
@@ -179,21 +379,12 @@
         }
     });
 
-    // INITIALIZE
     document.addEventListener('DOMContentLoaded', function() {
         const savedEmail = localStorage.getItem('savedEmail');
         if (savedEmail) {
             document.getElementById('loginEmail').value = savedEmail;
             document.getElementById('rememberMe').checked = true;
         }
-
-        // Check for message from registration
-        const urlParams = new URLSearchParams(window.location.search);
-        const message = urlParams.get('message');
-        if (message) {
-            showMessage(decodeURIComponent(message), 'success');
-        }
-
         console.log('🔐 Login page loaded');
     });
 </script>
