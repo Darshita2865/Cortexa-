@@ -13,11 +13,7 @@ import jwt
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# ============================================
 # CONFIGURATION
-# ============================================
-
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-super-secret-key-change-this")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
@@ -25,15 +21,7 @@ JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ============================================
-# USER STORE (In-memory - Replace with PostgreSQL)
-# ============================================
-
-# In production, use a real database:
-# - PostgreSQL + SQLAlchemy
-# - Supabase
-# - MongoDB
-
+# USER STORE 
 class UserDatabase:
     """In-memory user store for MVP. Replace with real DB for production."""
     
@@ -221,17 +209,10 @@ class UserDatabase:
             "pending_verifications": len(self.pending_verifications),
             "active_sessions": len(self.sessions)
         }
-
-# ============================================
 # SINGLETON INSTANCE
-# ============================================
-
 db = UserDatabase()
 
-# ============================================
 # HELPER FUNCTIONS
-# ============================================
-
 def get_user_from_token(token: str) -> Optional[Dict[str, Any]]:
     """Get user from JWT token"""
     return db.verify_session(token)
