@@ -10,21 +10,17 @@
         .verify-box {
             max-width: 450px;
             margin: 40px auto;
-            padding: 40px 30px;
+            padding: 40px 35px;
             background: rgba(26, 22, 43, 0.95);
             border-radius: 20px;
             border: 1px solid rgba(168, 85, 247, 0.3);
             text-align: center;
             backdrop-filter: blur(10px);
         }
-        .verify-box .icon {
-            font-size: 56px;
-            margin-bottom: 10px;
-        }
         .verify-box h2 {
             color: #a855f7;
+            font-size: 28px;
             margin-bottom: 8px;
-            font-size: 26px;
         }
         .verify-box .sub-text {
             color: #9ca3af;
@@ -103,9 +99,6 @@
             font-weight: 500;
             cursor: pointer;
         }
-        .verify-box .resend-section a:hover {
-            text-decoration: underline;
-        }
         .verify-box .resend-section .timer {
             color: #f59e0b;
             font-weight: 600;
@@ -115,6 +108,7 @@
             padding: 12px;
             border-radius: 10px;
             display: none;
+            font-size: 14px;
         }
         .verify-box .message.success {
             display: block;
@@ -149,7 +143,7 @@
             to { transform: rotate(360deg); }
         }
         @media (max-width: 480px) {
-            .verify-box { padding: 25px 15px; }
+            .verify-box { padding: 25px 18px; }
             .verify-box .code-input input {
                 width: 42px;
                 height: 54px;
@@ -158,15 +152,15 @@
         }
     </style>
 </head>
+
 <body class="register-page">
 
 <div class="container">
     <div class="verify-box">
-        <div class="icon">📱</div>
-        <h2>Verify Your Phone</h2>
+        <h2>📱 Verify Your Phone</h2>
         <p class="sub-text">
             We sent a 6-digit verification code via SMS to <br>
-            <strong id="phoneDisplay">+91XXXXXXXXXX</strong>
+            <strong id="phoneDisplay">your phone</strong>
         </p>
 
         <!-- OTP Input -->
@@ -191,7 +185,7 @@
         <!-- Resend Section -->
         <div class="resend-section">
             <span>Didn't receive the code?</span>
-            <a id="resendLink" onclick="resendCode()">Resend SMS</a>
+            <a id="resendLink" onclick="resendPhoneCode()">Resend SMS</a>
             <span class="timer" id="timerDisplay"></span>
         </div>
 
@@ -203,44 +197,34 @@
 </div>
 
 <script>
-    // ============================================
     // STATE
-    // ============================================
     let countdown = 60;
     let timerInterval = null;
     let isVerifying = false;
 
-    // ============================================
-    // INIT - Get Phone from URL
-    // ============================================
+    // INIT - Get Phone from URL or localStorage
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
-        const phone = urlParams.get('phone');
+        const phone = urlParams.get('phone') || localStorage.getItem('pendingVerificationPhone');
+
         if (phone) {
             document.getElementById('phoneDisplay').textContent = phone;
-            localStorage.setItem('pendingVerificationPhone', phone);
         } else {
-            const storedPhone = localStorage.getItem('pendingVerificationPhone');
-            if (storedPhone) {
-                document.getElementById('phoneDisplay').textContent = storedPhone;
-            }
+            document.getElementById('phoneDisplay').textContent = 'your phone (please register first)';
         }
+
         startTimer();
+        console.log('📱 Phone verification page loaded');
     });
 
-    // ============================================
     // OTP INPUT NAVIGATION
-    // ============================================
     function moveNext(input) {
-        // Allow only digits
         input.value = input.value.replace(/\D/g, '');
-
         if (input.value.length >= 1) {
             const next = input.nextElementSibling;
             if (next) {
                 next.focus();
             } else {
-                // Last input - auto-submit if all filled
                 const allInputs = document.querySelectorAll('#codeInput input');
                 const allFilled = Array.from(allInputs).every(i => i.value.length === 1);
                 if (allFilled) {
@@ -250,7 +234,6 @@
         }
     }
 
-    // Handle backspace
     document.querySelectorAll('#codeInput input').forEach((input, index) => {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Backspace' && this.value.length === 0) {
@@ -261,7 +244,6 @@
             }
         });
 
-        // Paste support
         input.addEventListener('paste', function(e) {
             e.preventDefault();
             const paste = (e.clipboardData || window.clipboardData).getData('text');
@@ -275,17 +257,24 @@
         });
     });
 
-    // ============================================
-    // GET OTP CODE
-    // ============================================
     function getCode() {
         const inputs = document.querySelectorAll('#codeInput input');
         return Array.from(inputs).map(i => i.value).join('');
     }
 
-    // ============================================
+    function showMessage(text, type) {
+        const msg = document.getElementById('message');
+        msg.textContent = text;
+        msg.className = 'message ' + type;
+    }
+
+    function hideMessage() {
+        const msg = document.getElementById('message');
+        msg.className = 'message';
+        msg.textContent = '';
+    }
+
     // VERIFY PHONE
-    // ============================================
     async function verifyPhone() {
         if (isVerifying) return;
 
@@ -296,8 +285,11 @@
         }
 
         const phone = document.getElementById('phoneDisplay').textContent;
+        if (!phone || phone === 'your phone (please register first)') {
+            showMessage('Phone number not found. Please go back and register again.', 'error');
+            return;
+        }
 
-        // Show loading
         isVerifying = true;
         document.getElementById('btnText').style.display = 'none';
         document.getElementById('btnLoader').style.display = 'inline';
@@ -305,7 +297,7 @@
         hideMessage();
 
         try {
-            const response = await fetch('/api/verify-phone', {
+            const response = await fetch('https://cortexa-64a6.onrender.com/api/verify-phone', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -318,14 +310,13 @@
 
             if (response.ok) {
                 showMessage('✅ ' + data.message, 'success');
-                // Mark inputs as correct
                 document.querySelectorAll('#codeInput input').forEach(i => i.className = 'correct');
-                // Redirect after 2 seconds
+                localStorage.removeItem('pendingVerificationPhone');
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = 'login.html?message=' + encodeURIComponent('Phone verified! Please login.');
                 }, 2000);
             } else {
-                showMessage('❌ ' + (data.error || 'Invalid verification code. Please try again.'), 'error');
+                showMessage('❌ ' + (data.error || 'Invalid verification code.'), 'error');
                 document.querySelectorAll('#codeInput input').forEach(i => {
                     i.className = 'wrong';
                     i.value = '';
@@ -345,14 +336,16 @@
         }
     }
 
-    // ============================================
-    // RESEND CODE
-    // ============================================
-    async function resendCode() {
+    // RESEND PHONE CODE
+    async function resendPhoneCode() {
         const phone = document.getElementById('phoneDisplay').textContent;
+        if (!phone || phone === 'your phone (please register first)') {
+            showMessage('Phone number not found. Please go back and register again.', 'error');
+            return;
+        }
 
         try {
-            const response = await fetch('/api/resend-phone-otp', {
+            const response = await fetch('https://cortexa-64a6.onrender.com/api/resend-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: phone })
@@ -362,10 +355,8 @@
 
             if (response.ok) {
                 showMessage('📱 New code sent to your phone!', 'info');
-                // Reset inputs
                 document.querySelectorAll('#codeInput input').forEach(i => i.value = '');
                 document.querySelector('#codeInput input').focus();
-                // Restart timer
                 countdown = 60;
                 startTimer();
             } else {
@@ -378,9 +369,7 @@
         }
     }
 
-    // ============================================
     // TIMER
-    // ============================================
     function startTimer() {
         const timerDisplay = document.getElementById('timerDisplay');
         const resendLink = document.getElementById('resendLink');
@@ -405,36 +394,16 @@
         }, 1000);
     }
 
-    // ============================================
-    // MESSAGE HELPERS
-    // ============================================
-    function showMessage(text, type) {
-        const msg = document.getElementById('message');
-        msg.textContent = text;
-        msg.className = 'message ' + type;
-    }
-
-    function hideMessage() {
-        const msg = document.getElementById('message');
-        msg.className = 'message';
-        msg.textContent = '';
-    }
-
-    // ============================================
     // ENTER KEY SUPPORT
-    // ============================================
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             const inputs = document.querySelectorAll('#codeInput input');
-            const active = document.activeElement;
-            if (Array.from(inputs).includes(active)) {
+            if (Array.from(inputs).includes(document.activeElement)) {
                 e.preventDefault();
                 verifyPhone();
             }
         }
     });
-
-    console.log('📱 Phone Verification Page loaded');
 </script>
 
 </body>
