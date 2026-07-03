@@ -1,214 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Login - Cortexa</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<style>
-    .login-box {
-        max-width: 420px;
-        margin: 0 auto;
-        padding: 40px 35px;
-        background: rgba(26, 22, 43, 0.95);
-        border-radius: 20px;
-        border: 1px solid rgba(168, 85, 247, 0.3);
-        backdrop-filter: blur(10px);
-    }
-    .login-box h2 {
-        color: #a855f7;
-        text-align: center;
-        margin-bottom: 8px;
-        font-size: 28px;
-    }
-    .login-box .sub-title {
-        text-align: center;
-        color: #9ca3af;
-        font-size: 14px;
-        margin-bottom: 25px;
-    }
-    .login-box input {
-        width: 100%;
-        padding: 14px 16px;
-        margin: 8px 0;
-        background: rgba(18, 13, 37, 0.8);
-        border: 1px solid rgba(168, 85, 247, 0.3);
-        border-radius: 12px;
-        color: white;
-        font-size: 14px;
-        transition: all 0.3s ease;
-    }
-    .login-box input:focus {
-        outline: none;
-        border-color: #a855f7;
-        box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
-    }
-    .login-box input::placeholder {
-        color: #6b7280;
-    }
-    .login-box .password-wrapper {
-        position: relative;
-    }
-    .login-box .password-wrapper .toggle-password {
-        position: absolute;
-        right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #6b7280;
-        cursor: pointer;
-        font-size: 18px;
-        padding: 0;
-    }
-    .login-box .password-wrapper .toggle-password:hover {
-        color: #a855f7;
-    }
-    .login-box .form-options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 12px 0 18px;
-        font-size: 13px;
-        color: #9ca3af;
-    }
-    .login-box .form-options label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-    .login-box .form-options input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        accent-color: #a855f7;
-        margin: 0;
-    }
-    .login-box .form-options a {
-        color: #a855f7;
-        text-decoration: none;
-    }
-    .login-box .form-options a:hover {
-        text-decoration: underline;
-    }
-    .login-box button {
-        width: 100%;
-        padding: 14px;
-        margin: 5px 0 15px;
-        background: linear-gradient(90deg, #a855f7, #6366f1);
-        border: none;
-        border-radius: 30px;
-        color: white;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    .login-box button:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
-    }
-    .login-box button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    .login-box .register-link {
-        text-align: center;
-        color: #9ca3af;
-        font-size: 14px;
-    }
-    .login-box .register-link a {
-        color: #a855f7;
-        text-decoration: none;
-        font-weight: 600;
-    }
-    .login-box .register-link a:hover {
-        text-decoration: underline;
-    }
-    .login-box .message {
-        padding: 12px 16px;
-        border-radius: 10px;
-        margin: 10px 0;
-        display: none;
-        font-size: 14px;
-    }
-    .login-box .message.success {
-        display: block;
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .login-box .message.error {
-        display: block;
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    .login-box .message.warning {
-        display: block;
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-    .login-box .message.info {
-        display: block;
-        background: rgba(168, 85, 247, 0.15);
-        color: #a855f7;
-        border: 1px solid rgba(168, 85, 247, 0.3);
-    }
-    .loader {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 50%;
-        border-top-color: white;
-        animation: spin 0.8s linear infinite;
-        vertical-align: middle;
-        margin-right: 8px;
-    }
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-    .social-login {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        text-align: center;
-    }
-    .social-login p {
-        color: #6b7280;
-        font-size: 13px;
-        margin-bottom: 12px;
-    }
-    .social-login .social-buttons {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-    }
-    .social-login .social-btn {
-        padding: 10px 20px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: rgba(255,255,255,0.05);
-        color: white;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-    }
-    .social-login .social-btn:hover {
-        background: rgba(168, 85, 247, 0.2);
-        border-color: #a855f7;
-    }
-    @media (max-width: 480px) {
-        .login-box { padding: 25px 18px; }
-        .login-box .form-options { flex-direction: column; gap: 8px; align-items: flex-start; }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Login - Cortexa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="register-page">
@@ -217,58 +14,53 @@
     <form class="login-box" id="loginForm" onsubmit="event.preventDefault(); loginUser();">
 
         <h2>🧠 Welcome Back</h2>
-        <p class="sub-title">Login to your Cortexa account</p>
+        <p class="sub-title" style="text-align: center; color: #9ca3af; font-size: 14px; margin-bottom: 25px;">
+            Login to your Cortexa account
+        </p>
 
         <!-- Email -->
         <input type="email" id="loginEmail" placeholder="Email Address" required autofocus>
 
         <!-- Password -->
-        <div class="password-wrapper">
+        <div class="password-wrapper" style="position: relative;">
             <input type="password" id="loginPassword" placeholder="Password" required>
-            <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+            <button type="button" class="toggle-password" onclick="togglePassword()" 
+                    style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #6b7280; cursor: pointer; font-size: 18px;">
+                👁️
+            </button>
         </div>
 
         <!-- Options -->
-        <div class="form-options">
-            <label>
-                <input type="checkbox" id="rememberMe">
+        <div class="form-options" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 18px; font-size: 13px; color: #9ca3af;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="rememberMe" style="width: 16px; height: 16px; accent-color: #a855f7; margin: 0;">
                 Remember me
             </label>
-            <a href="forgot-password.html">Forgot password?</a>
+            <a href="#" onclick="showMessage('📧 Password reset feature coming soon!', 'warning')" style="color: #a855f7; text-decoration: none;">
+                Forgot password?
+            </a>
         </div>
 
         <!-- Message Area -->
-        <div id="message" class="message"></div>
+        <div id="message" class="message" style="padding: 12px 16px; border-radius: 10px; margin: 10px 0; display: none; font-size: 14px;"></div>
 
         <!-- Login Button -->
         <button type="submit" id="loginBtn">
             <span id="btnText">Login</span>
-            <span id="btnLoader" style="display: none;"><span class="loader"></span>Logging in...</span>
+            <span id="btnLoader" style="display: none;">
+                <span class="loader" style="display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px;"></span>
+                Logging in...
+            </span>
         </button>
 
-        <p class="register-link">
-            Don't have an account? <a href="register.html">Create Account</a>
+        <p class="register-link" style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: 10px;">
+            Don't have an account? <a href="register.html" style="color: #a855f7; text-decoration: none; font-weight: 600;">Create Account</a>
         </p>
-
-        <!-- Social Login (Optional) -->
-        <div class="social-login">
-            <p>Or continue with</p>
-            <div class="social-buttons">
-                <button type="button" class="social-btn" onclick="socialLogin('google')">
-                    <span>🔵</span> Google
-                </button>
-                <button type="button" class="social-btn" onclick="socialLogin('github')">
-                    <span>⚫</span> GitHub
-                </button>
-            </div>
-        </div>
     </form>
 </div>
 
 <script>
-    // ============================================
     // TOGGLE PASSWORD VISIBILITY
-    // ============================================
     function togglePassword() {
         const passwordInput = document.getElementById('loginPassword');
         const toggleBtn = document.querySelector('.toggle-password');
@@ -281,77 +73,66 @@
         }
     }
 
-    // ============================================
     // SHOW MESSAGE
-    // ============================================
-    function showMessage(text, type = 'error') {
+    function showMessage(text, type) {
         const msg = document.getElementById('message');
         msg.textContent = text;
         msg.className = 'message ' + type;
+        msg.style.display = 'block';
     }
 
     function hideMessage() {
         const msg = document.getElementById('message');
         msg.className = 'message';
         msg.textContent = '';
+        msg.style.display = 'none';
     }
 
-    // ============================================
     // LOGIN USER
-    // ============================================
     async function loginUser() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
         const rememberMe = document.getElementById('rememberMe').checked;
 
-        // Reset message
         hideMessage();
 
-        // ===== VALIDATION =====
+        // Validation
         if (!email || !password) {
             showMessage('Please enter both email and password.', 'error');
             return;
         }
 
-        // Email validation
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             showMessage('Please enter a valid email address.', 'error');
             return;
         }
 
-        // Password minimum length
         if (password.length < 8) {
             showMessage('Password must be at least 8 characters.', 'error');
             return;
         }
 
-        // ===== SHOW LOADING =====
+        // Show loading
         document.getElementById('btnText').style.display = 'none';
         document.getElementById('btnLoader').style.display = 'inline';
         document.getElementById('loginBtn').disabled = true;
 
         try {
-            // ===== CALL BACKEND API =====
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
+                body: JSON.stringify({ email, password })
             });
 
             const data = await response.json();
 
-            // ===== HANDLE RESPONSE =====
             if (response.ok) {
-                // Login successful
                 showMessage('✅ Login successful! Redirecting...', 'success');
 
-                // Store session
                 localStorage.setItem('accessToken', data.access_token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
+                localStorage.setItem('isLoggedIn', 'true');
 
                 if (rememberMe) {
                     localStorage.setItem('rememberMe', 'true');
@@ -361,27 +142,17 @@
                     localStorage.removeItem('savedEmail');
                 }
 
-                // Redirect after 1.5 seconds
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1500);
 
             } else {
-                // Login failed
                 const errorMsg = data.error || 'Invalid credentials. Please try again.';
 
-                // Specific error messages
                 if (errorMsg.includes('verify your email')) {
-                    showMessage('📧 Please verify your email before logging in. Check your inbox.', 'warning');
-                    // Optionally redirect to verify page
-                    setTimeout(() => {
-                        window.location.href = 'verify-email.html?email=' + encodeURIComponent(email);
-                    }, 3000);
+                    showMessage('📧 Please verify your email before logging in.', 'warning');
                 } else if (errorMsg.includes('verify your phone')) {
                     showMessage('📱 Please verify your phone number before logging in.', 'warning');
-                    setTimeout(() => {
-                        window.location.href = 'verify-phone.html?phone=' + encodeURIComponent(localStorage.getItem('pendingVerificationPhone') || '');
-                    }, 3000);
                 } else {
                     showMessage('❌ ' + errorMsg, 'error');
                 }
@@ -389,32 +160,26 @@
 
         } catch (error) {
             console.error('Login error:', error);
-            showMessage('❌ Network error. Please check your connection and try again.', 'error');
+            showMessage('❌ Network error. Please check your connection.', 'error');
         } finally {
-            // ===== HIDE LOADING =====
             document.getElementById('btnText').style.display = 'inline';
             document.getElementById('btnLoader').style.display = 'none';
             document.getElementById('loginBtn').disabled = false;
         }
     }
 
-    // ============================================
     // ENTER KEY SUPPORT
-    // ============================================
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             const form = document.getElementById('loginForm');
-            const active = document.activeElement;
-            if (form.contains(active)) {
+            if (form.contains(document.activeElement)) {
                 e.preventDefault();
                 loginUser();
             }
         }
     });
 
-    // ============================================
-    // REMEMBER ME - Auto-fill saved email
-    // ============================================
+    // INITIALIZE
     document.addEventListener('DOMContentLoaded', function() {
         const savedEmail = localStorage.getItem('savedEmail');
         if (savedEmail) {
@@ -422,35 +187,15 @@
             document.getElementById('rememberMe').checked = true;
         }
 
-        // Check if there's a verification message from redirect
+        // Check for message from registration
         const urlParams = new URLSearchParams(window.location.search);
         const message = urlParams.get('message');
-        const type = urlParams.get('type') || 'info';
         if (message) {
-            showMessage(decodeURIComponent(message), type);
+            showMessage(decodeURIComponent(message), 'success');
         }
 
         console.log('🔐 Login page loaded');
     });
-
-    // ============================================
-    // SOCIAL LOGIN (Placeholder)
-    // ============================================
-    function socialLogin(provider) {
-        showMessage(`🔵 ${provider.charAt(0).toUpperCase() + provider.slice(1)} login coming soon!`, 'info');
-        // In production, redirect to OAuth endpoint:
-        // window.location.href = `/api/auth/${provider}`;
-    }
-
-    // ============================================
-    // FORGOT PASSWORD (Placeholder)
-    // ============================================
-    document.querySelector('.form-options a[href="forgot-password.html"]')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        showMessage('📧 Password reset feature coming soon!', 'info');
-    });
-
-    console.log('🔐 Cortexa Login Page with API integration loaded');
 </script>
 
 </body>
