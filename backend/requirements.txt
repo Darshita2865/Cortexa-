@@ -5,25 +5,11 @@ python-dotenv
 pydantic
 python-multipart
 gtts
-
-# RAG Dependencies
-sentence-transformers
-chromadb
-rank-bm25
-
-# ===== AUTHENTICATION =====
-# Email
 sendgrid
 email-validator
-
-# Phone Verification
 twilio
-
-# Security
 python-jose[cryptography]
 passlib[bcrypt]
 bcrypt
-
-# Database 
-# psycopg2-binary
-# supabase
+sentence-transformers
+onnxruntime
