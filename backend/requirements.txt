@@ -9,7 +9,6 @@ sendgrid
 email-validator
 twilio
 python-jose[cryptography]
-passlib[bcrypt]
-bcrypt
-sentence-transformers
-onnxruntime
+passlib==1.7.4
+bcrypt==4.0.1
+rank-bm25
