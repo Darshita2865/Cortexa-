@@ -7,7 +7,7 @@ import os
 import hashlib
 import uuid
 import uvicorn
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from groq import Groq
 from dotenv import load_dotenv
 import requests
@@ -15,14 +15,18 @@ import re
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
-from .rag.chunker import DocumentChunker
-from .rag.search import KeywordSearch
-from .rag.embedder import Embedder 
-from .rag.vector_store import VectorStore
+
+from rag.chunker import DocumentChunker
+from rag.search import KeywordSearch
+from rag.embedder import Embedder 
+from rag.vector_store import VectorStore
 
 app = FastAPI()
 
+# ============================================
 # SECURITY SETUP
+# ============================================
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -33,7 +37,9 @@ JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 security = HTTPBearer()
 
+# ============================================
 # LOAD ENVIRONMENT VARIABLES
+# ============================================
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -46,7 +52,10 @@ else:
     client = Groq(api_key=GROQ_API_KEY)
     print("✅ Groq API key loaded successfully!")
 
-# USER DATABASE 
+# ============================================
+# USER DATABASE (In-memory)
+# ============================================
+
 class UserDatabase:
     def __init__(self):
         self.users = {}  # email -> user_data
@@ -118,24 +127,44 @@ class UserDatabase:
 # Create database instance
 db = UserDatabase()
 
+# ============================================
 # AUTH MODELS
+# ============================================
+
 class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     phone: str = Field(..., pattern=r'^\+[1-9]\d{1,14}$')
-    password: str = Field(..., min_length=8, max_length=72)
+    password: str = Field(..., min_length=8)
     dob: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+# ============================================
 # RAG SETUP
-chunker = DocumentChunker(chunk_size=500, overlap=50)
-search_engine = KeywordSearch()
-document_store = {}
+# ============================================
 
+# Initialize RAG components
+chunker = DocumentChunker(chunk_size=500, overlap=50)
+# Use keyword search as fallback, and embeddings for semantic search
+search_engine = KeywordSearch()
+embedder = Embedder(model_name="all-MiniLM-L6-v2")  # Small, fast embedding model
+vector_store = VectorStore(persist_directory="./vector_store")
+
+# Document store for metadata
+document_store = {}  # {doc_id: {'filename': str, 'text': str, 'chunks': list}}
+
+print("🔧 Initializing RAG components...")
+embedder.initialize()
+vector_store.initialize()
+print("✅ RAG components initialized!")
+
+# ============================================
 # CORS
+# ============================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -144,13 +173,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============================================
 # CHAT MODELS
+# ============================================
+
 class Message(BaseModel):
     message: str
     document_content: Optional[str] = None
     audio: bool = False
 
+# ============================================
 # AVAILABLE MODELS
+# ============================================
+
 MODELS = {
     "fast": "llama-3.1-8b-instant",
     "balanced": "llama-3.3-70b-versatile",
@@ -161,15 +196,20 @@ MODELS = {
 PREFERRED_MODEL = MODELS["balanced"]
 
 SYSTEM_PROMPT = """You are Cortexa, a powerful AI assistant. 
+
 IMPORTANT RULES:
 1. NEVER give generic responses like "Got it! Let me help you with that"
 2. ALWAYS answer the user's question directly with SPECIFIC information
 3. Be conversational, friendly, and helpful
 4. Use **bold** for emphasis and bullet points for lists
 5. Keep responses informative but not overly long
+
 Never respond with generic phrases. Always provide specific, helpful answers."""
 
+# ============================================
 # HELPER FUNCTIONS
+# ============================================
+
 def extract_video_id(url: str) -> str:
     patterns = [
         r'(?:youtube\.com\/watch\?v=)([\w-]+)',
@@ -192,7 +232,7 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         if context and context != "null" and len(context) > 10:
             messages.append({
                 "role": "system",
-                "content": f"Reference document: {context[:1000]}"
+                "content": f"Reference document: {context[:3000]}"
             })
         
         messages.append({"role": "user", "content": message})
@@ -237,7 +277,10 @@ def get_current_user(token: str = Depends(security)) -> Optional[Dict[str, Any]]
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return user
 
+# ============================================
 # AUTHENTICATION ENDPOINTS
+# ============================================
+
 @app.post("/api/register")
 async def register(user: UserRegister):
     try:
@@ -268,6 +311,8 @@ async def register(user: UserRegister):
         
     except Exception as e:
         print(f"❌ Registration error: {e}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse(
             status_code=500,
             content={"error": str(e)}
@@ -324,8 +369,11 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         }
     }
 
+# ============================================
 # CHAT ENDPOINT
-@app.post("/chat")
+# ============================================
+
+@app.post("/api/chat")
 async def chat(data: Message):
     try:
         user_msg = data.message.strip()
@@ -336,13 +384,26 @@ async def chat(data: Message):
         
         context = ""
         if document_store:
-            results = search_engine.search(user_msg, top_k=3)
-            if results:
-                context_parts = []
-                for i, result in enumerate(results, 1):
-                    context_parts.append(f"[Source {i}]\n{result['text']}")
-                context = "\n\n".join(context_parts)
-                print(f"📚 Found {len(results)} relevant chunks")
+            # Try semantic search with embeddings first
+            try:
+                query_embedding = embedder.embed_text(user_msg)
+                vector_results = vector_store.search(query_embedding, top_k=3)
+                if vector_results:
+                    context_parts = []
+                    for i, result in enumerate(vector_results, 1):
+                        context_parts.append(f"[Source {i}]\n{result['text']}")
+                    context = "\n\n".join(context_parts)
+                    print(f"📚 Found {len(vector_results)} relevant chunks via semantic search")
+            except Exception as e:
+                print(f"⚠️ Semantic search failed, using keyword search: {e}")
+                # Fallback to keyword search
+                results = search_engine.search(user_msg, top_k=3)
+                if results:
+                    context_parts = []
+                    for i, result in enumerate(results, 1):
+                        context_parts.append(f"[Source {i}]\n{result['text']}")
+                    context = "\n\n".join(context_parts)
+                    print(f"📚 Found {len(results)} relevant chunks via keyword search")
         
         reply = await get_ai_response(user_msg, context)
         return {"role": "assistant", "response": reply}
@@ -351,8 +412,11 @@ async def chat(data: Message):
         print(f"❌ Error: {e}")
         return {"response": f"Error: {str(e)}. Please try again."}
 
+# ============================================
 # DOCUMENT ENDPOINTS
-@app.post("/upload-document")
+# ============================================
+
+@app.post("/api/upload-document")
 async def upload_document(file: UploadFile = File(...)):
     try:
         content = ""
@@ -369,6 +433,7 @@ async def upload_document(file: UploadFile = File(...)):
         doc_id = f"doc_{uuid.uuid4().hex[:8]}"
         chunks = chunker.chunk_text(content)
         
+        # Store in memory
         document_store[doc_id] = {
             'filename': filename,
             'text': content,
@@ -377,7 +442,18 @@ async def upload_document(file: UploadFile = File(...)):
             'char_count': len(content)
         }
         
+        # Index for keyword search
         search_engine.index_chunks(chunks)
+        
+        # Index for semantic search with embeddings
+        try:
+            print(f"📊 Generating embeddings for {len(chunks)} chunks...")
+            chunk_texts = [chunk['text'] for chunk in chunks]
+            embeddings = embedder.embed_batch(chunk_texts)
+            vector_store.add_document(doc_id, chunks, embeddings)
+            print(f"✅ Document {doc_id} indexed for semantic search")
+        except Exception as e:
+            print(f"⚠️ Semantic indexing failed: {e}")
         
         print(f"📄 Document stored: {filename} (ID: {doc_id}, Chunks: {len(chunks)})")
         
@@ -394,7 +470,7 @@ async def upload_document(file: UploadFile = File(...)):
         print(f"❌ Upload error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/search-document")
+@app.post("/api/search-document")
 async def search_document(data: dict):
     query = data.get("query", "")
     top_k = data.get("top_k", 3)
@@ -405,15 +481,30 @@ async def search_document(data: dict):
     if not document_store:
         return {"error": "No documents uploaded yet"}
     
-    results = search_engine.search_with_preview(query, top_k)
+    # Try semantic search first
+    try:
+        query_embedding = embedder.embed_text(query)
+        results = vector_store.search(query_embedding, top_k=top_k)
+        if results:
+            return {
+                "query": query,
+                "results": results,
+                "total_results": len(results),
+                "search_type": "semantic"
+            }
+    except Exception as e:
+        print(f"⚠️ Semantic search failed: {e}")
     
+    # Fallback to keyword search
+    results = search_engine.search_with_preview(query, top_k)
     return {
         "query": query,
         "results": results,
-        "total_results": len(results)
+        "total_results": len(results),
+        "search_type": "keyword"
     }
 
-@app.get("/documents")
+@app.get("/api/documents")
 async def list_documents():
     docs = []
     for doc_id, doc in document_store.items():
@@ -425,15 +516,23 @@ async def list_documents():
         })
     return {"documents": docs}
 
-@app.delete("/documents/{doc_id}")
+@app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str):
     if doc_id in document_store:
+        # Remove from vector store
+        try:
+            vector_store.delete_document(doc_id)
+        except:
+            pass
         del document_store[doc_id]
         return {"status": "success", "message": f"Document {doc_id} deleted"}
     return JSONResponse(status_code=404, content={"error": "Document not found"})
 
+# ============================================
 # YOUTUBE ENDPOINTS
-@app.get("/youtube-search")
+# ============================================
+
+@app.get("/api/youtube-search")
 async def youtube_search(query: str, max_results: int = 10):
     if not YOUTUBE_API_KEY:
         return {"error": "YouTube API key not configured"}
@@ -469,7 +568,7 @@ async def youtube_search(query: str, max_results: int = 10):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/youtube-video-info")
+@app.get("/api/youtube-video-info")
 async def youtube_video_info(video_id: str):
     if not YOUTUBE_API_KEY:
         return {"error": "YouTube API key not configured"}
@@ -503,7 +602,7 @@ async def youtube_video_info(video_id: str):
     except Exception as e:
         return {"error": str(e)}
 
-@app.post("/youtube-summary")
+@app.post("/api/youtube-summary")
 async def youtube_summary(data: dict):
     video_url = data.get("url", "")
     video_id = extract_video_id(video_url)
@@ -540,8 +639,11 @@ async def youtube_summary(data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+# ============================================
 # AUDIO GENERATION
-@app.post("/generate-audio")
+# ============================================
+
+@app.post("/api/generate-audio")
 async def generate_audio(data: dict):
     try:
         text = data.get("text", "")
@@ -575,7 +677,10 @@ async def get_audio(filename: str):
         return JSONResponse(status_code=404, content={"error": "Not found"})
     return FileResponse(filepath, media_type="audio/mpeg")
 
+# ============================================
 # HEALTH CHECK
+# ============================================
+
 @app.get("/health")
 async def health():
     groq_status = "not_configured"
@@ -597,7 +702,9 @@ async def health():
         "groq_api": groq_status,
         "youtube_api": "configured" if YOUTUBE_API_KEY else "not configured",
         "api_key_configured": GROQ_API_KEY is not None,
-        "auth_enabled": True
+        "auth_enabled": True,
+        "rag_enabled": True,
+        "vector_store_count": vector_store.get_count() if vector_store._initialized else 0
     }
 
 @app.get("/models")
@@ -618,8 +725,12 @@ async def root():
         "endpoints": [
             "/chat",
             "/upload-document",
+            "/search-document",
+            "/documents",
             "/generate-audio",
             "/youtube-search",
+            "/youtube-video-info",
+            "/youtube-summary",
             "/health",
             "/models",
             "/api/register",
