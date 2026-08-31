@@ -123,7 +123,7 @@ class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     phone: str = Field(..., pattern=r'^\+[1-9]\d{1,14}$')
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=72)
     dob: Optional[str] = None
 
 class UserLogin(BaseModel):
