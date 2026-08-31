@@ -1,5 +1,9 @@
 console.log("Cortexa JS Loaded - Full Version");
 
+// ================= API CONFIGURATION =================
+const BASE_URL = "https://cortexa-64a6.onrender.com";
+const API_URL = BASE_URL + "/api/chat";
+
 // ================= GLOBAL VARIABLES =================
 let currentChatId = null;
 let currentProjectId = null;
@@ -11,8 +15,6 @@ let isRecording = false;
 let currentAudio = null;
 let currentAudioText = null;
 
-// API URL 
-const API_URL = "https://cortexa-64a6.onrender.com/chat";
 // ================= USER-SPECIFIC STORAGE =================
 function getCurrentUser() {
     return localStorage.getItem("email") || "guest";
@@ -20,22 +22,22 @@ function getCurrentUser() {
 
 function getChats() {
     const user = getCurrentUser();
-    return JSON.parse(localStorage.getItem(`chats_${user}`)) || [];
+    return JSON.parse(localStorage.getItem("chats_" + user)) || [];
 }
 
 function saveChats(chats) {
     const user = getCurrentUser();
-    localStorage.setItem(`chats_${user}`, JSON.stringify(chats));
+    localStorage.setItem("chats_" + user, JSON.stringify(chats));
 }
 
 function getProjects() {
     const user = getCurrentUser();
-    return JSON.parse(localStorage.getItem(`projects_${user}`)) || [];
+    return JSON.parse(localStorage.getItem("projects_" + user)) || [];
 }
 
 function saveProjects(projects) {
     const user = getCurrentUser();
-    localStorage.setItem(`projects_${user}`, JSON.stringify(projects));
+    localStorage.setItem("projects_" + user, JSON.stringify(projects));
 }
 
 // ================= HELPER FUNCTIONS =================
@@ -46,32 +48,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function showToast(message, type = 'info') {
+function showToast(message, type) {
+    type = type || 'info';
     let toast = document.getElementById('customToast');
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'customToast';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: ${type === 'error' ? '#ef4444' : '#10b981'};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            font-size: 14px;
-        `;
+        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: ' + (type === 'error' ? '#ef4444' : '#10b981') + '; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 14px;';
         document.body.appendChild(toast);
     }
     
     toast.style.backgroundColor = type === 'error' ? '#ef4444' : '#10b981';
     toast.textContent = message;
     toast.style.opacity = '1';
-    setTimeout(() => {
+    setTimeout(function() {
         toast.style.opacity = '0';
     }, 3000);
 }
@@ -79,7 +69,7 @@ function showToast(message, type = 'info') {
 // ================= FORMAT FUNCTION =================
 function formatContent(content) {
     if (!content) return '';
-    let formatted = content.replace(/\n/g, '<br>');
+    var formatted = content.replace(/\n/g, '<br>');
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
     formatted = formatted.replace(/^[\•\-\*]\s/gm, '• ');
@@ -88,29 +78,25 @@ function formatContent(content) {
 
 // ================= DISPLAY MESSAGE FUNCTION =================
 function displayMessage(text, sender) {
-    const chatBox = document.getElementById("searchResults");
+    var chatBox = document.getElementById("searchResults");
     if (!chatBox) {
         console.error("searchResults container not found!");
         return;
     }
 
-    const msgDiv = document.createElement("div");
+    var msgDiv = document.createElement("div");
     msgDiv.className = sender === "user" ? "user-bubble" : "ai-bubble";
     
-    const formattedText = formatContent(text);
-    const senderName = sender === "user" ? "You" : "Cortexa";
+    var formattedText = formatContent(text);
+    var senderName = sender === "user" ? "You" : "Cortexa";
     
-    msgDiv.innerHTML = `
-        <div class="chat-title">${senderName}</div>
-        <div class="chat-content">${formattedText}</div>
-    `;
+    msgDiv.innerHTML = '<div class="chat-title">' + senderName + '</div><div class="chat-content">' + formattedText + '</div>';
 
-    const id = "msg-" + Date.now() + "-" + Math.random();
+    var id = "msg-" + Date.now() + "-" + Math.random();
     msgDiv.id = id;
 
     chatBox.appendChild(msgDiv);
     
-    // Auto-scroll to bottom
     chatBox.scrollTo({
         top: chatBox.scrollHeight,
         behavior: 'smooth'
@@ -120,9 +106,9 @@ function displayMessage(text, sender) {
 }
 
 function updateMessage(id, newText) {
-    const msg = document.getElementById(id);
+    var msg = document.getElementById(id);
     if (msg) {
-        const contentDiv = msg.querySelector(".chat-content");
+        var contentDiv = msg.querySelector(".chat-content");
         if (contentDiv) {
             contentDiv.innerHTML = formatContent(newText);
         }
@@ -133,35 +119,33 @@ function updateMessage(id, newText) {
 window.performSearch = async function() {
     console.log("performSearch called");
     
-    const queryInput = document.getElementById('searchInput');
+    var queryInput = document.getElementById('searchInput');
     if (!queryInput) {
         console.error("searchInput not found!");
         return;
     }
     
-    const query = queryInput.value.trim();
+    var query = queryInput.value.trim();
     if (!query) {
         console.log("Empty query");
         return;
     }
     
-    // Display user message
     displayMessage(query, 'user');
     queryInput.value = '';
     
-    // Show loading indicator
-    const loadingId = displayMessage('<span class="typing-dots">Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>', 'bot');
+    var loadingId = displayMessage('<span class="typing-dots">Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>', 'bot');
     
     try {
-        const requestBody = {
+        var requestBody = {
             message: query,
-            document_content: currentDocument?.content ? currentDocument.content : null,
+            document_content: currentDocument && currentDocument.content ? currentDocument.content : null,
             audio: false
         };
         
         console.log("📤 Sending request:", requestBody);
         
-        const response = await fetch(API_URL, {
+        var response = await fetch(API_URL, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -172,10 +156,10 @@ window.performSearch = async function() {
         console.log("📥 Response status:", response.status);
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error("HTTP " + response.status);
         }
         
-        const data = await response.json();
+        var data = await response.json();
         console.log("✅ Response received:", data);
         
         if (data.response) {
@@ -187,18 +171,18 @@ window.performSearch = async function() {
         
     } catch (error) {
         console.error("❌ Chat error:", error);
-        updateMessage(loadingId, `⚠️ Error connecting to AI. Make sure backend is running\n\nDetails: ${error.message}`);
+        updateMessage(loadingId, "⚠️ Error connecting to AI. Make sure backend is running\n\nDetails: " + error.message);
     }
 }
 
 // ================= SAVE CHAT =================
 function saveCurrentChat(userMessage, aiResponse) {
-    let chats = getChats();
+    var chats = getChats();
     
     if (!currentChatId) {
         currentChatId = 'chat_' + Date.now();
-        const title = userMessage.substring(0, 30);
-        const newChat = {
+        var title = userMessage.substring(0, 30);
+        var newChat = {
             id: currentChatId,
             title: title,
             created_at: new Date().toISOString(),
@@ -209,7 +193,7 @@ function saveCurrentChat(userMessage, aiResponse) {
         };
         chats.unshift(newChat);
     } else {
-        const chatIndex = chats.findIndex(c => c.id === currentChatId);
+        var chatIndex = chats.findIndex(function(c) { return c.id === currentChatId; });
         if (chatIndex !== -1) {
             chats[chatIndex].messages.push(
                 { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
@@ -226,7 +210,7 @@ function saveCurrentChat(userMessage, aiResponse) {
 
 // ================= ADD WELCOME MESSAGE =================
 function addWelcomeMessage() {
-    const container = document.getElementById("searchResults");
+    var container = document.getElementById("searchResults");
     if (!container) return;
     
     if (container.children.length === 0) {
@@ -236,64 +220,56 @@ function addWelcomeMessage() {
 
 // ================= LOAD CHATS =================
 function loadChats() {
-    const container = document.getElementById("chatList");
+    var container = document.getElementById("chatList");
     if (!container) return;
     
-    let chats = getChats();
+    var chats = getChats();
     if (chats.length === 0) {
         container.innerHTML = '<div class="empty-message">No chats yet</div>';
         return;
     }
     
     container.innerHTML = "";
-    chats.slice(0, 20).forEach(chat => {
-        const div = document.createElement("div");
-        div.className = `chat-item ${currentChatId === chat.id ? 'active' : ''}`;
+    chats.slice(0, 20).forEach(function(chat) {
+        var div = document.createElement("div");
+        div.className = "chat-item" + (currentChatId === chat.id ? ' active' : '');
         div.setAttribute('data-chat-id', chat.id);
-        div.innerHTML = `
-            <span class="chat-title" onclick="loadChatById('${chat.id}')">💬 ${escapeHtml(chat.title.substring(0, 35))}</span>
-            <div class="chat-menu-container">
-                <button class="chat-menu-btn" onclick="toggleChatMenu(event, '${chat.id}')">⋯</button>
-                <div class="chat-dropdown" id="chat-dropdown-${chat.id}">
-                    <div class="dropdown-item delete" onclick="deleteChatById('${chat.id}')">🗑️ Delete</div>
-                </div>
-            </div>
-        `;
+        div.innerHTML = '<span class="chat-title" onclick="loadChatById(\'' + chat.id + '\')">💬 ' + escapeHtml(chat.title.substring(0, 35)) + '</span><div class="chat-menu-container"><button class="chat-menu-btn" onclick="toggleChatMenu(event, \'' + chat.id + '\')">⋯</button><div class="chat-dropdown" id="chat-dropdown-' + chat.id + '"><div class="dropdown-item delete" onclick="deleteChatById(\'' + chat.id + '\')">🗑️ Delete</div></div></div>';
         container.appendChild(div);
     });
 }
 
 // ================= LOAD PROJECTS =================
 function loadProjects() {
-    const container = document.getElementById("projectListRight");
+    var container = document.getElementById("projectListRight");
     if (!container) return;
     
-    let projects = getProjects();
+    var projects = getProjects();
     if (projects.length === 0) {
         container.innerHTML = '<div class="empty-message">No projects yet</div>';
         return;
     }
     
     container.innerHTML = "";
-    projects.slice(0, 10).forEach(project => {
-        const div = document.createElement("div");
+    projects.slice(0, 10).forEach(function(project) {
+        var div = document.createElement("div");
         div.className = "project-item";
         div.setAttribute('data-project-id', project.id);
-        div.innerHTML = `📁 ${escapeHtml(project.name.substring(0, 35))}`;
+        div.innerHTML = '📁 ' + escapeHtml(project.name.substring(0, 35));
         container.appendChild(div);
     });
 }
 
 // ================= CHAT MANAGEMENT =================
 window.loadChatById = function(chatId) {
-    let chats = getChats();
-    const chat = chats.find(c => c.id === chatId);
+    var chats = getChats();
+    var chat = chats.find(function(c) { return c.id === chatId; });
     if (chat) {
         currentChatId = chat.id;
-        const container = document.getElementById("searchResults");
+        var container = document.getElementById("searchResults");
         if (container) {
             container.innerHTML = "";
-            chat.messages.forEach(msg => {
+            chat.messages.forEach(function(msg) {
                 displayMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
             });
         }
@@ -304,12 +280,12 @@ window.loadChatById = function(chatId) {
 
 window.deleteChatById = function(chatId) {
     if (confirm("Delete this chat?")) {
-        let chats = getChats();
-        chats = chats.filter(chat => chat.id !== chatId);
+        var chats = getChats();
+        chats = chats.filter(function(chat) { return chat.id !== chatId; });
         saveChats(chats);
         if (currentChatId === chatId) {
             currentChatId = null;
-            const container = document.getElementById("searchResults");
+            var container = document.getElementById("searchResults");
             if (container) {
                 container.innerHTML = "";
                 addWelcomeMessage();
@@ -318,14 +294,14 @@ window.deleteChatById = function(chatId) {
         loadChats();
         showToast("🗑️ Chat deleted!");
     }
-    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+    var dropdown = document.getElementById("chat-dropdown-" + chatId);
     if (dropdown) dropdown.classList.remove('show');
 }
 
 window.startNewChat = function(e) {
     if (e) e.preventDefault();
     currentChatId = null;
-    const container = document.getElementById("searchResults");
+    var container = document.getElementById("searchResults");
     if (container) {
         container.innerHTML = "";
         addWelcomeMessage();
@@ -334,37 +310,36 @@ window.startNewChat = function(e) {
     showToast("✨ New chat started!");
 }
 
-// Dropdown functions
 window.toggleChatMenu = function(event, chatId) {
     event.stopPropagation();
     
-    document.querySelectorAll('.chat-dropdown.show').forEach(dropdown => {
-        if (dropdown.id !== `chat-dropdown-${chatId}`) {
+    document.querySelectorAll('.chat-dropdown.show').forEach(function(dropdown) {
+        if (dropdown.id !== "chat-dropdown-" + chatId) {
             dropdown.classList.remove('show');
         }
     });
     
-    const dropdown = document.getElementById(`chat-dropdown-${chatId}`);
+    var dropdown = document.getElementById("chat-dropdown-" + chatId);
     if (!dropdown) return;
     
     dropdown.classList.toggle('show');
     
-    setTimeout(() => {
+    setTimeout(function() {
         dropdown.classList.remove('show');
     }, 3000);
 }
 
 window.togglePlusDropdown = function() {
-    const dropdown = document.getElementById('plusDropdown');
+    var dropdown = document.getElementById('plusDropdown');
     if (dropdown) dropdown.classList.toggle('show');
 }
 
 window.shareChat = function() {
     if (currentChatId) {
-        let chats = getChats();
-        const chat = chats.find(c => c.id === currentChatId);
+        var chats = getChats();
+        var chat = chats.find(function(c) { return c.id === currentChatId; });
         if (chat) {
-            const shareText = `${chat.title}\n\n${chat.messages.map(m => `${m.role === 'user' ? 'You' : 'Cortexa'}: ${m.content}`).join('\n\n')}`;
+            var shareText = chat.title + '\n\n' + chat.messages.map(function(m) { return (m.role === 'user' ? 'You' : 'Cortexa') + ': ' + m.content; }).join('\n\n');
             navigator.clipboard.writeText(shareText);
             showToast("✅ Chat copied to clipboard!");
         }
@@ -376,11 +351,11 @@ window.shareChat = function() {
 window.deleteChat = function() {
     if (currentChatId) {
         if (confirm("Delete this chat?")) {
-            let chats = getChats();
-            chats = chats.filter(chat => chat.id !== currentChatId);
+            var chats = getChats();
+            chats = chats.filter(function(chat) { return chat.id !== currentChatId; });
             saveChats(chats);
             currentChatId = null;
-            const container = document.getElementById("searchResults");
+            var container = document.getElementById("searchResults");
             if (container) {
                 container.innerHTML = "";
                 addWelcomeMessage();
@@ -398,10 +373,10 @@ window.pinChat = function() {
 }
 
 window.createProject = function() {
-    const name = prompt("Enter project name:");
+    var name = prompt("Enter project name:");
     if (name && name.trim() !== "") {
-        let projects = getProjects();
-        const newProject = {
+        var projects = getProjects();
+        var newProject = {
             id: 'project_' + Date.now(),
             name: name.trim(),
             created_at: new Date().toLocaleString()
@@ -409,32 +384,32 @@ window.createProject = function() {
         projects.push(newProject);
         saveProjects(projects);
         loadProjects();
-        showToast(`✅ Project "${name}" created!`);
+        showToast("✅ Project \"" + name + "\" created!");
     }
 }
 
 // ================= DOCUMENT CHAT =================
 window.documentChat = function() {
-    const input = document.createElement('input');
+    var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.txt,.pdf,.docx';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
+    input.onchange = async function(e) {
+        var file = e.target.files[0];
         if (file) {
-            const formData = new FormData();
+            var formData = new FormData();
             formData.append('file', file);
             
             showToast("📄 Uploading document...");
             
             try {
-                const response = await fetch('https://cortexa-64a6.onrender.com/upload-document', {
+                var response = await fetch(BASE_URL + "/api/upload-document", {
                     method: 'POST',
                     body: formData
                 });
-                const data = await response.json();
+                var data = await response.json();
                 currentDocument = data;
-                showToast(`✅ Document "${file.name}" loaded! You can now ask questions about it.`);
-                displayMessage(`📄 **Document loaded:** ${file.name}\n\nYou can now ask me questions about this document!`, 'bot');
+                showToast("✅ Document \"" + file.name + "\" loaded! You can now ask questions about it.");
+                displayMessage("📄 **Document loaded:** " + file.name + "\n\nYou can now ask me questions about this document!", 'bot');
             } catch (error) {
                 showToast("❌ Error uploading document", "error");
             }
@@ -445,44 +420,44 @@ window.documentChat = function() {
 
 // ================= AUDIO MODE =================
 window.openAudioMode = function() {
-    const modal = document.getElementById('audioModal');
+    var modal = document.getElementById('audioModal');
     if (modal) modal.style.display = 'flex';
 }
 
 window.closeAudioMode = function() {
-    const modal = document.getElementById('audioModal');
+    var modal = document.getElementById('audioModal');
     if (modal) modal.style.display = 'none';
 }
 
 window.setAudioMode = function(mode, btn) {
     currentAudioMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mode-btn').forEach(function(b) { return b.classList.remove('active'); });
     btn.classList.add('active');
-    showToast(`🎵 Audio mode: ${mode}`);
+    showToast("🎵 Audio mode: " + mode);
 }
 
 window.toggleMicrophone = async function() {
-    const micBtn = document.getElementById('micButton');
-    const statusDiv = document.getElementById('micStatus');
+    var micBtn = document.getElementById('micButton');
+    var statusDiv = document.getElementById('micStatus');
     
     if (!isRecording) {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
             
-            mediaRecorder.ondataavailable = (event) => {
+            mediaRecorder.ondataavailable = function(event) {
                 audioChunks.push(event.data);
             };
             
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            mediaRecorder.onstop = async function() {
+                var audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 statusDiv.innerHTML = '🎤 Speech detected! Processing...';
                 showToast("🎤 Voice input received! Please type your question for now (voice-to-text coming soon)");
                 statusDiv.innerHTML = 'Click microphone to speak';
                 isRecording = false;
                 micBtn.style.background = '';
-                stream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(function(track) { return track.stop(); });
             };
             
             mediaRecorder.start();
@@ -502,42 +477,41 @@ window.toggleMicrophone = async function() {
 }
 
 window.sendAudioQuery = async function() {
-    const queryInput = document.getElementById('audioQueryInput');
-    const query = queryInput.value.trim();
+    var queryInput = document.getElementById('audioQueryInput');
+    var query = queryInput.value.trim();
     if (!query) {
         showToast("Please enter a question", "error");
         return;
     }
     
-    const responseArea = document.getElementById('audioResponseArea');
-    const responseText = document.getElementById('responseText');
+    var responseArea = document.getElementById('audioResponseArea');
+    var responseText = document.getElementById('responseText');
     
     responseArea.style.display = 'block';
     responseText.innerHTML = '<span class="typing-dots">Generating response...</span>';
     
     try {
-        const requestBody = { message: query, audio: true };
-        const response = await fetch(API_URL, {
+        var requestBody = { message: query, audio: true };
+        var response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
-        const data = await response.json();
+        var data = await response.json();
         
         currentAudioText = data.response;
         responseText.innerHTML = formatContent(data.response);
         
-        // Generate audio
-        const audioResponse = await fetch('https://cortexa-64a6.onrender.com/generate-audio', {
+        var audioResponse = await fetch(BASE_URL + "/api/generate-audio", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: data.response })
         });
-        const audioData = await audioResponse.json();
+        var audioData = await audioResponse.json();
         
         if (audioData.audio_url) {
-            const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.src = `https://cortexa-64a6.onrender.com${audioData.audio_url}`;
+            var audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = BASE_URL + audioData.audio_url;
             document.getElementById('audioPlayerContainer').style.display = 'block';
         }
         
@@ -548,7 +522,7 @@ window.sendAudioQuery = async function() {
 }
 
 window.playAudioResponse = function() {
-    const audio = document.getElementById('audioPlayer');
+    var audio = document.getElementById('audioPlayer');
     if (audio && audio.src) {
         audio.play();
     } else {
@@ -557,12 +531,12 @@ window.playAudioResponse = function() {
 }
 
 window.pauseAudioResponse = function() {
-    const audio = document.getElementById('audioPlayer');
+    var audio = document.getElementById('audioPlayer');
     if (audio) audio.pause();
 }
 
 window.stopAudioResponse = function() {
-    const audio = document.getElementById('audioPlayer');
+    var audio = document.getElementById('audioPlayer');
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -570,9 +544,9 @@ window.stopAudioResponse = function() {
 }
 
 window.downloadAudioResponse = function() {
-    const audio = document.getElementById('audioPlayer');
+    var audio = document.getElementById('audioPlayer');
     if (audio && audio.src) {
-        const a = document.createElement('a');
+        var a = document.createElement('a');
         a.href = audio.src;
         a.download = 'cortexa_audio.mp3';
         a.click();
@@ -582,31 +556,24 @@ window.downloadAudioResponse = function() {
     }
 }
 
-// ================= VIDEO MODE (FULL FEATURED) =================
+// ================= VIDEO MODE =================
 window.openVideoMode = function() {
-    const modal = document.getElementById('videoModal');
+    var modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'flex';
     switchVideoTab('youtube');
 }
 
 window.closeVideoMode = function() {
-    const modal = document.getElementById('videoModal');
+    var modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'none';
-    // Clear results when closing
-    const youtubeResults = document.getElementById('youtubeResults');
-    const youtubeVideoInfo = document.getElementById('youtubeVideoInfo');
-    const youtubeOptions = document.getElementById('youtubeOptions');
-    if (youtubeResults) youtubeResults.innerHTML = '';
-    if (youtubeVideoInfo) youtubeVideoInfo.style.display = 'none';
-    if (youtubeOptions) youtubeOptions.style.display = 'none';
 }
 
 window.switchVideoTab = function(tab) {
-    const youtubeTab = document.getElementById('youtubeTab');
-    const libraryTab = document.getElementById('libraryTab');
-    const btns = document.querySelectorAll('.tab-btn');
+    var youtubeTab = document.getElementById('youtubeTab');
+    var libraryTab = document.getElementById('libraryTab');
+    var btns = document.querySelectorAll('.tab-btn');
     
-    btns.forEach(btn => btn.classList.remove('active'));
+    btns.forEach(function(btn) { return btn.classList.remove('active'); });
     
     if (tab === 'youtube') {
         if (youtubeTab) youtubeTab.style.display = 'block';
@@ -620,26 +587,25 @@ window.switchVideoTab = function(tab) {
     }
 }
 
-// Search YouTube and display videos
 window.searchYouTube = async function() {
-    const query = document.getElementById('youtubeSearchQuery').value;
+    var query = document.getElementById('youtubeSearchQuery').value;
     if (!query) {
         showToast("Please enter a search term", "error");
         return;
     }
     
     showToast("🔍 Searching YouTube...");
-    const resultsDiv = document.getElementById('youtubeResults');
+    var resultsDiv = document.getElementById('youtubeResults');
     if (!resultsDiv) return;
     
     resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
     
     try {
-        const response = await fetch(`https://cortexa-64a6.onrender.com/youtube-search?query=${encodeURIComponent(query)}&max_results=12`);
-        const data = await response.json();
+        var response = await fetch(BASE_URL + "/api/youtube-search?query=" + encodeURIComponent(query) + "&max_results=12");
+        var data = await response.json();
         
         if (data.error) {
-            resultsDiv.innerHTML = `<div class="error-message">❌ ${data.error}</div>`;
+            resultsDiv.innerHTML = '<div class="error-message">❌ ' + data.error + '</div>';
             showToast(data.error, "error");
             return;
         }
@@ -649,36 +615,11 @@ window.searchYouTube = async function() {
             return;
         }
         
-        // Display video results in a beautiful grid
-        resultsDiv.innerHTML = `
-            <div class="search-header">
-                <h3>📹 Search Results (${data.videos.length} videos)</h3>
-                <p>Click on any video to get AI summary</p>
-            </div>
-            <div class="youtube-grid">
-                ${data.videos.map(video => `
-                    <div class="video-card">
-                        <div class="video-thumbnail">
-                            <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
-                            <div class="video-duration">${video.duration || 'N/A'}</div>
-                        </div>
-                        <div class="video-details">
-                            <h4 class="video-title">${escapeHtml(video.title.substring(0, 70))}</h4>
-                            <p class="video-channel">${escapeHtml(video.channel)}</p>
-                            <p class="video-stats">👁️ ${video.views || 'N/A'} views</p>
-                            <button class="play-youtube-btn" onclick="getVideoInfoAndSummary('${video.id}', '${escapeHtml(video.title)}')">
-                                🤖 Get AI Summary
-                            </button>
-                            <button class="watch-btn" onclick="openInYouTube('${video.id}')">
-                                ▶️ Watch on YouTube
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        resultsDiv.innerHTML = '<div class="search-header"><h3>📹 Search Results (' + data.videos.length + ' videos)</h3><p>Click on any video to get AI summary</p></div><div class="youtube-grid">' + data.videos.map(function(video) {
+            return '<div class="video-card"><div class="video-thumbnail"><img src="' + video.thumbnail + '" alt="' + escapeHtml(video.title) + '"><div class="video-duration">' + (video.duration || 'N/A') + '</div></div><div class="video-details"><h4 class="video-title">' + escapeHtml(video.title.substring(0, 70)) + '</h4><p class="video-channel">' + escapeHtml(video.channel) + '</p><p class="video-stats">👁️ ' + (video.views || 'N/A') + ' views</p><button class="play-youtube-btn" onclick="getVideoInfoAndSummary(\'' + video.id + '\', \'' + escapeHtml(video.title) + '\')">🤖 Get AI Summary</button><button class="watch-btn" onclick="openInYouTube(\'' + video.id + '\')">▶️ Watch on YouTube</button></div></div>';
+        }).join('') + '</div>';
         
-        showToast(`Found ${data.videos.length} videos!`);
+        showToast("Found " + data.videos.length + " videos!");
         
     } catch (error) {
         console.error('Search error:', error);
@@ -687,43 +628,27 @@ window.searchYouTube = async function() {
     }
 }
 
-// Get video info and generate AI summary
 window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     showToast("📹 Getting video information and generating AI summary...");
     
-    const infoDiv = document.getElementById('youtubeVideoInfo');
+    var infoDiv = document.getElementById('youtubeVideoInfo');
     if (!infoDiv) return;
     
     infoDiv.style.display = 'block';
     infoDiv.innerHTML = '<div class="loading-spinner">🧠 Analyzing video content...</div>';
     
     try {
-        // First get video info
-        const infoResponse = await fetch(`https://cortexa-64a6.onrender.com/youtube-video-info?videoid=${videoId}`);
-        const videoInfo = await infoResponse.json();
+        var infoResponse = await fetch(BASE_URL + "/api/youtube-video-info?videoid=" + videoId);
+        var videoInfo = await infoResponse.json();
         
         if (videoInfo.error) {
-            infoDiv.innerHTML = `<div class="error-message">❌ ${videoInfo.error}</div>`;
+            infoDiv.innerHTML = '<div class="error-message">❌ ' + videoInfo.error + '</div>';
             return;
         }
         
-        // Generate AI summary using chat API
-        const summaryPrompt = `Please provide a comprehensive summary of this YouTube video:
-        
-Title: ${videoTitle || videoInfo.title}
-Channel: ${videoInfo.channel || 'Unknown'}
-Description: ${videoInfo.description || 'No description available'}
+        var summaryPrompt = 'Please provide a comprehensive summary of this YouTube video:\n\nTitle: ' + (videoTitle || videoInfo.title) + '\nChannel: ' + (videoInfo.channel || 'Unknown') + '\nDescription: ' + (videoInfo.description || 'No description available') + '\n\nPlease provide:\n1. Main topic/theme of the video\n2. 5-7 key points covered\n3. Important takeaways\n4. Who should watch this video\n5. A brief one-paragraph summary\n\nFormat the response in a clean, organized way with emojis for each section.';
 
-Please provide:
-1. Main topic/theme of the video
-2. 5-7 key points covered
-3. Important takeaways
-4. Who should watch this video
-5. A brief one-paragraph summary
-
-Format the response in a clean, organized way with emojis for each section.`;
-
-        const summaryResponse = await fetch(API_URL, {
+        var summaryResponse = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -733,48 +658,10 @@ Format the response in a clean, organized way with emojis for each section.`;
             })
         });
         
-        const summaryData = await summaryResponse.json();
-        const aiSummary = summaryData.response || "Summary generation failed. Please try again.";
+        var summaryData = await summaryResponse.json();
+        var aiSummary = summaryData.response || "Summary generation failed. Please try again.";
         
-        infoDiv.innerHTML = `
-            <div class="video-detail-card">
-                <div class="video-detail-header">
-                    <h3>✅ ${escapeHtml(videoInfo.title || videoTitle)}</h3>
-                    <button class="close-video-info" onclick="closeVideoInfo()">✖</button>
-                </div>
-                <div class="video-detail-content">
-                    <p><strong>📺 Channel:</strong> ${escapeHtml(videoInfo.channel || 'N/A')}</p>
-                    <p><strong>👁️ Views:</strong> ${parseInt(videoInfo.views || 0).toLocaleString()}</p>
-                    <p><strong>👍 Likes:</strong> ${parseInt(videoInfo.likes || 0).toLocaleString()}</p>
-                    <p><strong>⏱️ Duration:</strong> ${videoInfo.duration || 'N/A'}</p>
-                    
-                    <div class="ai-summary-section">
-                        <h4>🤖 AI GENERATED SUMMARY</h4>
-                        <div class="summary-text">${formatContent(aiSummary)}</div>
-                    </div>
-                    
-                    <details>
-                        <summary>📝 Video Description</summary>
-                        <p class="video-description">${escapeHtml((videoInfo.description || 'No description').substring(0, 1000))}</p>
-                    </details>
-                    
-                    <div class="video-action-buttons">
-                        <button class="watch-btn" onclick="openInYouTube('${videoId}')">
-                            🎬 Watch on YouTube
-                        </button>
-                        <button class="summary-btn" onclick="copySummaryToClipboard()">
-                            📋 Copy Summary
-                        </button>
-                        <button class="summary-btn" onclick="downloadSummaryAsFile()">
-                            💾 Download Summary
-                        </button>
-                        <button class="summary-btn" onclick="saveVideoToLibrary('${videoId}', '${escapeHtml(videoInfo.title || videoTitle)}')">
-                            💾 Save to Library
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+        infoDiv.innerHTML = '<div class="video-detail-card"><div class="video-detail-header"><h3>✅ ' + escapeHtml(videoInfo.title || videoTitle) + '</h3><button class="close-video-info" onclick="closeVideoInfo()">✖</button></div><div class="video-detail-content"><p><strong>📺 Channel:</strong> ' + escapeHtml(videoInfo.channel || 'N/A') + '</p><p><strong>👁️ Views:</strong> ' + parseInt(videoInfo.views || 0).toLocaleString() + '</p><p><strong>👍 Likes:</strong> ' + parseInt(videoInfo.likes || 0).toLocaleString() + '</p><p><strong>⏱️ Duration:</strong> ' + (videoInfo.duration || 'N/A') + '</p><div class="ai-summary-section"><h4>🤖 AI GENERATED SUMMARY</h4><div class="summary-text">' + formatContent(aiSummary) + '</div></div><details><summary>📝 Video Description</summary><p class="video-description">' + escapeHtml((videoInfo.description || 'No description').substring(0, 1000)) + '</p></details><div class="video-action-buttons"><button class="watch-btn" onclick="openInYouTube(\'' + videoId + '\')">🎬 Watch on YouTube</button><button class="summary-btn" onclick="copySummaryToClipboard()">📋 Copy Summary</button><button class="summary-btn" onclick="downloadSummaryAsFile()">💾 Download Summary</button><button class="summary-btn" onclick="saveVideoToLibrary(\'' + videoId + '\', \'' + escapeHtml(videoInfo.title || videoTitle) + '\')">💾 Save to Library</button></div></div></div>';
         
         document.getElementById('youtubeOptions').style.display = 'block';
         showToast("✅ AI Summary generated successfully!");
@@ -787,20 +674,18 @@ Format the response in a clean, organized way with emojis for each section.`;
 }
 
 window.closeVideoInfo = function() {
-    const infoDiv = document.getElementById('youtubeVideoInfo');
+    var infoDiv = document.getElementById('youtubeVideoInfo');
     if (infoDiv) infoDiv.style.display = 'none';
 }
 
-// Open video in YouTube
 window.openInYouTube = function(videoId) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    var youtubeUrl = 'https://www.youtube.com/watch?v=' + videoId;
     window.open(youtubeUrl, '_blank');
     showToast("📺 Opening YouTube in new tab...");
 }
 
-// Copy summary to clipboard
 window.copySummaryToClipboard = function() {
-    const summaryText = document.querySelector('.summary-text')?.innerText;
+    var summaryText = document.querySelector('.summary-text')?.innerText;
     if (summaryText) {
         navigator.clipboard.writeText(summaryText);
         showToast("📋 Summary copied to clipboard!");
@@ -809,13 +694,12 @@ window.copySummaryToClipboard = function() {
     }
 }
 
-// Download summary as file
 window.downloadSummaryAsFile = function() {
-    const summaryText = document.querySelector('.summary-text')?.innerText;
+    var summaryText = document.querySelector('.summary-text')?.innerText;
     if (summaryText) {
-        const blob = new Blob([summaryText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var blob = new Blob([summaryText], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
         a.download = 'video_summary.txt';
         a.click();
@@ -826,21 +710,20 @@ window.downloadSummaryAsFile = function() {
     }
 }
 
-// Save video to library
 window.saveVideoToLibrary = function(videoId, videoTitle) {
-    const user = getCurrentUser();
-    const savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
+    var user = getCurrentUser();
+    var savedVideos = JSON.parse(localStorage.getItem("videos_" + user) || '[]');
     
-    if (!savedVideos.some(v => v.id === videoId)) {
-        const newVideo = {
+    if (!savedVideos.some(function(v) { return v.id === videoId; })) {
+        var newVideo = {
             id: videoId,
             title: videoTitle,
-            url: `https://youtube.com/watch?v=${videoId}`,
+            url: 'https://youtube.com/watch?v=' + videoId,
             date: new Date().toLocaleString(),
-            thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+            thumbnail: 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg'
         };
         savedVideos.push(newVideo);
-        localStorage.setItem(`videos_${user}`, JSON.stringify(savedVideos));
+        localStorage.setItem("videos_" + user, JSON.stringify(savedVideos));
         showToast("💾 Video saved to library!");
         loadVideoLibrary();
     } else {
@@ -848,53 +731,35 @@ window.saveVideoToLibrary = function(videoId, videoTitle) {
     }
 }
 
-// Load video library
 function loadVideoLibrary() {
-    const user = getCurrentUser();
-    const libraryDiv = document.getElementById('videoLibraryList');
+    var user = getCurrentUser();
+    var libraryDiv = document.getElementById('videoLibraryList');
     if (!libraryDiv) return;
     
-    const savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
+    var savedVideos = JSON.parse(localStorage.getItem("videos_" + user) || '[]');
     
     if (savedVideos.length === 0) {
         libraryDiv.innerHTML = '<div class="empty-library">📭 No saved videos. Search and save videos to see them here!</div>';
         return;
     }
     
-    libraryDiv.innerHTML = `
-        <div class="library-grid">
-            ${savedVideos.map(video => `
-                <div class="library-card">
-                    <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}">
-                    <div class="library-card-info">
-                        <h4>${escapeHtml(video.title.substring(0, 50))}</h4>
-                        <p class="library-date">Saved: ${video.date}</p>
-                        <button class="library-play-btn" onclick="getVideoInfoAndSummary('${video.id}', '${escapeHtml(video.title)}')">
-                            🤖 Get AI Summary
-                        </button>
-                        <button class="library-remove-btn" onclick="removeFromLibrary('${video.id}')">
-                            🗑️ Remove
-                        </button>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    libraryDiv.innerHTML = '<div class="library-grid">' + savedVideos.map(function(video) {
+        return '<div class="library-card"><img src="' + video.thumbnail + '" alt="' + escapeHtml(video.title) + '"><div class="library-card-info"><h4>' + escapeHtml(video.title.substring(0, 50)) + '</h4><p class="library-date">Saved: ' + video.date + '</p><button class="library-play-btn" onclick="getVideoInfoAndSummary(\'' + video.id + '\', \'' + escapeHtml(video.title) + '\')">🤖 Get AI Summary</button><button class="library-remove-btn" onclick="removeFromLibrary(\'' + video.id + '\')">🗑️ Remove</button></div></div>';
+    }).join('') + '</div>';
 }
 
 window.removeFromLibrary = function(videoId) {
-    const user = getCurrentUser();
-    let savedVideos = JSON.parse(localStorage.getItem(`videos_${user}`) || '[]');
-    savedVideos = savedVideos.filter(v => v.id !== videoId);
-    localStorage.setItem(`videos_${user}`, JSON.stringify(savedVideos));
+    var user = getCurrentUser();
+    var savedVideos = JSON.parse(localStorage.getItem("videos_" + user) || '[]');
+    savedVideos = savedVideos.filter(function(v) { return v.id !== videoId; });
+    localStorage.setItem("videos_" + user, JSON.stringify(savedVideos));
     loadVideoLibrary();
     showToast("🗑️ Video removed from library");
 }
 
-// ================= REPORT MODE  =================
-
+// ================= REPORT MODE =================
 window.openReportMode = function() {
-    const modal = document.getElementById('reportModal');
+    var modal = document.getElementById('reportModal');
     if (modal) {
         modal.style.display = 'flex';
         modal.style.position = 'fixed';
@@ -910,73 +775,64 @@ window.openReportMode = function() {
 }
 
 window.closeReportMode = function() {
-    const modal = document.getElementById('reportModal');
+    var modal = document.getElementById('reportModal');
     if (modal) modal.style.display = 'none';
 }
 
 window.generateReport = async function() {
-    const topic = document.getElementById('reportTopicInput').value;
+    var topic = document.getElementById('reportTopicInput').value;
     if (!topic) {
         showToast("Please enter a topic", "error");
         return;
     }
     
-    const format = document.getElementById('reportFormat')?.value || 'PDF Document';
-    const includeCharts = document.getElementById('includeCharts')?.checked || false;
-    const includeTables = document.getElementById('includeTables')?.checked || false;
-    const includeExecutive = document.getElementById('includeExecutive')?.checked || true;
-    const includeRecommendations = document.getElementById('includeRecommendations')?.checked || true;
-    const includeAppendix = document.getElementById('includeAppendix')?.checked || false;
+    var format = document.getElementById('reportFormat')?.value || 'PDF Document';
+    var includeCharts = document.getElementById('includeCharts')?.checked || false;
+    var includeTables = document.getElementById('includeTables')?.checked || false;
+    var includeExecutive = document.getElementById('includeExecutive')?.checked || true;
+    var includeRecommendations = document.getElementById('includeRecommendations')?.checked || true;
+    var includeAppendix = document.getElementById('includeAppendix')?.checked || false;
     
-    const progressDiv = document.getElementById('reportProgress');
-    const progressFill = document.getElementById('reportProgressFill');
-    const displayDiv = document.getElementById('reportDisplay');
-    const contentDiv = document.getElementById('reportContent');
+    var progressDiv = document.getElementById('reportProgress');
+    var progressFill = document.getElementById('reportProgressFill');
+    var displayDiv = document.getElementById('reportDisplay');
+    var contentDiv = document.getElementById('reportContent');
     
     if (progressDiv) {
         progressDiv.style.display = 'block';
-        progressDiv.innerHTML = `
-            <div class="progress-bar">
-                <div id="reportProgressFill" class="progress-fill"></div>
-            </div>
-            <p class="generating-text">📊 Generating comprehensive report on "${topic.substring(0, 50)}"...</p>
-        `;
+        progressDiv.innerHTML = '<div class="progress-bar"><div id="reportProgressFill" class="progress-fill"></div></div><p class="generating-text">📊 Generating comprehensive report on "' + topic.substring(0, 50) + '"...</p>';
     }
     
-    let width = 0;
-    const interval = setInterval(() => {
+    var width = 0;
+    var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 200);
     
     try {
-        let prompt = `Generate a comprehensive, professional report about "${topic}".
+        var prompt = 'Generate a comprehensive, professional report about "' + topic + '". The report should include:';
 
-The report should include:`;
+        if (includeExecutive) prompt += '\n- Executive Summary';
+        prompt += '\n- Introduction';
+        prompt += '\n- Key Findings (at least 5 points with detailed explanations)';
+        prompt += '\n- Detailed Analysis';
+        if (includeCharts) prompt += '\n- Charts and Graphs Analysis (describe what charts would show)';
+        if (includeTables) prompt += '\n- Data Tables (create relevant data tables)';
+        prompt += '\n- Challenges and Opportunities';
+        if (includeRecommendations) prompt += '\n- Recommendations (at least 3 actionable recommendations)';
+        prompt += '\n- Conclusion';
+        if (includeAppendix) prompt += '\n- Appendix with References and Sources';
 
-        if (includeExecutive) prompt += `\n- Executive Summary`;
-        prompt += `\n- Introduction`;
-        prompt += `\n- Key Findings (at least 5 points with detailed explanations)`;
-        prompt += `\n- Detailed Analysis`;
-        if (includeCharts) prompt += `\n- Charts and Graphs Analysis (describe what charts would show)`;
-        if (includeTables) prompt += `\n- Data Tables (create relevant data tables)`;
-        prompt += `\n- Challenges and Opportunities`;
-        if (includeRecommendations) prompt += `\n- Recommendations (at least 3 actionable recommendations)`;
-        prompt += `\n- Conclusion`;
-        if (includeAppendix) prompt += `\n- Appendix with References and Sources`;
+        prompt += '\n\nFormat the report with proper headings (## for main sections), subheadings (### for subsections), and bullet points. Make it professional, well-structured, data-driven, and suitable for business/academic audience. Use markdown formatting.';
 
-        prompt += `\n\nFormat the report with proper headings (## for main sections), subheadings (### for subsections), and bullet points.
-Make it professional, well-structured, data-driven, and suitable for business/academic audience.
-Use markdown formatting.`;
-
-        const response = await fetch(API_URL, {
+        var response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: prompt, document_content: null, audio: false })
         });
         
-        const data = await response.json();
-        let reportContent = data.response || "Failed to generate report.";
+        var data = await response.json();
+        var reportContent = data.response || "Failed to generate report.";
         
         reportContent = reportContent.replace(/## (.*?)$/gm, '<h2>$1</h2>');
         reportContent = reportContent.replace(/### (.*?)$/gm, '<h3>$1</h3>');
@@ -994,28 +850,11 @@ Use markdown formatting.`;
             rawContent: data.response,
             format: format,
             date: new Date().toLocaleString(),
-            options: { includeCharts, includeTables, includeExecutive, includeRecommendations, includeAppendix }
+            options: { includeCharts: includeCharts, includeTables: includeTables, includeExecutive: includeExecutive, includeRecommendations: includeRecommendations, includeAppendix: includeAppendix }
         };
         
         if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="report-container" id="reportContainer">
-                    <div class="report-title-section">
-                        <h1>📊 ${escapeHtml(topic)}</h1>
-                        <div class="report-meta">
-                            <span>📅 Generated: ${new Date().toLocaleString()}</span>
-                            <span>📄 Format: ${format}</span>
-                            <span>🤖 Generated by Cortexa AI</span>
-                        </div>
-                    </div>
-                    <div class="report-content" id="reportContentText">
-                        ${reportContent}
-                    </div>
-                    <div class="report-footer">
-                        <p>© ${new Date().getFullYear()} Cortexa AI Report Generator - All Rights Reserved</p>
-                    </div>
-                </div>
-            `;
+            contentDiv.innerHTML = '<div class="report-container" id="reportContainer"><div class="report-title-section"><h1>📊 ' + escapeHtml(topic) + '</h1><div class="report-meta"><span>📅 Generated: ' + new Date().toLocaleString() + '</span><span>📄 Format: ' + format + '</span><span>🤖 Generated by Cortexa AI</span></div></div><div class="report-content" id="reportContentText">' + reportContent + '</div><div class="report-footer"><p>© ' + new Date().getFullYear() + ' Cortexa AI Report Generator - All Rights Reserved</p></div></div>';
         }
         
         showToast("✅ Report generated successfully!");
@@ -1029,70 +868,14 @@ Use markdown formatting.`;
 }
 
 window.downloadReportAsPDF = function() {
-    const reportContainer = document.getElementById('reportContainer');
+    var reportContainer = document.getElementById('reportContainer');
     if (!reportContainer) {
         showToast("No report to download! Generate a report first.", "error");
         return;
     }
     
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>${window.currentReport?.topic || 'Report'} - Cortexa AI</title>
-                <style>
-                    body {
-                        font-family: 'Segoe UI', Arial, sans-serif;
-                        padding: 40px;
-                        max-width: 900px;
-                        margin: 0 auto;
-                        line-height: 1.6;
-                    }
-                    .report-title-section {
-                        text-align: center;
-                        margin-bottom: 40px;
-                        padding-bottom: 20px;
-                        border-bottom: 2px solid #667eea;
-                    }
-                    .report-title-section h1 {
-                        color: #667eea;
-                        margin-bottom: 10px;
-                    }
-                    .report-meta {
-                        color: #666;
-                        font-size: 12px;
-                    }
-                    .report-content h2 {
-                        color: #667eea;
-                        margin-top: 30px;
-                        border-left: 4px solid #667eea;
-                        padding-left: 15px;
-                    }
-                    .report-content h3 {
-                        color: #764ba2;
-                        margin-top: 20px;
-                    }
-                    .report-content li {
-                        margin: 8px 0;
-                    }
-                    .report-footer {
-                        margin-top: 50px;
-                        padding-top: 20px;
-                        border-top: 1px solid #ddd;
-                        text-align: center;
-                        font-size: 11px;
-                        color: #999;
-                    }
-                    button {
-                        display: none;
-                    }
-                </style>
-            </head>
-            <body>
-                ${reportContainer.outerHTML}
-            </body>
-        </html>
-    `);
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>' + (window.currentReport?.topic || 'Report') + ' - Cortexa AI</title><style>body { font-family: "Segoe UI", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; } .report-title-section { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #667eea; } .report-title-section h1 { color: #667eea; margin-bottom: 10px; } .report-meta { color: #666; font-size: 12px; } .report-content h2 { color: #667eea; margin-top: 30px; border-left: 4px solid #667eea; padding-left: 15px; } .report-content h3 { color: #764ba2; margin-top: 20px; } .report-content li { margin: 8px 0; } .report-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #999; } button { display: none; }</style></head><body>' + reportContainer.outerHTML + '</body></html>');
     printWindow.print();
     printWindow.close();
     showToast("📄 Report sent to printer (save as PDF)");
@@ -1104,30 +887,19 @@ window.downloadReportAsDOCX = function() {
         return;
     }
     
-    const reportContent = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
+    var reportContent = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
     if (!reportContent) {
         showToast("No content to download", "error");
         return;
     }
     
-    const docContent = `
-${window.currentReport.topic}
-${"=".repeat(50)}
-
-Generated on: ${window.currentReport.date}
-Format: ${window.currentReport.format}
-
-${reportContent}
-
-${"=".repeat(50)}
-Generated by Cortexa AI Report Generator
-    `;
+    var docContent = window.currentReport.topic + '\n' + '='.repeat(50) + '\n\nGenerated on: ' + window.currentReport.date + '\nFormat: ' + window.currentReport.format + '\n\n' + reportContent + '\n\n' + '='.repeat(50) + '\nGenerated by Cortexa AI Report Generator';
     
-    const blob = new Blob([docContent], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    var blob = new Blob([docContent], { type: 'application/msword' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
     a.href = url;
-    a.download = `${window.currentReport.topic.replace(/[^a-z0-9]/gi, '_')}_report.doc`;
+    a.download = window.currentReport.topic.replace(/[^a-z0-9]/gi, '_') + '_report.doc';
     a.click();
     URL.revokeObjectURL(url);
     showToast("📄 Report downloaded as DOCX!");
@@ -1139,11 +911,11 @@ window.copyReportToClipboard = function() {
         return;
     }
     
-    const reportText = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
+    var reportText = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
     if (reportText) {
-        navigator.clipboard.writeText(reportText).then(() => {
+        navigator.clipboard.writeText(reportText).then(function() {
             showToast("📋 Report copied to clipboard!");
-        }).catch(() => {
+        }).catch(function() {
             showToast("Failed to copy", "error");
         });
     } else {
@@ -1157,11 +929,11 @@ window.shareReport = function() {
         return;
     }
     
-    const shareText = `📊 Report: ${window.currentReport.topic}\n\n${(document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent).substring(0, 500)}...\n\nGenerated on: ${window.currentReport.date}\n\nGenerated by Cortexa AI`;
+    var shareText = '📊 Report: ' + window.currentReport.topic + '\n\n' + (document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent).substring(0, 500) + '...\n\nGenerated on: ' + window.currentReport.date + '\n\nGenerated by Cortexa AI';
     
-    navigator.clipboard.writeText(shareText).then(() => {
+    navigator.clipboard.writeText(shareText).then(function() {
         showToast("📤 Report summary copied to clipboard! You can now share it anywhere.");
-    }).catch(() => {
+    }).catch(function() {
         showToast("Failed to copy for sharing", "error");
     });
 }
@@ -1172,10 +944,10 @@ window.saveReportToLibrary = function() {
         return;
     }
     
-    const user = getCurrentUser();
-    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    var user = getCurrentUser();
+    var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
     
-    const reportToSave = {
+    var reportToSave = {
         id: 'report_' + Date.now(),
         title: window.currentReport.topic,
         content: window.currentReport.rawContent,
@@ -1186,68 +958,29 @@ window.saveReportToLibrary = function() {
     };
     
     savedReports.unshift(reportToSave);
-    localStorage.setItem(`reports_${user}`, JSON.stringify(savedReports));
+    localStorage.setItem("reports_" + user, JSON.stringify(savedReports));
     
-    showToast(`✅ Report "${window.currentReport.topic}" saved to library!`);
+    showToast("✅ Report \"" + window.currentReport.topic + "\" saved to library!");
 }
 
 window.printReport = function() {
-    const reportContainer = document.getElementById('reportContainer');
+    var reportContainer = document.getElementById('reportContainer');
     if (!reportContainer) {
         showToast("No report to print! Generate a report first.", "error");
         return;
     }
     
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>${window.currentReport?.topic || 'Report'} - Cortexa AI</title>
-                <style>
-                    body {
-                        font-family: 'Segoe UI', Arial, sans-serif;
-                        padding: 40px;
-                        max-width: 900px;
-                        margin: 0 auto;
-                        line-height: 1.6;
-                    }
-                    .report-title-section {
-                        text-align: center;
-                        margin-bottom: 40px;
-                        padding-bottom: 20px;
-                        border-bottom: 2px solid #667eea;
-                    }
-                    .report-title-section h1 {
-                        color: #667eea;
-                    }
-                    .report-meta {
-                        color: #666;
-                        font-size: 12px;
-                    }
-                    .report-footer {
-                        margin-top: 50px;
-                        padding-top: 20px;
-                        border-top: 1px solid #ddd;
-                        text-align: center;
-                        font-size: 11px;
-                    }
-                    button { display: none; }
-                </style>
-            </head>
-            <body>
-                ${reportContainer.outerHTML}
-            </body>
-        </html>
-    `);
+    var printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>' + (window.currentReport?.topic || 'Report') + ' - Cortexa AI</title><style>body { font-family: "Segoe UI", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; } .report-title-section { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #667eea; } .report-title-section h1 { color: #667eea; } .report-meta { color: #666; font-size: 12px; } .report-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; } button { display: none; }</style></head><body>' + reportContainer.outerHTML + '</body></html>');
     printWindow.print();
     printWindow.close();
     showToast("🖨️ Report sent to printer!");
 }
 
 window.loadReportFromLibrary = function(reportId) {
-    const user = getCurrentUser();
-    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
-    const report = savedReports.find(r => r.id === reportId);
+    var user = getCurrentUser();
+    var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
+    var report = savedReports.find(function(r) { return r.id === reportId; });
     
     if (report) {
         window.currentReport = {
@@ -1259,74 +992,38 @@ window.loadReportFromLibrary = function(reportId) {
             options: report.options
         };
         
-        const contentDiv = document.getElementById('reportContent');
+        var contentDiv = document.getElementById('reportContent');
         if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="report-container" id="reportContainer">
-                    <div class="report-title-section">
-                        <h1>📊 ${escapeHtml(report.title)}</h1>
-                        <div class="report-meta">
-                            <span>📅 Generated: ${report.date}</span>
-                            <span>📄 Format: ${report.format}</span>
-                        </div>
-                    </div>
-                    <div class="report-content" id="reportContentText">
-                        ${report.formattedContent}
-                    </div>
-                    <div class="report-footer">
-                        <p>© ${new Date().getFullYear()} Cortexa AI Report Generator</p>
-                    </div>
-                </div>
-            `;
+            contentDiv.innerHTML = '<div class="report-container" id="reportContainer"><div class="report-title-section"><h1>📊 ' + escapeHtml(report.title) + '</h1><div class="report-meta"><span>📅 Generated: ' + report.date + '</span><span>📄 Format: ' + report.format + '</span></div></div><div class="report-content" id="reportContentText">' + report.formattedContent + '</div><div class="report-footer"><p>© ' + new Date().getFullYear() + ' Cortexa AI Report Generator</p></div></div>';
         }
         
         document.getElementById('reportDisplay').style.display = 'block';
-        showToast(`✅ Report "${report.title}" loaded from library!`);
+        showToast("✅ Report \"" + report.title + "\" loaded from library!");
     } else {
         showToast("Report not found!", "error");
     }
 }
 
 window.openReportLibrary = function() {
-    const user = getCurrentUser();
-    const savedReports = JSON.parse(localStorage.getItem(`reports_${user}`) || '[]');
+    var user = getCurrentUser();
+    var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
     
     if (savedReports.length === 0) {
         showToast("No saved reports found!", "info");
         return;
     }
     
-    let libraryHTML = '<div class="report-library-modal"><h3>📚 Saved Reports</h3><div class="report-list">';
-    savedReports.forEach(report => {
-        libraryHTML += `
-            <div class="report-list-item">
-                <div class="report-info">
-                    <strong>${escapeHtml(report.title)}</strong>
-                    <small>${report.date}</small>
-                </div>
-                <button onclick="loadReportFromLibrary('${report.id}')">Load</button>
-            </div>
-        `;
+    var libraryHTML = '<div class="report-library-modal"><h3>📚 Saved Reports</h3><div class="report-list">';
+    savedReports.forEach(function(report) {
+        libraryHTML += '<div class="report-list-item"><div class="report-info"><strong>' + escapeHtml(report.title) + '</strong><small>' + report.date + '</small></div><button onclick="loadReportFromLibrary(\'' + report.id + '\')">Load</button></div>';
     });
     libraryHTML += '</div><button onclick="closeReportLibrary()">Close</button></div>';
     
-    let modal = document.getElementById('reportLibraryModal');
+    var modal = document.getElementById('reportLibraryModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'reportLibraryModal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-            z-index: 10001;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        `;
+        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; max-width: 500px; width: 90%; z-index: 10001; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
         document.body.appendChild(modal);
     }
     
@@ -1335,27 +1032,31 @@ window.openReportLibrary = function() {
 }
 
 window.closeReportLibrary = function() {
-    const modal = document.getElementById('reportLibraryModal');
+    var modal = document.getElementById('reportLibraryModal');
     if (modal) modal.style.display = 'none';
 }
-// ================= LEARNING TOOLS MODE (QUIZ + NOTES) =================
+
+// ============================================
+// LEARNING TOOLS - QUIZ GENERATOR
+// ============================================
+
 window.openLearningTools = function() {
-    const modal = document.getElementById('learningToolsModal');
+    var modal = document.getElementById('learningToolsModal');
     if (modal) modal.style.display = 'flex';
     switchLearningTab('quiz');
 }
 
 window.closeLearningTools = function() {
-    const modal = document.getElementById('learningToolsModal');
+    var modal = document.getElementById('learningToolsModal');
     if (modal) modal.style.display = 'none';
 }
 
 window.switchLearningTab = function(tab) {
-    const quizTab = document.getElementById('quizTab');
-    const notesTab = document.getElementById('notesTab');
-    const btns = document.querySelectorAll('.learning-tab-btn');
+    var quizTab = document.getElementById('quizTab');
+    var notesTab = document.getElementById('notesTab');
+    var btns = document.querySelectorAll('.learning-tab-btn');
     
-    btns.forEach(btn => btn.classList.remove('active'));
+    btns.forEach(function(btn) { return btn.classList.remove('active'); });
     
     if (tab === 'quiz') {
         if (quizTab) quizTab.style.display = 'block';
@@ -1368,54 +1069,33 @@ window.switchLearningTab = function(tab) {
     }
 }
 
-// =================  QUIZ FUNCTIONS =================
-
 window.generateQuiz = async function() {
-    const topic = document.getElementById('quizTopicInput').value;
+    var topic = document.getElementById('quizTopicInput').value;
     if (!topic) {
         showToast("Please enter a topic", "error");
         return;
     }
     
-    const numQuestions = document.getElementById('quizNumQuestions')?.value || 5;
-    const difficulty = document.getElementById('quizDifficulty')?.value || 'Medium';
-    const questionType = document.getElementById('quizQuestionType')?.value || 'Mixed';
+    var numQuestions = document.getElementById('quizCount')?.value || 5;
+    var difficulty = document.getElementById('quizDifficulty')?.value || 'medium';
+    var questionType = document.getElementById('quizType')?.value || 'mixed';
     
-    const progressDiv = document.getElementById('quizProgress');
-    const progressFill = document.getElementById('quizProgressFill');
-    const displayDiv = document.getElementById('quizDisplay');
-    const contentDiv = document.getElementById('quizContent');
+    var progressDiv = document.getElementById('quizProgress');
+    var progressFill = document.getElementById('quizProgressFill');
+    var displayDiv = document.getElementById('quizDisplay');
+    var contentDiv = document.getElementById('quizContent');
     
     if (progressDiv) progressDiv.style.display = 'block';
-    let width = 0;
-    const interval = setInterval(() => {
+    var width = 0;
+    var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 100);
     
     try {
-        const prompt = `Generate a quiz about "${topic}" with exactly ${numQuestions} questions. 
-Difficulty: ${difficulty}. Type: ${questionType}.
+        var prompt = 'Generate a quiz about "' + topic + '" with exactly ' + numQuestions + ' questions. Difficulty: ' + difficulty + '. Type: ' + questionType + '.\n\nReturn ONLY valid JSON with this exact format:\n{\n    "title": "' + topic + ' Quiz",\n    "questions": [\n        {\n            "id": 1,\n            "text": "Question text here",\n            "type": "mcq",\n            "options": ["Option A", "Option B", "Option C", "Option D"],\n            "correctAnswer": "Option A",\n            "explanation": "Brief explanation"\n        }\n    ]\n}\n\nFor true/false, options should be ["True", "False"].\nMake questions educational and appropriate for ' + difficulty + ' difficulty.';
 
-Return ONLY valid JSON with this exact format:
-{
-    "title": "${topic} Quiz",
-    "questions": [
-        {
-            "id": 1,
-            "text": "Question text here",
-            "type": "mcq",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
-            "correctAnswer": "Option A",
-            "explanation": "Brief explanation"
-        }
-    ]
-}
-
-For true/false, options should be ["True", "False"].
-Make questions educational and appropriate for ${difficulty} difficulty.`;
-
-        const response = await fetch(API_URL, {
+        var response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -1425,25 +1105,27 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
             })
         });
         
-        const data = await response.json();
-        let quizData;
+        var data = await response.json();
+        var quizData;
         
         try {
-            let jsonStr = data.response;
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            var jsonStr = data.response;
+            var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
             if (jsonMatch) jsonStr = jsonMatch[0];
             quizData = JSON.parse(jsonStr);
         } catch (e) {
             quizData = {
-                title: `${topic} Quiz`,
-                questions: Array(parseInt(numQuestions)).fill().map((_, i) => ({
-                    id: i + 1,
-                    text: `Sample question about ${topic} ${i + 1}`,
-                    type: "mcq",
-                    options: ["Option A", "Option B", "Option C"],
-                    correctAnswer: "Option A",
-                    explanation: "This is a sample explanation."
-                }))
+                title: topic + ' Quiz',
+                questions: Array(parseInt(numQuestions)).fill().map(function(_, i) {
+                    return {
+                        id: i + 1,
+                        text: 'Sample question about ' + topic + ' ' + (i + 1),
+                        type: "mcq",
+                        options: ["Option A", "Option B", "Option C"],
+                        correctAnswer: "Option A",
+                        explanation: "This is a sample explanation."
+                    };
+                })
             };
         }
         
@@ -1452,55 +1134,26 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
         if (displayDiv) displayDiv.style.display = 'block';
         
         window.currentQuizData = quizData;
-        window.quizAnswers = {}; // Store user answers
+        window.quizAnswers = {};
         
-        let quizHTML = `
-            <div class="quiz-header">
-                <h3>📝 ${escapeHtml(quizData.title)}</h3>
-                <p>Difficulty: ${difficulty} | Questions: ${quizData.questions.length}</p>
-            </div>
-            <div id="quizQuestionsContainer">
-        `;
+        var quizHTML = '<div class="quiz-header"><h3>📝 ' + escapeHtml(quizData.title) + '</h3><p>Difficulty: ' + difficulty + ' | Questions: ' + quizData.questions.length + '</p></div><div id="quizQuestionsContainer">';
         
-        quizData.questions.forEach((q, idx) => {
-            const qNum = idx + 1;
-            quizHTML += `
-                <div class="quiz-question-card" data-question-id="${qNum}" data-correct="${escapeHtml(q.correctAnswer)}">
-                    <p class="quiz-question-text"><strong>Question ${qNum}:</strong> ${escapeHtml(q.text)}</p>
-                    <div class="quiz-options">
-            `;
+        quizData.questions.forEach(function(q, idx) {
+            var qNum = idx + 1;
+            quizHTML += '<div class="quiz-question-card" data-question-id="' + qNum + '" data-correct="' + escapeHtml(q.correctAnswer) + '"><p class="quiz-question-text"><strong>Question ' + qNum + ':</strong> ' + escapeHtml(q.text) + '</p><div class="quiz-options">';
             
-            const options = q.options || (q.type === 'truefalse' ? ['True', 'False'] : ['Option A', 'Option B', 'Option C']);
-            options.forEach(opt => {
-                quizHTML += `
-                    <label class="quiz-option">
-                        <input type="radio" name="q${qNum}" value="${escapeHtml(opt)}" onchange="saveQuizAnswer(${qNum}, '${escapeHtml(opt)}')">
-                        <span>${escapeHtml(opt)}</span>
-                    </label>
-                `;
+            var options = q.options || (q.type === 'truefalse' ? ['True', 'False'] : ['Option A', 'Option B', 'Option C']);
+            options.forEach(function(opt) {
+                quizHTML += '<label class="quiz-option"><input type="radio" name="q' + qNum + '" value="' + escapeHtml(opt) + '" onchange="saveQuizAnswer(' + qNum + ', \'' + escapeHtml(opt) + '\')"><span>' + escapeHtml(opt) + '</span></label>';
             });
             
-            quizHTML += `
-                    </div>
-                    <div class="quiz-feedback" id="feedback-${qNum}" style="display:none;"></div>
-                </div>
-            `;
+            quizHTML += '</div><div class="quiz-feedback" id="feedback-' + qNum + '" style="display:none;"></div></div>';
         });
         
-        quizHTML += `
-            </div>
-            <div class="quiz-actions">
-                <button class="quiz-action-btn submit-quiz-btn" onclick="submitQuizAnswers()">✅ Submit Quiz</button>
-                <button class="quiz-action-btn" onclick="resetQuizAnswers()">🔄 Reset All</button>
-                <button class="quiz-action-btn" onclick="exportQuizAsPDF()">📄 Export PDF</button>
-                <button class="quiz-action-btn" onclick="copyQuizToClipboard()">📋 Copy</button>
-                <button class="quiz-action-btn" onclick="saveQuizToLibrary()">💾 Save to Library</button>
-            </div>
-            <div class="quiz-results-container" id="quizResultsContainer" style="display:none;"></div>
-        `;
+        quizHTML += '</div><div class="quiz-actions"><button class="quiz-action-btn submit-quiz-btn" onclick="submitQuizAnswers()">✅ Submit Quiz</button><button class="quiz-action-btn" onclick="resetQuizAnswers()">🔄 Reset All</button><button class="quiz-action-btn" onclick="exportQuizAsPDF()">📄 Export PDF</button><button class="quiz-action-btn" onclick="copyQuizToClipboard()">📋 Copy</button><button class="quiz-action-btn" onclick="saveQuizToLibrary()">💾 Save to Library</button></div><div class="quiz-results-container" id="quizResultsContainer" style="display:none;"></div>';
         
         if (contentDiv) contentDiv.innerHTML = quizHTML;
-        showToast(`✅ Quiz generated with ${quizData.questions.length} questions!`);
+        showToast("✅ Quiz generated with " + quizData.questions.length + " questions!");
         
     } catch (error) {
         clearInterval(interval);
@@ -1510,34 +1163,30 @@ Make questions educational and appropriate for ${difficulty} difficulty.`;
     }
 }
 
-// Save individual answer when selected
 window.saveQuizAnswer = function(questionNum, answer) {
     if (!window.quizAnswers) window.quizAnswers = {};
     window.quizAnswers[questionNum] = answer;
     
-    // Visual feedback that answer is saved
-    const questionCard = document.querySelector(`.quiz-question-card[data-question-id="${questionNum}"]`);
+    var questionCard = document.querySelector('.quiz-question-card[data-question-id="' + questionNum + '"]');
     if (questionCard) {
         questionCard.style.borderLeft = '4px solid #10b981';
     }
 }
 
-// Submit all answers and show results
 window.submitQuizAnswers = function() {
     if (!window.currentQuizData || !window.currentQuizData.questions) {
         showToast("No quiz loaded!", "error");
         return;
     }
     
-    let score = 0;
-    const totalQuestions = window.currentQuizData.questions.length;
-    const results = [];
+    var score = 0;
+    var totalQuestions = window.currentQuizData.questions.length;
+    var results = [];
     
-    // Calculate score and prepare results
-    window.currentQuizData.questions.forEach((q, idx) => {
-        const qNum = idx + 1;
-        const userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
-        const isCorrect = userAnswer === q.correctAnswer;
+    window.currentQuizData.questions.forEach(function(q, idx) {
+        var qNum = idx + 1;
+        var userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
+        var isCorrect = userAnswer === q.correctAnswer;
         
         if (isCorrect) {
             score++;
@@ -1552,36 +1201,18 @@ window.submitQuizAnswers = function() {
             explanation: q.explanation
         });
         
-        // Show feedback for this question
-        const feedbackDiv = document.getElementById(`feedback-${qNum}`);
+        var feedbackDiv = document.getElementById('feedback-' + qNum);
         if (feedbackDiv) {
             if (userAnswer) {
                 if (isCorrect) {
-                    feedbackDiv.innerHTML = `
-                        <div class="correct-feedback">
-                            ✅ <strong>Correct!</strong> ${q.explanation || 'Great job!'}
-                        </div>
-                    `;
+                    feedbackDiv.innerHTML = '<div class="correct-feedback">✅ <strong>Correct!</strong> ' + (q.explanation || 'Great job!') + '</div>';
                     feedbackDiv.style.backgroundColor = '#d1fae5';
                 } else {
-                    feedbackDiv.innerHTML = `
-                        <div class="wrong-feedback">
-                            ❌ <strong>Incorrect!</strong><br>
-                            Your answer: ${escapeHtml(userAnswer)}<br>
-                            Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
-                            ${q.explanation ? `📖 ${q.explanation}` : ''}
-                        </div>
-                    `;
+                    feedbackDiv.innerHTML = '<div class="wrong-feedback">❌ <strong>Incorrect!</strong><br>Your answer: ' + escapeHtml(userAnswer) + '<br>Correct answer: <strong>' + escapeHtml(q.correctAnswer) + '</strong><br>' + (q.explanation ? '📖 ' + q.explanation : '') + '</div>';
                     feedbackDiv.style.backgroundColor = '#fee2e2';
                 }
             } else {
-                feedbackDiv.innerHTML = `
-                    <div class="wrong-feedback">
-                        ⚠️ <strong>Not answered!</strong><br>
-                        Correct answer: <strong>${escapeHtml(q.correctAnswer)}</strong><br>
-                        ${q.explanation ? `📖 ${q.explanation}` : ''}
-                    </div>
-                `;
+                feedbackDiv.innerHTML = '<div class="wrong-feedback">⚠️ <strong>Not answered!</strong><br>Correct answer: <strong>' + escapeHtml(q.correctAnswer) + '</strong><br>' + (q.explanation ? '📖 ' + q.explanation : '') + '</div>';
                 feedbackDiv.style.backgroundColor = '#fffbeb';
             }
             feedbackDiv.style.display = 'block';
@@ -1591,9 +1222,9 @@ window.submitQuizAnswers = function() {
         }
     });
     
-    const percentage = Math.round((score / totalQuestions) * 100);
-    let gradeMessage = '';
-    let gradeIcon = '';
+    var percentage = Math.round((score / totalQuestions) * 100);
+    var gradeMessage = '';
+    var gradeIcon = '';
     
     if (percentage >= 90) {
         gradeMessage = 'Excellent! You\'re a master of this topic! 🏆';
@@ -1609,176 +1240,155 @@ window.submitQuizAnswers = function() {
         gradeIcon = '⭐';
     }
     
-    // Display overall results
-    const resultsContainer = document.getElementById('quizResultsContainer');
+    var resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) {
         resultsContainer.style.display = 'block';
-        resultsContainer.innerHTML = `
-            <div class="results-card">
-                <div class="results-header">
-                    <span class="results-icon">${gradeIcon}</span>
-                    <h3>📊 Quiz Results</h3>
-                </div>
-                <div class="score-display">
-                    <div class="score-number">${score}/${totalQuestions}</div>
-                    <div class="score-percentage">${percentage}%</div>
-                </div>
-                <div class="grade-message">${gradeMessage}</div>
-                <div class="results-details">
-                    <details>
-                        <summary>📖 View Detailed Results</summary>
-                        <div class="detailed-results">
-                            ${results.map(r => `
-                                <div class="result-item ${r.isCorrect ? 'correct-result' : 'wrong-result'}">
-                                    <p><strong>Q${r.id}:</strong> ${escapeHtml(r.question)}</p>
-                                    <p>Your answer: ${escapeHtml(r.userAnswer)}</p>
-                                    <p>Correct: ${escapeHtml(r.correctAnswer)}</p>
-                                    ${r.explanation ? `<p>Explanation: ${escapeHtml(r.explanation)}</p>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </details>
-                </div>
-                <div class="results-actions">
-                    <button class="results-btn" onclick="scrollToWrongAnswers()">📖 Review Wrong Answers</button>
-                    <button class="results-btn" onclick="resetQuizAnswers()">🔄 Try Again</button>
-                    <button class="results-btn" onclick="exportQuizResults()">📄 Export Results</button>
-                </div>
-            </div>
-        `;
+        resultsContainer.innerHTML = '<div class="results-card"><div class="results-header"><span class="results-icon">' + gradeIcon + '</span><h3>📊 Quiz Results</h3></div><div class="score-display"><div class="score-number">' + score + '/' + totalQuestions + '</div><div class="score-percentage">' + percentage + '%</div></div><div class="grade-message">' + gradeMessage + '</div><div class="results-details"><details><summary>📖 View Detailed Results</summary><div class="detailed-results">' + results.map(function(r) {
+            return '<div class="result-item ' + (r.isCorrect ? 'correct-result' : 'wrong-result') + '"><p><strong>Q' + r.id + ':</strong> ' + escapeHtml(r.question) + '</p><p>Your answer: ' + escapeHtml(r.userAnswer) + '</p><p>Correct: ' + escapeHtml(r.correctAnswer) + '</p>' + (r.explanation ? '<p>Explanation: ' + escapeHtml(r.explanation) + '</p>' : '') + '</div>';
+        }).join('') + '</div></details></div><div class="results-actions"><button class="results-btn" onclick="scrollToWrongAnswers()">📖 Review Wrong Answers</button><button class="results-btn" onclick="resetQuizAnswers()">🔄 Try Again</button><button class="results-btn" onclick="exportQuizResults()">📄 Export Results</button></div></div>';
     }
     
-    // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    showToast(`Quiz completed! Score: ${score}/${totalQuestions} (${percentage}%)`);
+    showToast("Quiz completed! Score: " + score + "/" + totalQuestions + " (" + percentage + "%)");
 }
 
-// Reset all answers
 window.resetQuizAnswers = function() {
-    // Clear stored answers
     window.quizAnswers = {};
     
-    // Clear all radio inputs
-    document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(radio => {
+    document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(function(radio) {
         radio.checked = false;
     });
     
-    // Clear all feedback
-    document.querySelectorAll('.quiz-feedback').forEach(feedback => {
+    document.querySelectorAll('.quiz-feedback').forEach(function(feedback) {
         feedback.style.display = 'none';
         feedback.innerHTML = '';
     });
     
-    // Reset question card borders
-    document.querySelectorAll('.quiz-question-card').forEach(card => {
+    document.querySelectorAll('.quiz-question-card').forEach(function(card) {
         card.style.borderLeft = '';
     });
     
-    // Hide results container
-    const resultsContainer = document.getElementById('quizResultsContainer');
+    var resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) resultsContainer.style.display = 'none';
     
     showToast("Quiz reset! You can try again.");
 }
 
-// Scroll to wrong answers only
 window.scrollToWrongAnswers = function() {
-    const wrongFeedbacks = document.querySelectorAll('.wrong-feedback');
+    var wrongFeedbacks = document.querySelectorAll('.wrong-feedback');
     if (wrongFeedbacks.length > 0) {
         wrongFeedbacks[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        showToast(`Reviewing ${wrongFeedbacks.length} incorrect answers...`);
+        showToast("Reviewing " + wrongFeedbacks.length + " incorrect answers...");
     } else {
         showToast("🎉 Perfect score! No wrong answers to review!");
     }
 }
 
-// Export quiz results
 window.exportQuizResults = function() {
     if (!window.currentQuizData || !window.quizAnswers) {
         showToast("No quiz results to export!", "error");
         return;
     }
     
-    let exportText = `📝 ${window.currentQuizData.title}\n`;
-    exportText += `📅 Date: ${new Date().toLocaleString()}\n`;
-    exportText += `📊 Total Questions: ${window.currentQuizData.questions.length}\n`;
-    exportText += `="\n\n`;
+    var exportText = '📝 ' + window.currentQuizData.title + '\n';
+    exportText += '📅 Date: ' + new Date().toLocaleString() + '\n';
+    exportText += '📊 Total Questions: ' + window.currentQuizData.questions.length + '\n';
+    exportText += '="\n\n';
     
-    let score = 0;
+    var score = 0;
     
-    window.currentQuizData.questions.forEach((q, idx) => {
-        const qNum = idx + 1;
-        const userAnswer = window.quizAnswers[qNum] || "Not answered";
-        const isCorrect = userAnswer === q.correctAnswer;
+    window.currentQuizData.questions.forEach(function(q, idx) {
+        var qNum = idx + 1;
+        var userAnswer = window.quizAnswers[qNum] || "Not answered";
+        var isCorrect = userAnswer === q.correctAnswer;
         if (isCorrect) score++;
         
-        exportText += `${qNum}. ${q.text}\n`;
-        exportText += `   Your answer: ${userAnswer}\n`;
-        exportText += `   Correct answer: ${q.correctAnswer}\n`;
-        exportText += `   Result: ${isCorrect ? '✓ CORRECT' : '✗ INCORRECT'}\n`;
+        exportText += qNum + '. ' + q.text + '\n';
+        exportText += '   Your answer: ' + userAnswer + '\n';
+        exportText += '   Correct answer: ' + q.correctAnswer + '\n';
+        exportText += '   Result: ' + (isCorrect ? '✓ CORRECT' : '✗ INCORRECT') + '\n';
         if (q.explanation) {
-            exportText += `   Explanation: ${q.explanation}\n`;
+            exportText += '   Explanation: ' + q.explanation + '\n';
         }
-        exportText += `\n`;
+        exportText += '\n';
     });
     
-    const percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
-    exportText += `="\n`;
-    exportText += `FINAL SCORE: ${score}/${window.currentQuizData.questions.length} (${percentage}%)\n`;
-    exportText += `Grade: ${percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT'}\n`;
+    var percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
+    exportText += '="\n';
+    exportText += 'FINAL SCORE: ' + score + '/' + window.currentQuizData.questions.length + ' (' + percentage + '%)\n';
+    exportText += 'Grade: ' + (percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT') + '\n';
     
-    // Download as text file
-    const blob = new Blob([exportText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    var blob = new Blob([exportText], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
     a.href = url;
-    a.download = `${window.currentQuizData.title.replace(/ /g, '_')}_results.txt`;
+    a.download = window.currentQuizData.title.replace(/ /g, '_') + '_results.txt';
     a.click();
     URL.revokeObjectURL(url);
     
     showToast("Quiz results exported!");
 }
 
-// Remove the old startQuiz function and replace with submitQuizAnswers
-window.startQuiz = function() {
-    // This function is deprecated - now using submitQuizAnswers
-    showToast("Please answer the questions and click 'Submit Quiz'", "info");
+window.exportQuizAsPDF = function() {
+    var content = document.getElementById('quizContent')?.innerHTML;
+    if (content) {
+        var printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Quiz</title><style>body { font-family: Arial; padding: 20px; } .quiz-question-card { margin-bottom: 20px; }</style></head><body>' + content + '</body></html>');
+        printWindow.print();
+    }
 }
 
-// Study Notes Generation
+window.copyQuizToClipboard = function() {
+    if (!window.currentQuizData) return;
+    var quizText = window.currentQuizData.title + '\n\n';
+    window.currentQuizData.questions.forEach(function(q, idx) {
+        quizText += (idx + 1) + '. ' + q.text + '\n   Correct: ' + q.correctAnswer + '\n\n';
+    });
+    navigator.clipboard.writeText(quizText);
+    showToast("Quiz copied!");
+}
+
+window.saveQuizToLibrary = function() {
+    if (!window.currentQuizData) return;
+    var user = getCurrentUser();
+    var savedQuizzes = JSON.parse(localStorage.getItem("quizzes_" + user) || '[]');
+    savedQuizzes.push({
+        id: 'quiz_' + Date.now(),
+        title: window.currentQuizData.title,
+        data: window.currentQuizData,
+        date: new Date().toLocaleString()
+    });
+    localStorage.setItem("quizzes_" + user, JSON.stringify(savedQuizzes));
+    showToast("Quiz saved to library!");
+}
+
+// ============================================
+// STUDY NOTES
+// ============================================
+
 window.generateStudyNotes = async function() {
-    const topic = document.getElementById('notesTopicInput').value;
+    var topic = document.getElementById('notesTopicInput').value;
     if (!topic) {
         showToast("Please enter a topic", "error");
         return;
     }
     
-    const progressDiv = document.getElementById('notesProgress');
-    const progressFill = document.getElementById('notesProgressFill');
-    const displayDiv = document.getElementById('notesDisplay');
-    const contentDiv = document.getElementById('notesContent');
+    var progressDiv = document.getElementById('notesProgress');
+    var progressFill = document.getElementById('notesProgressFill');
+    var displayDiv = document.getElementById('notesDisplay');
+    var contentDiv = document.getElementById('notesContent');
     
     if (progressDiv) progressDiv.style.display = 'block';
-    let width = 0;
-    const interval = setInterval(() => {
+    var width = 0;
+    var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 100);
     
     try {
-        const prompt = `Create comprehensive study notes about "${topic}".
+        var prompt = 'Create comprehensive study notes about "' + topic + '".\n\nInclude:\n1. Key Concepts (at least 5)\n2. Important Definitions\n3. Summary Points\n4. Key Takeaways\n5. Study Tips\n\nFormat with clear headings, bullet points, and emojis for easy reading.\nMake it organized and educational.';
 
-Include:
-1. Key Concepts (at least 5)
-2. Important Definitions
-3. Summary Points
-4. Key Takeaways
-5. Study Tips
-
-Format with clear headings, bullet points, and emojis for easy reading.
-Make it organized and educational.`;
-
-        const response = await fetch(API_URL, {
+        var response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -1788,26 +1398,18 @@ Make it organized and educational.`;
             })
         });
         
-        const data = await response.json();
-        const notesContent = data.response || "Failed to generate notes.";
+        var data = await response.json();
+        var notesContent = data.response || "Failed to generate notes.";
         
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
         if (displayDiv) displayDiv.style.display = 'block';
         
         if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="notes-header">
-                    <h2>📚 Study Notes: ${escapeHtml(topic)}</h2>
-                    <p>Generated on: ${new Date().toLocaleString()}</p>
-                </div>
-                <div class="notes-body">
-                    ${formatContent(notesContent)}
-                </div>
-            `;
+            contentDiv.innerHTML = '<div class="notes-header"><h2>📚 Study Notes: ' + escapeHtml(topic) + '</h2><p>Generated on: ' + new Date().toLocaleString() + '</p></div><div class="notes-body">' + formatContent(notesContent) + '</div>';
         }
         
-        window.currentNotes = { topic, content: notesContent, date: new Date().toLocaleString() };
+        window.currentNotes = { topic: topic, content: notesContent, date: new Date().toLocaleString() };
         showToast("✅ Study notes generated!");
         
     } catch (error) {
@@ -1818,130 +1420,17 @@ Make it organized and educational.`;
     }
 }
 
-// Quiz helper functions
-window.startQuiz = function() {
-    if (!window.currentQuizData || !window.currentQuizData.questions) {
-        showToast("No quiz loaded. Generate a quiz first!", "error");
-        return;
-    }
-    
-    let score = 0;
-    
-    window.currentQuizData.questions.forEach((q, idx) => {
-        const qNum = idx + 1;
-        const selected = document.querySelector(`input[name="q${qNum}"]:checked`);
-        const feedbackDiv = document.getElementById(`feedback-${qNum}`);
-        
-        if (selected) {
-            const userAnswer = selected.value;
-            if (userAnswer === q.correctAnswer) {
-                score++;
-                if (feedbackDiv) {
-                    feedbackDiv.innerHTML = `✅ Correct! ${q.explanation || ''}`;
-                    feedbackDiv.style.color = '#10b981';
-                    feedbackDiv.style.display = 'block';
-                }
-            } else {
-                if (feedbackDiv) {
-                    feedbackDiv.innerHTML = `❌ Incorrect! Correct answer: ${q.correctAnswer}. ${q.explanation || ''}`;
-                    feedbackDiv.style.color = '#ef4444';
-                    feedbackDiv.style.display = 'block';
-                }
-            }
-        } else {
-            if (feedbackDiv) {
-                feedbackDiv.innerHTML = `⚠️ No answer selected. Correct answer: ${q.correctAnswer}`;
-                feedbackDiv.style.color = '#f59e0b';
-                feedbackDiv.style.display = 'block';
-            }
-        }
-    });
-    
-    const percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
-    let gradeMessage = percentage >= 90 ? '🎉 Excellent!' : percentage >= 70 ? '👍 Good job!' : percentage >= 50 ? '📚 Not bad!' : '💪 Keep practicing!';
-    
-    const scoreDiv = document.getElementById('quizScore');
-    if (scoreDiv) {
-        scoreDiv.style.display = 'block';
-        scoreDiv.innerHTML = `
-            <div class="score-card">
-                <h4>📊 Score: ${score}/${window.currentQuizData.questions.length} (${percentage}%)</h4>
-                <p>${gradeMessage}</p>
-                <button onclick="resetQuiz()">🔄 Retake Quiz</button>
-            </div>
-        `;
-    }
-    
-    showToast(`Quiz completed! Score: ${score}/${window.currentQuizData.questions.length}`);
-}
-
-window.resetQuiz = function() {
-    document.querySelectorAll('#quizForm input[type="radio"]').forEach(radio => radio.checked = false);
-    for (let i = 1; i <= (window.currentQuizData?.questions.length || 0); i++) {
-        const feedbackDiv = document.getElementById(`feedback-${i}`);
-        if (feedbackDiv) {
-            feedbackDiv.style.display = 'none';
-            feedbackDiv.innerHTML = '';
-        }
-    }
-    const scoreDiv = document.getElementById('quizScore');
-    if (scoreDiv) scoreDiv.style.display = 'none';
-    showToast("Quiz reset!");
-}
-
-window.exportQuizAsPDF = function() {
-    const content = document.getElementById('quizContent')?.innerHTML;
-    if (content) {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html><head><title>Quiz</title>
-            <style>body { font-family: Arial; padding: 20px; } .quiz-question-card { margin-bottom: 20px; }</style>
-            </head><body>${content}</body></html>
-        `);
-        printWindow.print();
-    }
-}
-
-window.copyQuizToClipboard = function() {
-    if (!window.currentQuizData) return;
-    let quizText = `${window.currentQuizData.title}\n\n`;
-    window.currentQuizData.questions.forEach((q, idx) => {
-        quizText += `${idx + 1}. ${q.text}\n   Correct: ${q.correctAnswer}\n\n`;
-    });
-    navigator.clipboard.writeText(quizText);
-    showToast("Quiz copied!");
-}
-
-window.saveQuizToLibrary = function() {
-    if (!window.currentQuizData) return;
-    const user = getCurrentUser();
-    const savedQuizzes = JSON.parse(localStorage.getItem(`quizzes_${user}`) || '[]');
-    savedQuizzes.push({
-        id: 'quiz_' + Date.now(),
-        title: window.currentQuizData.title,
-        data: window.currentQuizData,
-        date: new Date().toLocaleString()
-    });
-    localStorage.setItem(`quizzes_${user}`, JSON.stringify(savedQuizzes));
-    showToast("Quiz saved to library!");
-}
-
-// Notes helper functions
 window.exportNotesAsPDF = function() {
-    const content = document.getElementById('notesContent')?.innerHTML;
+    var content = document.getElementById('notesContent')?.innerHTML;
     if (content) {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html><head><title>Study Notes</title>
-            <style>body { font-family: Arial; padding: 20px; }</style>
-            </head><body>${content}</body></html>
-        `);
+        var printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Study Notes</title><style>body { font-family: Arial; padding: 20px; }</style></head><body>' + content + '</body></html>');
         printWindow.print();
     }
 }
 
 window.copyNotesToClipboard = function() {
-    const content = document.getElementById('notesContent')?.innerText;
+    var content = document.getElementById('notesContent')?.innerText;
     if (content) {
         navigator.clipboard.writeText(content);
         showToast("Notes copied!");
@@ -1950,18 +1439,18 @@ window.copyNotesToClipboard = function() {
 
 window.saveNotesToLibrary = function() {
     if (!window.currentNotes) return;
-    const user = getCurrentUser();
-    const savedNotes = JSON.parse(localStorage.getItem(`notes_${user}`) || '[]');
+    var user = getCurrentUser();
+    var savedNotes = JSON.parse(localStorage.getItem("notes_" + user) || '[]');
     savedNotes.push(window.currentNotes);
-    localStorage.setItem(`notes_${user}`, JSON.stringify(savedNotes));
+    localStorage.setItem("notes_" + user, JSON.stringify(savedNotes));
     showToast("Notes saved to library!");
 }
 
 window.printNotes = function() {
-    const content = document.getElementById('notesContent')?.innerHTML;
+    var content = document.getElementById('notesContent')?.innerHTML;
     if (content) {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`<html><head><title>Notes</title></head><body>${content}</body></html>`);
+        var printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Notes</title></head><body>' + content + '</body></html>');
         printWindow.print();
     }
 }
@@ -1972,17 +1461,16 @@ window.useChatForLearning = async function(type) {
         return;
     }
     
-    let chats = getChats();
-    const chat = chats.find(c => c.id === currentChatId);
+    var chats = getChats();
+    var chat = chats.find(function(c) { return c.id === currentChatId; });
     
     if (!chat || !chat.messages || chat.messages.length === 0) {
         showToast("No chat content found!", "error");
         return;
     }
     
-    // Get the last few messages for context
-    const lastMessages = chat.messages.slice(-5);
-    const chatContent = lastMessages.map(m => `${m.role}: ${m.content}`).join('\n\n');
+    var lastMessages = chat.messages.slice(-5);
+    var chatContent = lastMessages.map(function(m) { return m.role + ': ' + m.content; }).join('\n\n');
     
     if (type === 'quiz') {
         document.getElementById('quizTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
@@ -1990,58 +1478,56 @@ window.useChatForLearning = async function(type) {
     } else if (type === 'notes') {
         document.getElementById('notesTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
         showToast("✅ Chat content loaded! Click Generate Notes");
-    } else if (type === 'mindmap') {
-        document.getElementById('mindmapTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
-        showToast("✅ Chat content loaded! Click Generate Mind Map");
     }
 }
 
 window.uploadForLearning = function(type) {
-    const input = document.createElement('input');
+    var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.txt,.pdf,.docx';
-    input.onchange = () => showToast(`Document uploaded for ${type} generation!`);
+    input.onchange = function() { showToast("Document uploaded for " + type + " generation!"); };
     input.click();
 }
 
-// ================= COMPLETE GAMES MODULE WITH BIG BOXES =================
+// ============================================
+// GAMES MODULE
+// ============================================
 
 // Game state variables
-let currentGameType = null;
-let currentQuizQuestions = [];
-let currentQuizIndex = 0;
-let quizScore = 0;
-let quizTimer = null;
-let timeLeft = 30;
+var currentGameType = null;
+var currentQuizQuestions = [];
+var currentQuizIndex = 0;
+var quizScore = 0;
+var quizTimer = null;
+var timeLeft = 30;
 
-let memoryCards = [];
-let memoryFlipped = [];
-let memoryLocked = false;
-let memoryMatches = 0;
+var memoryCards = [];
+var memoryFlipped = [];
+var memoryLocked = false;
+var memoryMatches = 0;
 
-let typingCurrentWord = "";
-let typingScore = 0;
-let typingRound = 0;
-let typingWordsList = [];
+var typingCurrentWord = "";
+var typingScore = 0;
+var typingRound = 0;
+var typingWordsList = [];
 
-let triviaQuestions = [];
-let triviaIndex = 0;
-let triviaScore = 0;
+var triviaQuestions = [];
+var triviaIndex = 0;
+var triviaScore = 0;
 
-let scrambleCurrentWord = "";
-let scrambleCurrentHint = "";
-let scrambleScore = 0;
-let scrambleRound = 0;
-let scrambleWordsList = [];
+var scrambleCurrentWord = "";
+var scrambleCurrentHint = "";
+var scrambleScore = 0;
+var scrambleRound = 0;
+var scrambleWordsList = [];
 
-let tfQuestions = [];
-let tfIndex = 0;
-let tfScore = 0;
+var tfQuestions = [];
+var tfIndex = 0;
+var tfScore = 0;
 
-// Open Games Modal
 window.openGamesModal = function() {
     console.log("Opening Games Modal");
-    const modal = document.getElementById('gamesModal');
+    var modal = document.getElementById('gamesModal');
     if (modal) {
         modal.style.display = 'flex';
         modal.style.position = 'fixed';
@@ -2054,87 +1540,31 @@ window.openGamesModal = function() {
         modal.style.justifyContent = 'center';
         modal.style.alignItems = 'center';
     }
-    // Show game selection by default
     showGameSelectionScreen();
 }
 
-// Close Games Modal
 window.closeGamesModal = function() {
-    const modal = document.getElementById('gamesModal');
+    var modal = document.getElementById('gamesModal');
     if (modal) modal.style.display = 'none';
     if (quizTimer) clearInterval(quizTimer);
 }
 
-// Show game selection screen with big boxes
 function showGameSelectionScreen() {
-    const gameContent = document.getElementById('gameContent');
+    var gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
     
-    gameContent.innerHTML = `
-        <div class="games-grid-container">
-            <div class="game-card-large" onclick="selectGame('quiz-race')">
-                <div class="game-card-icon">🏆</div>
-                <h3>Quiz Race</h3>
-                <p>Test your knowledge with timed quizzes</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-            
-            <div class="game-card-large" onclick="selectGame('memory-match')">
-                <div class="game-card-icon">🎴</div>
-                <h3>Memory Match</h3>
-                <p>Match terms with definitions</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-            
-            <div class="game-card-large" onclick="selectGame('typing-speed')">
-                <div class="game-card-icon">⌨️</div>
-                <h3>Typing Speed</h3>
-                <p>Improve your typing speed</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-            
-            <div class="game-card-large" onclick="selectGame('trivia-challenge')">
-                <div class="game-card-icon">❓</div>
-                <h3>Trivia Challenge</h3>
-                <p>Answer random knowledge questions</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-            
-            <div class="game-card-large" onclick="selectGame('word-scramble')">
-                <div class="game-card-icon">🔤</div>
-                <h3>Word Scramble</h3>
-                <p>Unscramble the letters to form words</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-            
-            <div class="game-card-large" onclick="selectGame('true-false')">
-                <div class="game-card-icon">✓✗</div>
-                <h3>True or False</h3>
-                <p>Test your knowledge with true/false questions</p>
-                <button class="play-now-btn">Play Now →</button>
-            </div>
-        </div>
-    `;
+    gameContent.innerHTML = '<div class="games-grid-container"><div class="game-card-large" onclick="selectGame(\'quiz-race\')"><div class="game-card-icon">🏆</div><h3>Quiz Race</h3><p>Test your knowledge with timed quizzes</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'memory-match\')"><div class="game-card-icon">🎴</div><h3>Memory Match</h3><p>Match terms with definitions</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'typing-speed\')"><div class="game-card-icon">⌨️</div><h3>Typing Speed</h3><p>Improve your typing speed</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'trivia-challenge\')"><div class="game-card-icon">❓</div><h3>Trivia Challenge</h3><p>Answer random knowledge questions</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'word-scramble\')"><div class="game-card-icon">🔤</div><h3>Word Scramble</h3><p>Unscramble the letters to form words</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'true-false\')"><div class="game-card-icon">✓✗</div><h3>True or False</h3><p>Test your knowledge with true/false questions</p><button class="play-now-btn">Play Now →</button></div></div>';
 }
 
-// Select and start a game
 window.selectGame = function(gameType) {
     currentGameType = gameType;
-    const gameContent = document.getElementById('gameContent');
+    var gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
     
-    // Add back button
-    gameContent.innerHTML = `
-        <div class="game-header-bar">
-            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            <h2 class="current-game-title">${getGameTitle(gameType)}</h2>
-        </div>
-        <div id="activeGameContainer" class="active-game-container"></div>
-    `;
+    gameContent.innerHTML = '<div class="game-header-bar"><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button><h2 class="current-game-title">' + getGameTitle(gameType) + '</h2></div><div id="activeGameContainer" class="active-game-container"></div>';
     
-    const activeContainer = document.getElementById('activeGameContainer');
+    var activeContainer = document.getElementById('activeGameContainer');
     
-    // Load the selected game
     switch(gameType) {
         case 'quiz-race':
             loadQuizRaceGame(activeContainer);
@@ -2160,7 +1590,7 @@ window.selectGame = function(gameType) {
 }
 
 function getGameTitle(gameType) {
-    const titles = {
+    var titles = {
         'quiz-race': '🏆 Quiz Race',
         'memory-match': '🎴 Memory Match',
         'typing-speed': '⌨️ Typing Speed',
@@ -2193,14 +1623,14 @@ function displayQuizQuestion(container) {
         return;
     }
     
-    const q = currentQuizQuestions[currentQuizIndex];
+    var q = currentQuizQuestions[currentQuizIndex];
     timeLeft = 30;
     
     if (quizTimer) clearInterval(quizTimer);
     
-    quizTimer = setInterval(() => {
+    quizTimer = setInterval(function() {
         timeLeft--;
-        const timerEl = document.getElementById('quizTimer');
+        var timerEl = document.getElementById('quizTimer');
         if (timerEl) {
             timerEl.textContent = timeLeft;
             if (timeLeft <= 5) timerEl.style.color = '#ef4444';
@@ -2211,39 +1641,27 @@ function displayQuizQuestion(container) {
         }
     }, 1000);
     
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">Question ${currentQuizIndex + 1}/${currentQuizQuestions.length}</div>
-            <div class="game-score">⭐ Score: ${quizScore}</div>
-            <div class="game-timer">⏱️ Time: <span id="quizTimer">30</span>s</div>
-        </div>
-        <div class="game-question-large">${escapeHtml(q.question)}</div>
-        <div class="game-options-grid">
-            ${q.options.map(opt => `<button class="game-option-btn" onclick="checkQuizAnswer('${escapeHtml(opt)}', this)">${escapeHtml(opt)}</button>`).join('')}
-        </div>
-        <div class="game-feedback" id="gameFeedback"></div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (currentQuizIndex + 1) + '/' + currentQuizQuestions.length + '</div><div class="game-score">⭐ Score: ' + quizScore + '</div><div class="game-timer">⏱️ Time: <span id="quizTimer">30</span>s</div></div><div class="game-question-large">' + escapeHtml(q.question) + '</div><div class="game-options-grid">' + q.options.map(function(opt) { return '<button class="game-option-btn" onclick="checkQuizAnswer(\'' + escapeHtml(opt) + '\', this)">' + escapeHtml(opt) + '</button>'; }).join('') + '</div><div class="game-feedback" id="gameFeedback"></div>';
 }
 
 window.checkQuizAnswer = function(selected, btnElement) {
     if (quizTimer) clearInterval(quizTimer);
     
-    const q = currentQuizQuestions[currentQuizIndex];
-    const feedback = document.getElementById('gameFeedback');
+    var q = currentQuizQuestions[currentQuizIndex];
+    var feedback = document.getElementById('gameFeedback');
     
-    // Disable all option buttons
-    document.querySelectorAll('.game-option-btn').forEach(btn => btn.disabled = true);
+    document.querySelectorAll('.game-option-btn').forEach(function(btn) { btn.disabled = true; });
     
     if (selected === q.correct) {
         quizScore += 10;
-        feedback.innerHTML = `<div class="correct-answer">✅ Correct! +10 points</div>`;
+        feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
         showToast("✅ Correct!");
     } else {
-        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! Correct answer: ${q.correct}</div>`;
+        feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! Correct answer: ' + q.correct + '</div>';
         showToast("❌ Wrong answer!");
     }
     
-    setTimeout(() => moveToNextQuizQuestion(document.getElementById('activeGameContainer')), 2000);
+    setTimeout(function() { moveToNextQuizQuestion(document.getElementById('activeGameContainer')); }, 2000);
 }
 
 function moveToNextQuizQuestion(container) {
@@ -2256,24 +1674,13 @@ function moveToNextQuizQuestion(container) {
 }
 
 function showQuizResults(container) {
-    const percentage = Math.round((quizScore / (currentQuizQuestions.length * 10)) * 100);
-    container.innerHTML = `
-        <div class="game-results-large">
-            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
-            <h2>Quiz Complete!</h2>
-            <div class="final-score-large">Final Score: ${quizScore}/${currentQuizQuestions.length * 10}</div>
-            <div class="score-percentage-large">${percentage}%</div>
-            <div class="results-buttons">
-                <button class="play-again-btn" onclick="selectGame('quiz-race')">🔄 Play Again</button>
-                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            </div>
-        </div>
-    `;
+    var percentage = Math.round((quizScore / (currentQuizQuestions.length * 10)) * 100);
+    container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>Quiz Complete!</h2><div class="final-score-large">Final Score: ' + quizScore + '/' + (currentQuizQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'quiz-race\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
 // ================= MEMORY MATCH GAME =================
 function loadMemoryMatchGame(container) {
-    const pairs = [
+    var pairs = [
         { pair1: "HTML", pair2: "Web Page" },
         { pair1: "CSS", pair2: "Styling" },
         { pair1: "JS", pair2: "JavaScript" },
@@ -2283,15 +1690,16 @@ function loadMemoryMatchGame(container) {
     ];
     
     memoryCards = [];
-    pairs.forEach((pair, idx) => {
+    pairs.forEach(function(pair, idx) {
         memoryCards.push({ id: idx * 2, value: pair.pair1, matched: false, pairId: idx });
         memoryCards.push({ id: idx * 2 + 1, value: pair.pair2, matched: false, pairId: idx });
     });
     
-    // Shuffle
-    for (let i = memoryCards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [memoryCards[i], memoryCards[j]] = [memoryCards[j], memoryCards[i]];
+    for (var i = memoryCards.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = memoryCards[i];
+        memoryCards[i] = memoryCards[j];
+        memoryCards[j] = temp;
     }
     
     memoryFlipped = [];
@@ -2302,25 +1710,9 @@ function loadMemoryMatchGame(container) {
 }
 
 function renderMemoryGame(container) {
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">🎴 Memory Match</div>
-            <div class="game-score">Matches: ${memoryMatches}/${memoryCards.length / 2}</div>
-        </div>
-        <div class="memory-grid-large">
-            ${memoryCards.map((card, idx) => `
-                <div class="memory-card-large ${card.matched ? 'matched' : ''} ${memoryFlipped.includes(idx) ? 'flipped' : ''}" 
-                     onclick="flipMemoryCard(${idx})">
-                    <div class="card-front">❓</div>
-                    <div class="card-back">${card.matched ? '✓' : escapeHtml(card.value)}</div>
-                </div>
-            `).join('')}
-        </div>
-        <div class="game-buttons">
-            <button class="play-again-btn" onclick="selectGame('memory-match')">🔄 New Game</button>
-            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-        </div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">🎴 Memory Match</div><div class="game-score">Matches: ' + memoryMatches + '/' + (memoryCards.length / 2) + '</div></div><div class="memory-grid-large">' + memoryCards.map(function(card, idx) {
+        return '<div class="memory-card-large' + (card.matched ? ' matched' : '') + (memoryFlipped.includes(idx) ? ' flipped' : '') + '" onclick="flipMemoryCard(' + idx + ')"><div class="card-front">❓</div><div class="card-back">' + (card.matched ? '✓' : escapeHtml(card.value)) + '</div></div>';
+    }).join('') + '</div><div class="game-buttons"><button class="play-again-btn" onclick="selectGame(\'memory-match\')">🔄 New Game</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div>';
 }
 
 window.flipMemoryCard = function(index) {
@@ -2338,8 +1730,8 @@ window.flipMemoryCard = function(index) {
 }
 
 function checkMemoryMatch() {
-    const card1 = memoryCards[memoryFlipped[0]];
-    const card2 = memoryCards[memoryFlipped[1]];
+    var card1 = memoryCards[memoryFlipped[0]];
+    var card2 = memoryCards[memoryFlipped[1]];
     
     if (card1.pairId === card2.pairId) {
         card1.matched = true;
@@ -2350,11 +1742,11 @@ function checkMemoryMatch() {
         showToast("🎉 Match found!");
         
         if (memoryMatches === memoryCards.length / 2) {
-            setTimeout(() => showToast("🏆 Congratulations! You completed the game!"), 500);
+            setTimeout(function() { showToast("🏆 Congratulations! You completed the game!"); }, 500);
         }
     } else {
         memoryLocked = true;
-        setTimeout(() => {
+        setTimeout(function() {
             memoryFlipped = [];
             memoryLocked = false;
             renderMemoryGame(document.getElementById('activeGameContainer'));
@@ -2378,58 +1770,35 @@ function loadNextTypingWord(container) {
     
     typingCurrentWord = typingWordsList[typingRound];
     
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">Word ${typingRound + 1}/${typingWordsList.length}</div>
-            <div class="game-score">⭐ Score: ${typingScore}</div>
-        </div>
-        <div class="typing-word-large">${typingCurrentWord}</div>
-        <input type="text" id="typingInput" class="game-input-large" placeholder="Type the word above..." autofocus>
-        <div class="game-buttons">
-            <button class="game-submit-btn-large" onclick="checkTypingWord()">Submit</button>
-            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button>
-        </div>
-        <div class="game-feedback" id="typingFeedback"></div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">Word ' + (typingRound + 1) + '/' + typingWordsList.length + '</div><div class="game-score">⭐ Score: ' + typingScore + '</div></div><div class="typing-word-large">' + typingCurrentWord + '</div><input type="text" id="typingInput" class="game-input-large" placeholder="Type the word above..." autofocus><div class="game-buttons"><button class="game-submit-btn-large" onclick="checkTypingWord()">Submit</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button></div><div class="game-feedback" id="typingFeedback"></div>';
     
     document.getElementById('typingInput')?.focus();
 }
 
 window.checkTypingWord = function() {
-    const input = document.getElementById('typingInput');
-    const userInput = input?.value.trim().toLowerCase();
-    const feedback = document.getElementById('typingFeedback');
-    const container = document.getElementById('activeGameContainer');
+    var input = document.getElementById('typingInput');
+    var userInput = input?.value.trim().toLowerCase();
+    var feedback = document.getElementById('typingFeedback');
+    var container = document.getElementById('activeGameContainer');
     
     if (userInput === typingCurrentWord) {
         typingScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
         showToast("🎉 Correct!");
     } else {
-        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! The word was: ${typingCurrentWord}</div>`;
+        feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! The word was: ' + typingCurrentWord + '</div>';
         showToast("❌ Wrong!");
     }
     
-    setTimeout(() => {
+    setTimeout(function() {
         typingRound++;
         loadNextTypingWord(container);
     }, 1500);
 }
 
 function showTypingResults(container) {
-    const percentage = Math.round((typingScore / (typingWordsList.length * 10)) * 100);
-    container.innerHTML = `
-        <div class="game-results-large">
-            <div class="results-emoji">⌨️</div>
-            <h2>Typing Speed Complete!</h2>
-            <div class="final-score-large">Score: ${typingScore}/${typingWordsList.length * 10}</div>
-            <div class="score-percentage-large">${percentage}%</div>
-            <div class="results-buttons">
-                <button class="play-again-btn" onclick="selectGame('typing-speed')">🔄 Try Again</button>
-                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            </div>
-        </div>
-    `;
+    var percentage = Math.round((typingScore / (typingWordsList.length * 10)) * 100);
+    container.innerHTML = '<div class="game-results-large"><div class="results-emoji">⌨️</div><h2>Typing Speed Complete!</h2><div class="final-score-large">Score: ' + typingScore + '/' + (typingWordsList.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'typing-speed\')">🔄 Try Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
 // ================= TRIVIA CHALLENGE =================
@@ -2454,56 +1823,35 @@ function displayTriviaQuestion(container) {
         return;
     }
     
-    const q = triviaQuestions[triviaIndex];
+    var q = triviaQuestions[triviaIndex];
     
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">Question ${triviaIndex + 1}/${triviaQuestions.length}</div>
-            <div class="game-score">⭐ Score: ${triviaScore}</div>
-        </div>
-        <div class="game-question-large">${escapeHtml(q.question)}</div>
-        <div class="game-options-grid">
-            ${q.options.map(opt => `<button class="game-option-btn" onclick="checkTriviaAnswer('${escapeHtml(opt)}', this)">${escapeHtml(opt)}</button>`).join('')}
-        </div>
-        <div class="game-feedback" id="triviaFeedback"></div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (triviaIndex + 1) + '/' + triviaQuestions.length + '</div><div class="game-score">⭐ Score: ' + triviaScore + '</div></div><div class="game-question-large">' + escapeHtml(q.question) + '</div><div class="game-options-grid">' + q.options.map(function(opt) { return '<button class="game-option-btn" onclick="checkTriviaAnswer(\'' + escapeHtml(opt) + '\', this)">' + escapeHtml(opt) + '</button>'; }).join('') + '</div><div class="game-feedback" id="triviaFeedback"></div>';
 }
 
 window.checkTriviaAnswer = function(selected, btnElement) {
-    const q = triviaQuestions[triviaIndex];
-    const feedback = document.getElementById('triviaFeedback');
+    var q = triviaQuestions[triviaIndex];
+    var feedback = document.getElementById('triviaFeedback');
     
-    document.querySelectorAll('.game-option-btn').forEach(btn => btn.disabled = true);
+    document.querySelectorAll('.game-option-btn').forEach(function(btn) { btn.disabled = true; });
     
     if (selected === q.correct) {
         triviaScore += 10;
-        feedback.innerHTML = `<div class="correct-answer">✅ Correct! ${q.funFact || 'Great job!'}</div>`;
+        feedback.innerHTML = '<div class="correct-answer">✅ Correct! ' + (q.funFact || 'Great job!') + '</div>';
         showToast("✅ Correct!");
     } else {
-        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! Correct: ${q.correct}. ${q.funFact || ''}</div>`;
+        feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! Correct: ' + q.correct + '. ' + (q.funFact || '') + '</div>';
         showToast("❌ Wrong!");
     }
     
-    setTimeout(() => {
+    setTimeout(function() {
         triviaIndex++;
         displayTriviaQuestion(document.getElementById('activeGameContainer'));
     }, 2000);
 }
 
 function showTriviaResults(container) {
-    const percentage = Math.round((triviaScore / (triviaQuestions.length * 10)) * 100);
-    container.innerHTML = `
-        <div class="game-results-large">
-            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
-            <h2>Trivia Complete!</h2>
-            <div class="final-score-large">Score: ${triviaScore}/${triviaQuestions.length * 10}</div>
-            <div class="score-percentage-large">${percentage}%</div>
-            <div class="results-buttons">
-                <button class="play-again-btn" onclick="selectGame('trivia-challenge')">🔄 Play Again</button>
-                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            </div>
-        </div>
-    `;
+    var percentage = Math.round((triviaScore / (triviaQuestions.length * 10)) * 100);
+    container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>Trivia Complete!</h2><div class="final-score-large">Score: ' + triviaScore + '/' + (triviaQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'trivia-challenge\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
 // ================= WORD SCRAMBLE =================
@@ -2527,69 +1875,47 @@ function loadNextScrambleWord(container) {
         return;
     }
     
-    const wordObj = scrambleWordsList[scrambleRound];
+    var wordObj = scrambleWordsList[scrambleRound];
     scrambleCurrentWord = wordObj.word;
     scrambleCurrentHint = wordObj.hint;
     
-    let scrambled = scrambleCurrentWord.split('');
-    for (let i = scrambled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [scrambled[i], scrambled[j]] = [scrambled[j], scrambled[i]];
+    var scrambled = scrambleCurrentWord.split('');
+    for (var i = scrambled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = scrambled[i];
+        scrambled[i] = scrambled[j];
+        scrambled[j] = temp;
     }
     
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">Word ${scrambleRound + 1}/${scrambleWordsList.length}</div>
-            <div class="game-score">⭐ Score: ${scrambleScore}</div>
-        </div>
-        <div class="scrambled-word-large">${scrambled.join(' ').toUpperCase()}</div>
-        <div class="game-hint-large">💡 Hint: ${escapeHtml(scrambleCurrentHint)}</div>
-        <input type="text" id="scrambleGuess" class="game-input-large" placeholder="Type your guess..." autofocus>
-        <div class="game-buttons">
-            <button class="game-submit-btn-large" onclick="checkScrambleGuess()">Submit Guess</button>
-            <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button>
-        </div>
-        <div class="game-feedback" id="scrambleFeedback"></div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">Word ' + (scrambleRound + 1) + '/' + scrambleWordsList.length + '</div><div class="game-score">⭐ Score: ' + scrambleScore + '</div></div><div class="scrambled-word-large">' + scrambled.join(' ').toUpperCase() + '</div><div class="game-hint-large">💡 Hint: ' + escapeHtml(scrambleCurrentHint) + '</div><input type="text" id="scrambleGuess" class="game-input-large" placeholder="Type your guess..." autofocus><div class="game-buttons"><button class="game-submit-btn-large" onclick="checkScrambleGuess()">Submit Guess</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button></div><div class="game-feedback" id="scrambleFeedback"></div>';
     
     document.getElementById('scrambleGuess')?.focus();
 }
 
 window.checkScrambleGuess = function() {
-    const input = document.getElementById('scrambleGuess');
-    const guess = input?.value.trim().toLowerCase();
-    const feedback = document.getElementById('scrambleFeedback');
-    const container = document.getElementById('activeGameContainer');
+    var input = document.getElementById('scrambleGuess');
+    var guess = input?.value.trim().toLowerCase();
+    var feedback = document.getElementById('scrambleFeedback');
+    var container = document.getElementById('activeGameContainer');
     
     if (guess === scrambleCurrentWord.toLowerCase()) {
         scrambleScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
         showToast("🎉 Correct!");
     } else {
-        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! The word was: ${scrambleCurrentWord}</div>`;
+        feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! The word was: ' + scrambleCurrentWord + '</div>';
         showToast("❌ Wrong!");
     }
     
-    setTimeout(() => {
+    setTimeout(function() {
         scrambleRound++;
         loadNextScrambleWord(container);
     }, 1500);
 }
 
 function showScrambleResults(container) {
-    const percentage = Math.round((scrambleScore / (scrambleWordsList.length * 10)) * 100);
-    container.innerHTML = `
-        <div class="game-results-large">
-            <div class="results-emoji">🔤</div>
-            <h2>Word Scramble Complete!</h2>
-            <div class="final-score-large">Score: ${scrambleScore}/${scrambleWordsList.length * 10}</div>
-            <div class="score-percentage-large">${percentage}%</div>
-            <div class="results-buttons">
-                <button class="play-again-btn" onclick="selectGame('word-scramble')">🔄 Play Again</button>
-                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            </div>
-        </div>
-    `;
+    var percentage = Math.round((scrambleScore / (scrambleWordsList.length * 10)) * 100);
+    container.innerHTML = '<div class="game-results-large"><div class="results-emoji">🔤</div><h2>Word Scramble Complete!</h2><div class="final-score-large">Score: ' + scrambleScore + '/' + (scrambleWordsList.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'word-scramble\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
 // ================= TRUE OR FALSE GAME =================
@@ -2614,62 +1940,34 @@ function displayTrueFalseQuestion(container) {
         return;
     }
     
-    const q = tfQuestions[tfIndex];
+    var q = tfQuestions[tfIndex];
     
-    container.innerHTML = `
-        <div class="game-header-info">
-            <div class="game-progress">Question ${tfIndex + 1}/${tfQuestions.length}</div>
-            <div class="game-score">⭐ Score: ${tfScore}</div>
-        </div>
-        <div class="game-question-large">${escapeHtml(q.statement)}</div>
-        <div class="truefalse-buttons-large">
-            <button class="true-btn-large" onclick="checkTrueFalseAnswer(true)">✓ True</button>
-            <button class="false-btn-large" onclick="checkTrueFalseAnswer(false)">✗ False</button>
-        </div>
-        <div class="game-feedback" id="tfFeedback"></div>
-    `;
+    container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (tfIndex + 1) + '/' + tfQuestions.length + '</div><div class="game-score">⭐ Score: ' + tfScore + '</div></div><div class="game-question-large">' + escapeHtml(q.statement) + '</div><div class="truefalse-buttons-large"><button class="true-btn-large" onclick="checkTrueFalseAnswer(true)">✓ True</button><button class="false-btn-large" onclick="checkTrueFalseAnswer(false)">✗ False</button></div><div class="game-feedback" id="tfFeedback"></div>';
 }
 
 window.checkTrueFalseAnswer = function(selected) {
-    const q = tfQuestions[tfIndex];
-    const feedback = document.getElementById('tfFeedback');
-    const isCorrect = (selected === q.answer);
+    var q = tfQuestions[tfIndex];
+    var feedback = document.getElementById('tfFeedback');
+    var isCorrect = (selected === q.answer);
     
-    document.querySelectorAll('.true-btn-large, .false-btn-large').forEach(btn => btn.disabled = true);
+    document.querySelectorAll('.true-btn-large, .false-btn-large').forEach(function(btn) { btn.disabled = true; });
     
     if (isCorrect) {
         tfScore += 10;
-        feedback.innerHTML = `<div class="correct-answer">✅ Correct! ${q.explanation}</div>`;
+        feedback.innerHTML = '<div class="correct-answer">✅ Correct! ' + q.explanation + '</div>';
         showToast("✅ Correct!");
     } else {
-        feedback.innerHTML = `<div class="wrong-answer">❌ Wrong! ${q.explanation}</div>`;
+        feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! ' + q.explanation + '</div>';
         showToast("❌ Wrong!");
     }
     
-    setTimeout(() => {
+    setTimeout(function() {
         tfIndex++;
         displayTrueFalseQuestion(document.getElementById('activeGameContainer'));
     }, 2000);
 }
 
 function showTrueFalseResults(container) {
-    const percentage = Math.round((tfScore / (tfQuestions.length * 10)) * 100);
-    container.innerHTML = `
-        <div class="game-results-large">
-            <div class="results-emoji">${percentage >= 70 ? '🏆' : '📚'}</div>
-            <h2>True or False Complete!</h2>
-            <div class="final-score-large">Score: ${tfScore}/${tfQuestions.length * 10}</div>
-            <div class="score-percentage-large">${percentage}%</div>
-            <div class="results-buttons">
-                <button class="play-again-btn" onclick="selectGame('true-false')">🔄 Play Again</button>
-                <button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button>
-            </div>
-        </div>
-    `;
-}
-
-// Helper functions
-window.startGame = function(gameType) {
-    window.openGamesModal();
-    setTimeout(() => window.selectGame(gameType), 100);
+    var percentage = Math.round((tfScore / (tfQuestions.length * 10)) * 100);
+    container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>True or False Complete!</h2><div class="final-score-large">Score: ' + tfScore + '/' + (tfQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'true-false\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
