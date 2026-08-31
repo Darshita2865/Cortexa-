@@ -312,7 +312,12 @@
         if (password.length < 8) {
             showMessage('Password must be at least 8 characters long.', 'error');
             return;
-        }
+         }
+
+        if (new TextEncoder().encode(password).length > 72) {
+             showMessage('Password must not exceed 72 bytes.', 'error');
+             return;
+         }
 
         // 6. Password match
         if (password !== confirmPassword) {
