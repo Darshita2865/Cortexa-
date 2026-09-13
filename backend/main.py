@@ -47,10 +47,7 @@ from rag.search import KeywordSearch
 from rag.embedder import Embedder
 from rag.vector_store import VectorStore
 
-
-# ============================================================
 # LOAD ENVIRONMENT VARIABLES
-# ============================================================
 
 load_dotenv()
 
@@ -73,10 +70,7 @@ JWT_EXPIRE_MINUTES = 60 * 24 * 7
 
 DB_PATH = os.getenv("DB_PATH", "./cortexa.db")
 
-
-# ============================================================
 # FASTAPI APP
-# ============================================================
 
 app = FastAPI(
     title="Cortexa AI API",
@@ -84,8 +78,6 @@ app = FastAPI(
     version="2.4"
 )
 
-
-# ============================================================
 # CORS
 # ============================================================
 
