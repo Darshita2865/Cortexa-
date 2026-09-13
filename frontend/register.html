@@ -166,7 +166,7 @@
 <div class="container">
     <form class="register-box" id="registerForm" onsubmit="event.preventDefault(); registerUser();">
 
-        <h2> Create Account</h2>
+        <h2>🧠 Create Account</h2>
         <p class="sub-title">Join Cortexa AI - Your Knowledge Partner</p>
 
         <!-- Full Name -->
@@ -339,7 +339,7 @@
 
         try {
             // ===== CALL BACKEND API =====
-            const response = await fetch('https://cortexa-64a6.onrender.com/api/register', {
+            const response = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
