@@ -1,8 +1,22 @@
-console.log("Cortexa JS Loaded - Full Version");
+console.log("🚀 Cortexa JS Loaded - Production Version");
 
-// ================= API CONFIGURATION =================
+// ================= API CONFIGURATION - FIXED =================
+// Points to your backend (change this to your actual backend URL)
 const BASE_URL = "https://cortexa-64a6.onrender.com";
-const API_URL = BASE_URL + "/api/chat";
+const API_URL = BASE_URL + "/chat";
+
+const ENDPOINTS = {
+    chat: BASE_URL + "/chat",
+    uploadDocument: BASE_URL + "/upload-document",
+    generateAudio: BASE_URL + "/generate-audio",
+    youtubeSearch: BASE_URL + "/youtube-search",
+    youtubeVideoInfo: BASE_URL + "/youtube-video-info",
+    health: BASE_URL + "/health",
+    models: BASE_URL + "/models"
+};
+
+console.log("✅ Backend URL:", BASE_URL);
+console.log("✅ Chat API:", API_URL);
 
 // ================= GLOBAL VARIABLES =================
 let currentChatId = null;
@@ -54,7 +68,7 @@ function showToast(message, type) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'customToast';
-        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: ' + (type === 'error' ? '#ef4444' : '#10b981') + '; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 14px;';
+        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: ' + (type === 'error' ? '#ef4444' : '#10b981') + '; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 14px; max-width: 400px;';
         document.body.appendChild(toast);
     }
     
@@ -117,11 +131,11 @@ function updateMessage(id, newText) {
 
 // ================= MAIN CHAT FUNCTION =================
 window.performSearch = async function() {
-    console.log("performSearch called");
+    console.log("🔵 performSearch called");
     
     var queryInput = document.getElementById('searchInput');
     if (!queryInput) {
-        console.error("searchInput not found!");
+        console.error("❌ searchInput not found!");
         return;
     }
     
@@ -143,35 +157,47 @@ window.performSearch = async function() {
             audio: false
         };
         
-        console.log("📤 Sending request:", requestBody);
+        console.log("📤 Sending to:", ENDPOINTS.chat);
+        console.log("📦 Request:", requestBody);
         
-        var response = await fetch(API_URL, {
+        var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { 
-                "Content-Type": "application/json" 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             body: JSON.stringify(requestBody)
         });
         
-        console.log("📥 Response status:", response.status);
+        console.log("📥 HTTP Status:", response.status);
+        console.log("📥 Response URL:", response.url);
+        
+        const rawText = await response.text();
+        console.log("📥 Raw response:", rawText);
         
         if (!response.ok) {
-            throw new Error("HTTP " + response.status);
+            throw new Error("HTTP " + response.status + ": " + rawText.substring(0, 300));
         }
         
-        var data = await response.json();
-        console.log("✅ Response received:", data);
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (jsonError) {
+            throw new Error("Backend returned invalid JSON: " + rawText.substring(0, 300));
+        }
+        
+        console.log("✅ Backend JSON:", data);
         
         if (data.response) {
             updateMessage(loadingId, data.response);
             saveCurrentChat(query, data.response);
         } else {
-            updateMessage(loadingId, "⚠️ No response from AI. Please try again.");
+            updateMessage(loadingId, "⚠️ Backend connected, but no AI response was returned.\n\nResponse: " + JSON.stringify(data));
         }
         
     } catch (error) {
         console.error("❌ Chat error:", error);
-        updateMessage(loadingId, "⚠️ Error connecting to AI. Make sure backend is running\n\nDetails: " + error.message);
+        updateMessage(loadingId, "⚠️ Error connecting to AI.\n\nDetails: " + error.message + "\n\nMake sure the backend is running and accessible.");
     }
 }
 
@@ -402,16 +428,23 @@ window.documentChat = function() {
             showToast("📄 Uploading document...");
             
             try {
-                var response = await fetch(BASE_URL + "/api/upload-document", {
+                var response = await fetch(ENDPOINTS.uploadDocument, {
                     method: 'POST',
                     body: formData
                 });
                 var data = await response.json();
+                console.log("📄 Upload response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.error || "Upload failed");
+                }
+                
                 currentDocument = data;
                 showToast("✅ Document \"" + file.name + "\" loaded! You can now ask questions about it.");
                 displayMessage("📄 **Document loaded:** " + file.name + "\n\nYou can now ask me questions about this document!", 'bot');
             } catch (error) {
-                showToast("❌ Error uploading document", "error");
+                console.error("❌ Document upload error:", error);
+                showToast("❌ Error uploading document: " + error.message, "error");
             }
         }
     };
@@ -476,6 +509,7 @@ window.toggleMicrophone = async function() {
     }
 }
 
+// ================= SEND AUDIO QUERY =================
 window.sendAudioQuery = async function() {
     var queryInput = document.getElementById('audioQueryInput');
     var query = queryInput.value.trim();
@@ -492,7 +526,7 @@ window.sendAudioQuery = async function() {
     
     try {
         var requestBody = { message: query, audio: true };
-        var response = await fetch(API_URL, {
+        var response = await fetch(ENDPOINTS.chat, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -502,7 +536,7 @@ window.sendAudioQuery = async function() {
         currentAudioText = data.response;
         responseText.innerHTML = formatContent(data.response);
         
-        var audioResponse = await fetch(BASE_URL + "/api/generate-audio", {
+        var audioResponse = await fetch(ENDPOINTS.generateAudio, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: data.response })
@@ -516,6 +550,7 @@ window.sendAudioQuery = async function() {
         }
         
     } catch (error) {
+        console.error("Audio error:", error);
         responseText.innerHTML = '❌ Error generating response';
         showToast("Error connecting to AI", "error");
     }
@@ -587,6 +622,7 @@ window.switchVideoTab = function(tab) {
     }
 }
 
+// ================= YOUTUBE SEARCH =================
 window.searchYouTube = async function() {
     var query = document.getElementById('youtubeSearchQuery').value;
     if (!query) {
@@ -601,7 +637,7 @@ window.searchYouTube = async function() {
     resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
     
     try {
-        var response = await fetch(BASE_URL + "/api/youtube-search?query=" + encodeURIComponent(query) + "&max_results=12");
+        var response = await fetch(ENDPOINTS.youtubeSearch + "?query=" + encodeURIComponent(query) + "&max_results=12");
         var data = await response.json();
         
         if (data.error) {
@@ -628,6 +664,7 @@ window.searchYouTube = async function() {
     }
 }
 
+// ================= YOUTUBE VIDEO INFO =================
 window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     showToast("📹 Getting video information and generating AI summary...");
     
@@ -638,7 +675,7 @@ window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     infoDiv.innerHTML = '<div class="loading-spinner">🧠 Analyzing video content...</div>';
     
     try {
-        var infoResponse = await fetch(BASE_URL + "/api/youtube-video-info?videoid=" + videoId);
+        var infoResponse = await fetch(ENDPOINTS.youtubeVideoInfo + "?video_id=" + videoId);
         var videoInfo = await infoResponse.json();
         
         if (videoInfo.error) {
@@ -648,7 +685,7 @@ window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
         
         var summaryPrompt = 'Please provide a comprehensive summary of this YouTube video:\n\nTitle: ' + (videoTitle || videoInfo.title) + '\nChannel: ' + (videoInfo.channel || 'Unknown') + '\nDescription: ' + (videoInfo.description || 'No description available') + '\n\nPlease provide:\n1. Main topic/theme of the video\n2. 5-7 key points covered\n3. Important takeaways\n4. Who should watch this video\n5. A brief one-paragraph summary\n\nFormat the response in a clean, organized way with emojis for each section.';
 
-        var summaryResponse = await fetch(API_URL, {
+        var summaryResponse = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -825,7 +862,7 @@ window.generateReport = async function() {
 
         prompt += '\n\nFormat the report with proper headings (## for main sections), subheadings (### for subsections), and bullet points. Make it professional, well-structured, data-driven, and suitable for business/academic audience. Use markdown formatting.';
 
-        var response = await fetch(API_URL, {
+        var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: prompt, document_content: null, audio: false })
@@ -1095,7 +1132,7 @@ window.generateQuiz = async function() {
     try {
         var prompt = 'Generate a quiz about "' + topic + '" with exactly ' + numQuestions + ' questions. Difficulty: ' + difficulty + '. Type: ' + questionType + '.\n\nReturn ONLY valid JSON with this exact format:\n{\n    "title": "' + topic + ' Quiz",\n    "questions": [\n        {\n            "id": 1,\n            "text": "Question text here",\n            "type": "mcq",\n            "options": ["Option A", "Option B", "Option C", "Option D"],\n            "correctAnswer": "Option A",\n            "explanation": "Brief explanation"\n        }\n    ]\n}\n\nFor true/false, options should be ["True", "False"].\nMake questions educational and appropriate for ' + difficulty + ' difficulty.';
 
-        var response = await fetch(API_URL, {
+        var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -1388,7 +1425,7 @@ window.generateStudyNotes = async function() {
     try {
         var prompt = 'Create comprehensive study notes about "' + topic + '".\n\nInclude:\n1. Key Concepts (at least 5)\n2. Important Definitions\n3. Summary Points\n4. Key Takeaways\n5. Study Tips\n\nFormat with clear headings, bullet points, and emojis for easy reading.\nMake it organized and educational.';
 
-        var response = await fetch(API_URL, {
+        var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
@@ -1971,3 +2008,7 @@ function showTrueFalseResults(container) {
     var percentage = Math.round((tfScore / (tfQuestions.length * 10)) * 100);
     container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>True or False Complete!</h2><div class="final-score-large">Score: ' + tfScore + '/' + (tfQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'true-false\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
+
+console.log("✅ Cortexa JS Full Version Loaded Successfully!");
+console.log("🔗 API URL:", API_URL);
+console.log("💡 All endpoints configured for production backend");
