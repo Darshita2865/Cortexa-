@@ -54,7 +54,7 @@ load_dotenv()
 # Primary provider: Cerebras
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
 
-# Optional secondary provider: Groq (skipped if key is missing)
+# Optional secondary provider: Groq 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # YouTube
@@ -63,7 +63,7 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 # Auth
 JWT_SECRET_KEY = os.getenv(
     "JWT_SECRET_KEY",
-    "your-super-secret-key-change-this"
+    "secret-key"
 )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7
@@ -79,8 +79,6 @@ app = FastAPI(
 )
 
 # CORS
-# ============================================================
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -90,9 +88,7 @@ app.add_middleware(
 )
 
 
-# ============================================================
 # SECURITY
-# ============================================================
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -101,10 +97,7 @@ pwd_context = CryptContext(
 
 security = HTTPBearer()
 
-
-# ============================================================
 # CEREBRAS INITIALIZATION (PRIMARY)
-# ============================================================
 
 CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
@@ -125,9 +118,7 @@ else:
     print("⚠️ CEREBRAS_API_KEY not found — Cerebras disabled")
 
 
-# ============================================================
-# GROQ INITIALIZATION (OPTIONAL SECONDARY)
-# ============================================================
+# GROQ INITIALIZATION 
 
 groq_client = None
 
@@ -143,19 +134,14 @@ else:
     print("ℹ️ GROQ_API_KEY not set — Groq fallback disabled")
 
 
-# ============================================================
-# OLLAMA INITIALIZATION (LAST-RESORT FALLBACK)
-# ============================================================
-
+# OLLAMA INITIALIZATION 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 
 print(f"🦙 Ollama fallback: {OLLAMA_BASE_URL} (model: {OLLAMA_MODEL})")
 
 
-# ============================================================
-# USER DATABASE (SQLite-backed)
-# ============================================================
+# USER DATABASE 
 
 class UserDatabase:
 
@@ -363,9 +349,7 @@ async def get_config():
     }
 
 
-# ============================================================
 # STATIC FILES
-# ============================================================
 
 @app.get("/static/{filename}")
 async def get_static_file(filename: str):
@@ -378,10 +362,7 @@ async def get_static_file(filename: str):
     return FileResponse(filepath)
 
 
-# ============================================================
 # AUTH MODELS
-# ============================================================
-
 class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
@@ -403,10 +384,7 @@ class UserLogin(BaseModel):
     password: str
 
 
-# ============================================================
 # RAG SETUP
-# ============================================================
-
 print("🔧 Initializing RAG components...")
 
 chunker = DocumentChunker(chunk_size=500, overlap=50)
@@ -431,20 +409,14 @@ except Exception as e:
 print("✅ RAG initialization completed!")
 
 
-# ============================================================
 # CHAT MODEL
-# ============================================================
 
 class Message(BaseModel):
     message: str
     document_content: Optional[str] = None
     audio: bool = False
 
-
-# ============================================================
-# AVAILABLE GROQ MODELS (only used if Groq is configured)
-# ============================================================
-
+# AVAILABLE GROQ MODELS 
 GROQ_MODELS = {
     "fast": "openai/gpt-oss-20b",
     "balanced": "openai/gpt-oss-120b",
@@ -452,10 +424,7 @@ GROQ_MODELS = {
 GROQ_PREFERRED = GROQ_MODELS["balanced"]
 
 
-# ============================================================
 # SYSTEM PROMPT
-# ============================================================
-
 SYSTEM_PROMPT = """
 You are Cortexa, a powerful AI assistant.
 
@@ -489,9 +458,7 @@ IMPORTANT RULES:
 """
 
 
-# ============================================================
 # YOUTUBE VIDEO ID
-# ============================================================
 
 def extract_video_id(url: str) -> Optional[str]:
     patterns = [
@@ -505,14 +472,7 @@ def extract_video_id(url: str) -> Optional[str]:
             return match.group(1)
     return None
 
-
-# ============================================================
 # AI RESPONSE — HYBRID FALLBACK CHAIN
-#   1. Cerebras (primary)
-#   2. Groq     (secondary, optional)
-#   3. Ollama   (last resort, local)
-# ============================================================
-
 async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -524,7 +484,6 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
 
     messages.append({"role": "user", "content": message})
 
-    # 1️⃣ Cerebras
     if cerebras_client:
         try:
             completion = cerebras_client.chat.completions.create(
@@ -540,7 +499,6 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         except Exception as e:
             print(f"⚠️ Cerebras failed: {str(e)[:200]}")
 
-    # 2️⃣ Groq (only if configured)
     if groq_client:
         try:
             completion = groq_client.chat.completions.create(
@@ -557,7 +515,6 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         except Exception as e:
             print(f"⚠️ Groq failed: {str(e)[:200]}")
 
-    # 3️⃣ Ollama
     try:
         async with httpx.AsyncClient(timeout=120.0) as hc:
             r = await hc.post(
@@ -583,10 +540,7 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     )
 
 
-# ============================================================
 # AUTH DEPENDENCY
-# ============================================================
-
 def get_current_user(
     token: HTTPAuthorizationCredentials = Depends(security)
 ):
@@ -598,10 +552,7 @@ def get_current_user(
         )
     return user
 
-
-# ============================================================
 # REGISTER
-# ============================================================
 
 @app.post("/api/register")
 async def register(user: UserRegister):
@@ -636,9 +587,7 @@ async def register(user: UserRegister):
         )
 
 
-# ============================================================
 # LOGIN
-# ============================================================
 
 @app.post("/api/login")
 async def login(data: UserLogin):
@@ -687,10 +636,7 @@ async def logout(
         content={"error": "Invalid session"}
     )
 
-
-# ============================================================
 # CURRENT USER
-# ============================================================
 
 @app.get("/api/me")
 async def get_current_user_info(
@@ -704,11 +650,7 @@ async def get_current_user_info(
         }
     }
 
-
-# ============================================================
 # CHAT HANDLER
-# ============================================================
-
 async def chat_handler(data: Message):
     try:
         user_msg = data.message.strip()
@@ -766,10 +708,7 @@ async def legacy_chat(data: Message):
     return await chat_handler(data)
 
 
-# ============================================================
 # DOCUMENT UPLOAD
-# ============================================================
-
 async def upload_document_handler(file: UploadFile):
     try:
         filename = file.filename or "unknown"
@@ -836,11 +775,7 @@ async def api_upload_document(file: UploadFile = File(...)):
 async def legacy_upload_document(file: UploadFile = File(...)):
     return await upload_document_handler(file)
 
-
-# ============================================================
 # DOCUMENT SEARCH
-# ============================================================
-
 async def search_document_handler(data: dict):
     query = data.get("query", "")
     top_k = data.get("top_k", 3)
@@ -881,10 +816,7 @@ async def api_search_document(data: dict):
 async def legacy_search_document(data: dict):
     return await search_document_handler(data)
 
-
-# ============================================================
 # DOCUMENT LIST / DELETE
-# ============================================================
 
 async def list_documents_handler():
     docs = []
@@ -932,9 +864,7 @@ async def legacy_delete_document(doc_id: str):
     return await delete_document_handler(doc_id)
 
 
-# ============================================================
 # YOUTUBE SEARCH
-# ============================================================
 
 async def youtube_search_handler(query: str, max_results: int = 10):
     if not YOUTUBE_API_KEY:
@@ -978,9 +908,8 @@ async def legacy_youtube_search(query: str, max_results: int = 10):
     return await youtube_search_handler(query, max_results)
 
 
-# ============================================================
 # YOUTUBE VIDEO INFO
-# ============================================================
+
 
 async def youtube_video_info_handler(video_id: str):
     if not YOUTUBE_API_KEY:
@@ -1022,9 +951,7 @@ async def legacy_youtube_video_info(video_id: str):
     return await youtube_video_info_handler(video_id)
 
 
-# ============================================================
 # YOUTUBE SUMMARY
-# ============================================================
 
 async def youtube_summary_handler(data: dict):
     video_url = data.get("url", "")
@@ -1077,7 +1004,7 @@ Description:
             except Exception as e:
                 print(f"⚠️ Cerebras summary failed: {e}")
 
-        # Groq second (optional)
+        # Groq second
         if groq_client:
             completion = groq_client.chat.completions.create(
                 model=GROQ_PREFERRED,
@@ -1107,10 +1034,7 @@ async def legacy_youtube_summary(data: dict):
     return await youtube_summary_handler(data)
 
 
-# ============================================================
 # AUDIO GENERATION
-# ============================================================
-
 async def generate_audio_handler(data: dict):
     try:
         text = data.get("text", "")
@@ -1164,9 +1088,7 @@ async def get_audio(filename: str):
     return FileResponse(filepath, media_type="audio/mpeg")
 
 
-# ============================================================
 # HEALTH CHECK
-# ============================================================
 
 @app.get("/health")
 async def health():
@@ -1228,10 +1150,7 @@ async def health():
     }
 
 
-# ============================================================
 # MODELS
-# ============================================================
-
 @app.get("/models")
 async def list_models():
     return {
@@ -1254,10 +1173,7 @@ async def list_models():
     }
 
 
-# ============================================================
 # ROOT
-# ============================================================
-
 @app.get("/")
 async def root():
     return {
@@ -1281,9 +1197,7 @@ async def root():
     }
 
 
-# ============================================================
 # START SERVER
-# ============================================================
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
