@@ -17,6 +17,8 @@ from fastapi.security import (
     HTTPAuthorizationCredentials
 )
 
+from fastapi.staticfiles import StaticFiles
+
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -31,6 +33,7 @@ import requests
 import re
 import sqlite3
 import threading
+import json
 
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
@@ -47,61 +50,50 @@ from rag.search import KeywordSearch
 from rag.embedder import Embedder
 from rag.vector_store import VectorStore
 
+
 # LOAD ENVIRONMENT VARIABLES
 
 load_dotenv()
 
-# Primary provider: Cerebras
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
-
-# Optional secondary provider: Groq 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-# YouTube
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
-# Auth
 JWT_SECRET_KEY = os.getenv(
     "JWT_SECRET_KEY",
-    "secret-key"
+    "your-super-secret-key-change-this"
 )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7
 
 DB_PATH = os.getenv("DB_PATH", "./cortexa.db")
 
-# FASTAPI APP
 
+# FASTAPI APP
 app = FastAPI(
     title="Cortexa AI API",
     description="Cortexa AI Knowledge Intelligence Platform",
-    version="2.4"
+    version="2.5"
 )
 
-# CORS
+# CORS 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 # SECURITY
-
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
-
 security = HTTPBearer()
 
-# CEREBRAS INITIALIZATION (PRIMARY)
-
+# CEREBRAS 
 CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
-CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
-
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
 cerebras_client = None
 
 if CEREBRAS_API_KEY:
@@ -115,34 +107,16 @@ if CEREBRAS_API_KEY:
         print(f"❌ Cerebras init failed: {e}")
         cerebras_client = None
 else:
-    print("⚠️ CEREBRAS_API_KEY not found — Cerebras disabled")
+    print("⚠️ CEREBRAS_API_KEY not set — Cerebras disabled")
 
 
-# GROQ INITIALIZATION 
-
-groq_client = None
-
-if GROQ_API_KEY:
-    try:
-        from groq import Groq
-        groq_client = Groq(api_key=GROQ_API_KEY)
-        print("✅ Groq client initialized (secondary)")
-    except Exception as e:
-        print(f"⚠️ Groq init failed: {e}")
-        groq_client = None
-else:
-    print("ℹ️ GROQ_API_KEY not set — Groq fallback disabled")
-
-
-# OLLAMA INITIALIZATION 
+# OLLAMA (FALLBACK)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 
 print(f"🦙 Ollama fallback: {OLLAMA_BASE_URL} (model: {OLLAMA_MODEL})")
 
-
-# USER DATABASE 
-
+# USER DATABASE (SQLite)
 class UserDatabase:
 
     def __init__(self, db_path: str = DB_PATH):
@@ -182,6 +156,21 @@ class UserDatabase:
                     created_at TEXT NOT NULL
                 )
                 """
+            )
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS chats (
+                    id TEXT PRIMARY KEY,
+                    user_email TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    messages TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            self._conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chats_user_email ON chats(user_email)"
             )
             self._conn.commit()
 
@@ -318,51 +307,136 @@ class UserDatabase:
             deleted = cur.rowcount > 0
         return deleted
 
+    # ---------- CHATS (per-user, isolated by user_email) ----------
+
+    def list_chats(self, user_email: str) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM chats WHERE user_email = ? ORDER BY updated_at DESC",
+                (user_email,)
+            ).fetchall()
+        result = []
+        for row in rows:
+            result.append({
+                "id": row["id"],
+                "title": row["title"],
+                "messages": json.loads(row["messages"]),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            })
+        return result
+
+    def get_chat(self, user_email: str, chat_id: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT * FROM chats WHERE id = ? AND user_email = ?",
+                (chat_id, user_email)
+            ).fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "title": row["title"],
+            "messages": json.loads(row["messages"]),
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+        }
+
+    def save_chat(
+        self,
+        user_email: str,
+        chat_id: Optional[str],
+        title: str,
+        messages: list
+    ) -> Dict[str, Any]:
+        now = datetime.utcnow().isoformat()
+        messages_json = json.dumps(messages)
+
+        with self._lock:
+            if chat_id:
+                # Only update if this chat belongs to this user
+                existing = self._conn.execute(
+                    "SELECT id FROM chats WHERE id = ? AND user_email = ?",
+                    (chat_id, user_email)
+                ).fetchone()
+                if existing:
+                    self._conn.execute(
+                        "UPDATE chats SET title = ?, messages = ?, updated_at = ? "
+                        "WHERE id = ? AND user_email = ?",
+                        (title, messages_json, now, chat_id, user_email)
+                    )
+                    self._conn.commit()
+                    return {
+                        "id": chat_id, "title": title, "messages": messages,
+                        "updated_at": now
+                    }
+                # chat_id given but doesn't belong to this user -> create fresh instead
+                chat_id = None
+
+            if not chat_id:
+                chat_id = "chat_" + uuid.uuid4().hex[:12]
+                self._conn.execute(
+                    "INSERT INTO chats (id, user_email, title, messages, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (chat_id, user_email, title, messages_json, now, now)
+                )
+                self._conn.commit()
+
+        return {"id": chat_id, "title": title, "messages": messages, "updated_at": now}
+
+    def delete_chat(self, user_email: str, chat_id: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM chats WHERE id = ? AND user_email = ?",
+                (chat_id, user_email)
+            )
+            self._conn.commit()
+            return cur.rowcount > 0
+
 
 db = UserDatabase()
 
+# RAG SETUP
+print("🔧 Initializing RAG components...")
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
+chunker = DocumentChunker(chunk_size=500, overlap=50)
+search_engine = KeywordSearch()
+embedder = Embedder(model_name="all-MiniLM-L6-v2")
+vector_store = VectorStore(persist_directory="./vector_store")
 
-@app.get("/api/config")
-async def get_config():
-    return {
-        "status": "success",
-        "config": {
-            "api_url": "/api/chat",
-            "version": "2.4",
-            "provider_chain": [
-                "cerebras" if cerebras_client else None,
-                "groq" if groq_client else None,
-                "ollama"
-            ],
-            "features": {
-                "audio": True,
-                "video": True,
-                "reports": True,
-                "learning": True,
-                "games": True
-            }
-        }
-    }
+document_store = {}
+embedder_ready = False
 
 
-# STATIC FILES
+def ensure_embedder():
+    global embedder_ready
 
-@app.get("/static/{filename}")
-async def get_static_file(filename: str):
-    filepath = os.path.join("static", filename)
-    if not os.path.exists(filepath):
-        return JSONResponse(
-            status_code=404,
-            content={"error": "File not found"}
-        )
-    return FileResponse(filepath)
+    if not embedder_ready:
+        try:
+            embedder.initialize()
+            embedder_ready = True
+            print("✅ Embedder initialized!")
+        except Exception as e:
+            print(f"⚠️ Embedder initialization failed: {e}")
+            raise
+
+    return embedder
+
+try:
+    vector_store.initialize()
+    print("✅ Vector store initialized!")
+except Exception as e:
+    print(f"⚠️ Vector store initialization failed: {e}")
+
+print("✅ RAG initialization completed!")
+
+# MODELS / SYSTEM PROMPT
+class Message(BaseModel):
+    message: str
+    document_content: Optional[str] = None
+    audio: bool = False
 
 
-# AUTH MODELS
 class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
@@ -384,47 +458,12 @@ class UserLogin(BaseModel):
     password: str
 
 
-# RAG SETUP
-print("🔧 Initializing RAG components...")
-
-chunker = DocumentChunker(chunk_size=500, overlap=50)
-search_engine = KeywordSearch()
-embedder = Embedder(model_name="all-MiniLM-L6-v2")
-vector_store = VectorStore(persist_directory="./vector_store")
-
-document_store = {}
-
-try:
-    embedder.initialize()
-    print("✅ Embedder initialized!")
-except Exception as e:
-    print(f"⚠️ Embedder initialization failed: {e}")
-
-try:
-    vector_store.initialize()
-    print("✅ Vector store initialized!")
-except Exception as e:
-    print(f"⚠️ Vector store initialization failed: {e}")
-
-print("✅ RAG initialization completed!")
+class ChatSave(BaseModel):
+    chat_id: Optional[str] = None
+    title: str
+    messages: list
 
 
-# CHAT MODEL
-
-class Message(BaseModel):
-    message: str
-    document_content: Optional[str] = None
-    audio: bool = False
-
-# AVAILABLE GROQ MODELS 
-GROQ_MODELS = {
-    "fast": "openai/gpt-oss-20b",
-    "balanced": "openai/gpt-oss-120b",
-}
-GROQ_PREFERRED = GROQ_MODELS["balanced"]
-
-
-# SYSTEM PROMPT
 SYSTEM_PROMPT = """
 You are Cortexa, a powerful AI assistant.
 
@@ -456,23 +495,7 @@ IMPORTANT RULES:
 11. For coding questions, provide correct,
     practical code and explain the important parts.
 """
-
-
-# YOUTUBE VIDEO ID
-
-def extract_video_id(url: str) -> Optional[str]:
-    patterns = [
-        r"(?:youtube\.com\/watch\?v=)([\w-]+)",
-        r"(?:youtu\.be\/)([\w-]+)",
-        r"(?:youtube\.com\/embed\/)([\w-]+)"
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-    return None
-
-# AI RESPONSE — HYBRID FALLBACK CHAIN
+# AI RESPONSE — FALLBACK CHAIN (Cerebras -> Ollama)
 async def get_ai_response(message: str, context: Optional[str] = None) -> str:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -484,6 +507,7 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
 
     messages.append({"role": "user", "content": message})
 
+    # 1️⃣ Cerebras
     if cerebras_client:
         try:
             completion = cerebras_client.chat.completions.create(
@@ -499,22 +523,7 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         except Exception as e:
             print(f"⚠️ Cerebras failed: {str(e)[:200]}")
 
-    if groq_client:
-        try:
-            completion = groq_client.chat.completions.create(
-                model=GROQ_PREFERRED,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1024,
-                stream=False,
-            )
-            text = completion.choices[0].message.content
-            if text:
-                print("✅ Response from Groq")
-                return text
-        except Exception as e:
-            print(f"⚠️ Groq failed: {str(e)[:200]}")
-
+    # 2️⃣ Ollama
     try:
         async with httpx.AsyncClient(timeout=120.0) as hc:
             r = await hc.post(
@@ -539,6 +548,18 @@ async def get_ai_response(message: str, context: Optional[str] = None) -> str:
         "Check your CEREBRAS_API_KEY and Ollama server."
     )
 
+# YOUTUBE HELPERS
+def extract_video_id(url: str) -> Optional[str]:
+    patterns = [
+        r"(?:youtube\.com\/watch\?v=)([\w-]+)",
+        r"(?:youtu\.be\/)([\w-]+)",
+        r"(?:youtube\.com\/embed\/)([\w-]+)"
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
 
 # AUTH DEPENDENCY
 def get_current_user(
@@ -552,28 +573,24 @@ def get_current_user(
         )
     return user
 
-# REGISTER
 
+# AUTH ROUTES
 @app.post("/api/register")
 async def register(user: UserRegister):
     try:
         print(f"📝 Registration attempt: {user.email}")
-
         if db.get_user_by_email(user.email):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Email already registered"}
             )
-
         if db.get_user_by_phone(user.phone):
             return JSONResponse(
                 status_code=400,
                 content={"error": "Phone number already registered"}
             )
-
         db.create_user(user.model_dump())
         print(f"✅ User registered: {user.email}")
-
         return {
             "message": "Registration successful! Please login.",
             "email": user.email,
@@ -587,23 +604,18 @@ async def register(user: UserRegister):
         )
 
 
-# LOGIN
-
 @app.post("/api/login")
 async def login(data: UserLogin):
     try:
         print(f"📝 Login attempt: {data.email}")
         user = db.authenticate_user(data.email, data.password)
-
         if not user:
             return JSONResponse(
                 status_code=401,
                 content={"error": "Invalid credentials"}
             )
-
         token = db.create_session(user)
         print(f"✅ Login successful: {data.email}")
-
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -621,10 +633,6 @@ async def login(data: UserLogin):
         )
 
 
-# ============================================================
-# LOGOUT
-# ============================================================
-
 @app.post("/api/logout")
 async def logout(
     token: HTTPAuthorizationCredentials = Depends(security)
@@ -636,7 +644,6 @@ async def logout(
         content={"error": "Invalid session"}
     )
 
-# CURRENT USER
 
 @app.get("/api/me")
 async def get_current_user_info(
@@ -650,6 +657,52 @@ async def get_current_user_info(
         }
     }
 
+
+# CHAT PERSISTENCE ROUTES (per-user, auth-required)
+# These replace localStorage chat history so users on a shared browser
+# can never see another account's chats.
+
+@app.get("/api/chats")
+async def api_list_chats(current_user: dict = Depends(get_current_user)):
+    chats = db.list_chats(current_user["email"])
+    return {"chats": chats}
+
+
+@app.get("/api/chats/{chat_id}")
+async def api_get_chat(
+    chat_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    chat = db.get_chat(current_user["email"], chat_id)
+    if not chat:
+        return JSONResponse(status_code=404, content={"error": "Chat not found"})
+    return {"chat": chat}
+
+
+@app.post("/api/chats")
+async def api_save_chat(
+    data: ChatSave,
+    current_user: dict = Depends(get_current_user)
+):
+    saved = db.save_chat(
+        current_user["email"],
+        data.chat_id,
+        data.title,
+        data.messages
+    )
+    return {"chat": saved}
+
+
+@app.delete("/api/chats/{chat_id}")
+async def api_delete_chat(
+    chat_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    deleted = db.delete_chat(current_user["email"], chat_id)
+    if not deleted:
+        return JSONResponse(status_code=404, content={"error": "Chat not found"})
+    return {"status": "success", "message": f"Chat {chat_id} deleted"}
+
 # CHAT HANDLER
 async def chat_handler(data: Message):
     try:
@@ -657,18 +710,15 @@ async def chat_handler(data: Message):
         print(f"📥 Chat request: {user_msg}")
 
         if not user_msg:
-            return {
-                "role": "assistant",
-                "response": "Please enter a message! 💙"
-            }
+            return {"role": "assistant", "response": "Please enter a message! 💙"}
 
         context = ""
 
         if document_store:
             try:
+                ensure_embedder()
                 query_embedding = embedder.embed_text(user_msg)
                 vector_results = vector_store.search(query_embedding, top_k=3)
-
                 if vector_results:
                     context_parts = []
                     for i, result in enumerate(vector_results, 1):
@@ -684,8 +734,8 @@ async def chat_handler(data: Message):
                         for i, result in enumerate(results, 1):
                             context_parts.append(f"[Source {i}]\n{result['text']}")
                         context = "\n\n".join(context_parts)
-                except Exception as keyword_error:
-                    print(f"⚠️ Keyword search failed: {keyword_error}")
+                except Exception as ke:
+                    print(f"⚠️ Keyword search failed: {ke}")
 
         reply = await get_ai_response(user_msg, context)
         return {"role": "assistant", "response": reply}
@@ -708,12 +758,26 @@ async def legacy_chat(data: Message):
     return await chat_handler(data)
 
 
-# DOCUMENT UPLOAD
+@app.post("/api/predict")
+async def predict(request: dict):
+    try:
+        message = request.get("message", "")
+        if not message:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "No message provided"}
+            )
+        chat_data = Message(message=message)
+        return await chat_handler(chat_data)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# DOCUMENT ROUTES
 async def upload_document_handler(file: UploadFile):
     try:
         filename = file.filename or "unknown"
         print(f"📄 Upload request: {filename}")
-
         file_bytes = await file.read()
 
         if filename.lower().endswith(".txt"):
@@ -743,6 +807,7 @@ async def upload_document_handler(file: UploadFile):
         try:
             print(f"📊 Creating embeddings for {len(chunks)} chunks...")
             chunk_texts = [chunk["text"] for chunk in chunks]
+            ensure_embedder()
             embeddings = embedder.embed_batch(chunk_texts)
             vector_store.add_document(doc_id, chunks, embeddings)
             print(f"✅ Document indexed: {doc_id}")
@@ -757,13 +822,9 @@ async def upload_document_handler(file: UploadFile):
             "char_count": len(content),
             "preview": content[:500] + ("..." if len(content) > 500 else "")
         }
-
     except Exception as e:
         print(f"❌ Upload error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/api/upload-document")
@@ -775,17 +836,17 @@ async def api_upload_document(file: UploadFile = File(...)):
 async def legacy_upload_document(file: UploadFile = File(...)):
     return await upload_document_handler(file)
 
-# DOCUMENT SEARCH
+
 async def search_document_handler(data: dict):
     query = data.get("query", "")
     top_k = data.get("top_k", 3)
-
     if not query:
         return {"error": "No query provided"}
     if not document_store:
         return {"error": "No documents uploaded yet"}
 
     try:
+        ensure_embedder()
         query_embedding = embedder.embed_text(query)
         results = vector_store.search(query_embedding, top_k=top_k)
         if results:
@@ -816,7 +877,6 @@ async def api_search_document(data: dict):
 async def legacy_search_document(data: dict):
     return await search_document_handler(data)
 
-# DOCUMENT LIST / DELETE
 
 async def list_documents_handler():
     docs = []
@@ -842,10 +902,7 @@ async def legacy_list_documents():
 
 async def delete_document_handler(doc_id: str):
     if doc_id not in document_store:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "Document not found"}
-        )
+        return JSONResponse(status_code=404, content={"error": "Document not found"})
     try:
         vector_store.delete_document(doc_id)
     except Exception as e:
@@ -864,8 +921,7 @@ async def legacy_delete_document(doc_id: str):
     return await delete_document_handler(doc_id)
 
 
-# YOUTUBE SEARCH
-
+# YOUTUBE ROUTES
 async def youtube_search_handler(query: str, max_results: int = 10):
     if not YOUTUBE_API_KEY:
         return {"error": "YouTube API key not configured"}
@@ -880,7 +936,6 @@ async def youtube_search_handler(query: str, max_results: int = 10):
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
-
         if "error" in data:
             return {"error": data["error"]["message"]}
 
@@ -908,9 +963,6 @@ async def legacy_youtube_search(query: str, max_results: int = 10):
     return await youtube_search_handler(query, max_results)
 
 
-# YOUTUBE VIDEO INFO
-
-
 async def youtube_video_info_handler(video_id: str):
     if not YOUTUBE_API_KEY:
         return {"error": "YouTube API key not configured"}
@@ -923,7 +975,6 @@ async def youtube_video_info_handler(video_id: str):
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
-
         if "error" in data:
             return {"error": data["error"]["message"]}
 
@@ -950,8 +1001,6 @@ async def api_youtube_video_info(video_id: str):
 async def legacy_youtube_video_info(video_id: str):
     return await youtube_video_info_handler(video_id)
 
-
-# YOUTUBE SUMMARY
 
 async def youtube_summary_handler(data: dict):
     video_url = data.get("url", "")
@@ -987,7 +1036,6 @@ Description:
             }
         ]
 
-        # Cerebras first
         if cerebras_client:
             try:
                 completion = cerebras_client.chat.completions.create(
@@ -1004,20 +1052,28 @@ Description:
             except Exception as e:
                 print(f"⚠️ Cerebras summary failed: {e}")
 
-        # Groq second
-        if groq_client:
-            completion = groq_client.chat.completions.create(
-                model=GROQ_PREFERRED,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=500,
-                stream=False
-            )
-            return {
-                "summary": completion.choices[0].message.content,
-                "title": info["title"],
-                "video_id": video_id
-            }
+        # Ollama fallback for summary
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as hc:
+                r = await hc.post(
+                    f"{OLLAMA_BASE_URL}/chat/completions",
+                    json={
+                        "model": OLLAMA_MODEL,
+                        "messages": messages,
+                        "temperature": 0.7,
+                    },
+                )
+                r.raise_for_status()
+                rdata = r.json()
+                text = rdata["choices"][0]["message"]["content"]
+                if text:
+                    return {
+                        "summary": text,
+                        "title": info["title"],
+                        "video_id": video_id
+                    }
+        except Exception as e:
+            print(f"⚠️ Ollama summary failed: {str(e)[:200]}")
 
         return {"error": "No AI provider available for summary"}
     except Exception as e:
@@ -1034,15 +1090,12 @@ async def legacy_youtube_summary(data: dict):
     return await youtube_summary_handler(data)
 
 
-# AUDIO GENERATION
+# AUDIO ROUTES
 async def generate_audio_handler(data: dict):
     try:
         text = data.get("text", "")
         if not text:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "No text provided"}
-            )
+            return JSONResponse(status_code=400, content={"error": "No text provided"})
 
         os.makedirs("audio_files", exist_ok=True)
         filename = f"audio_{uuid.uuid4().hex[:8]}.mp3"
@@ -1061,10 +1114,7 @@ async def generate_audio_handler(data: dict):
             return {"audio_url": None, "message": f"Audio error: {str(e)}"}
     except Exception as e:
         print(f"❌ Audio error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/api/generate-audio")
@@ -1081,19 +1131,39 @@ async def legacy_generate_audio(data: dict):
 async def get_audio(filename: str):
     filepath = os.path.join("audio_files", filename)
     if not os.path.exists(filepath):
-        return JSONResponse(
-            status_code=404,
-            content={"error": "Audio file not found"}
-        )
+        return JSONResponse(status_code=404, content={"error": "Audio file not found"})
     return FileResponse(filepath, media_type="audio/mpeg")
 
 
-# HEALTH CHECK
+# ============================================================
+# CONFIG / HEALTH / MODELS / ROOT
+# ============================================================
+
+@app.get("/api/config")
+async def get_config():
+    return {
+        "status": "success",
+        "config": {
+            "api_url": "/api/chat",
+            "version": "2.5",
+            "provider_chain": [
+                "cerebras" if cerebras_client else None,
+                "ollama"
+            ],
+            "features": {
+                "audio": True,
+                "video": True,
+                "reports": True,
+                "learning": True,
+                "games": True
+            }
+        }
+    }
+
 
 @app.get("/health")
 async def health():
     cerebras_status = "not_configured"
-    groq_status = "not_configured"
     ollama_status = "unknown"
 
     if cerebras_client:
@@ -1106,17 +1176,6 @@ async def health():
             cerebras_status = "connected"
         except Exception as e:
             cerebras_status = f"error: {str(e)[:100]}"
-
-    if groq_client:
-        try:
-            groq_client.chat.completions.create(
-                model=GROQ_MODELS["fast"],
-                messages=[{"role": "user", "content": "Say OK"}],
-                max_tokens=5,
-            )
-            groq_status = "connected"
-        except Exception as e:
-            groq_status = f"error: {str(e)[:100]}"
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as hc:
@@ -1139,7 +1198,6 @@ async def health():
         "message": "✅ Cortexa Backend Running",
         "provider_chain": [
             {"name": "cerebras", "status": cerebras_status, "primary": True},
-            {"name": "groq", "status": groq_status, "primary": False},
             {"name": "ollama", "status": ollama_status, "primary": False},
         ],
         "youtube_api": "configured" if YOUTUBE_API_KEY else "not configured",
@@ -1150,7 +1208,6 @@ async def health():
     }
 
 
-# MODELS
 @app.get("/models")
 async def list_models():
     return {
@@ -1158,12 +1215,6 @@ async def list_models():
             "model": CEREBRAS_MODEL,
             "enabled": cerebras_client is not None,
             "primary": True,
-        },
-        "groq": {
-            "models": GROQ_MODELS,
-            "preferred": GROQ_PREFERRED,
-            "enabled": groq_client is not None,
-            "primary": False,
         },
         "ollama": {
             "model": OLLAMA_MODEL,
@@ -1173,14 +1224,13 @@ async def list_models():
     }
 
 
-# ROOT
 @app.get("/")
 async def root():
     return {
         "message": "🚀 Cortexa Backend Running",
-        "version": "2.4",
+        "version": "2.5",
         "status": "active",
-        "provider_chain": ["cerebras", "groq", "ollama"],
+        "provider_chain": ["cerebras", "ollama"],
         "endpoints": [
             "/api/chat", "/chat",
             "/api/register", "/api/login", "/api/logout", "/api/me",
@@ -1196,9 +1246,22 @@ async def root():
         ]
     }
 
+# STATIC FILES
+
+FRONTEND_DIR = os.getenv("FRONTEND_DIR", "frontend")
+
+if os.path.isdir(FRONTEND_DIR):
+    app.mount(
+        "/",
+        StaticFiles(directory=FRONTEND_DIR, html=True),
+        name="frontend"
+    )
+    print(f"✅ Frontend mounted from ./{FRONTEND_DIR}")
+else:
+    print(f"ℹ️ No frontend directory at ./{FRONTEND_DIR} — API-only mode")
+
 
 # START SERVER
-
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
 
@@ -1207,7 +1270,6 @@ if __name__ == "__main__":
     print(f"🌐 Port: {port}")
     print(f"💾 DB: {DB_PATH}")
     print(f"🧠 Cerebras: {'✅ configured' if cerebras_client else '❌ missing'}")
-    print(f"🧠 Groq:     {'✅ configured' if groq_client else '⏭️  skipped'}")
     print(f"🦙 Ollama:   {OLLAMA_BASE_URL}")
     print("================================================")
 
