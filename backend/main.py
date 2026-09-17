@@ -45,10 +45,10 @@ from dotenv import load_dotenv
 import jwt
 from passlib.context import CryptContext
 
-from rag.chunker import DocumentChunker
-from rag.search import KeywordSearch
-from rag.embedder import Embedder
-from rag.vector_store import VectorStore
+from backend.rag.chunker import DocumentChunker
+from backend.rag.search import KeywordSearch
+from backend.rag.embedder import Embedder
+from backend.rag.vector_store import VectorStore
 
 
 # LOAD ENVIRONMENT VARIABLES
