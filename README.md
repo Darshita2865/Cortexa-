@@ -1,4 +1,4 @@
-# 🧠 Cortexa — AI Knowledge Intelligence Platform
+#  Cortexa — AI Knowledge Intelligence Platform
 
 **Cortexa** is an AI-powered system that transforms documents into **interactive knowledge, research insights, and learning tools**.
 
