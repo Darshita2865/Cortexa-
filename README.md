@@ -4,8 +4,7 @@
 
 > Think of it as: *NotebookLM + Research Assistant + Knowledge Graph + AI Agents*
 
-# Live DEMO Link:
-cortexa-theaiagent28.netlify.app
+
 
 ## 🚀 Overview
 
