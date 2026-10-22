@@ -1,5 +1,6 @@
 from fastapi import (
     FastAPI,
+    Request,
     UploadFile,
     File,
     HTTPException,
@@ -11,6 +12,7 @@ from fastapi.responses import (
     FileResponse
 )
 
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import (
     HTTPBearer,
@@ -38,24 +40,22 @@ import json
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
-from openai import OpenAI
-import httpx
 from dotenv import load_dotenv
 
 import jwt
 from passlib.context import CryptContext
 
-from backend.rag.chunker import DocumentChunker
-from backend.rag.search import KeywordSearch
-from backend.rag.embedder import Embedder
-from backend.rag.vector_store import VectorStore
+from rag.chunker import DocumentChunker
+from rag.search import KeywordSearch
+from rag.embedder import Embedder
+from rag.vector_store import VectorStore
 
 
 # LOAD ENVIRONMENT VARIABLES
+# AI providers and fallback order are configured in the MULTI-PROVIDER section below.
 
 load_dotenv()
 
-CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 JWT_SECRET_KEY = os.getenv(
@@ -72,10 +72,10 @@ DB_PATH = os.getenv("DB_PATH", "./cortexa.db")
 app = FastAPI(
     title="Cortexa AI API",
     description="Cortexa AI Knowledge Intelligence Platform",
-    version="2.5"
+    version="3.0"
 )
 
-# CORS 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -91,32 +91,306 @@ pwd_context = CryptContext(
 )
 security = HTTPBearer()
 
-# CEREBRAS 
-CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
-CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
-cerebras_client = None
+import time
+import hashlib
+from collections import OrderedDict
 
-if CEREBRAS_API_KEY:
+
+class LLMError(Exception):
+    """All providers failed (internal; the chat still answers via offline mode)."""
+
+
+class ProviderError(Exception):
+    def __init__(self, message: str, cooldown: int = 30):
+        super().__init__(message)
+        self.cooldown = cooldown
+
+
+_cooldown_until: Dict[str, float] = {}
+_last_error: Dict[str, str] = {}
+
+
+def _all_providers() -> Dict[str, Dict[str, Any]]:
+    ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+    return {
+        "gemini": {
+            "name": "gemini",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "key": os.getenv("GEMINI_API_KEY"),
+            "model": os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+            "needs_key": True,
+            "timeout": 25,
+        },
+        "openrouter": {
+            "name": "openrouter",
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "key": os.getenv("OPENROUTER_API_KEY"),
+            "model": os.getenv(
+                "OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free"
+            ),
+            "needs_key": True,
+            "timeout": 30,
+        },
+        "mistral": {
+            "name": "mistral",
+            "url": "https://api.mistral.ai/v1/chat/completions",
+            "key": os.getenv("MISTRAL_API_KEY"),
+            "model": os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
+            "needs_key": True,
+            "timeout": 25,
+        },
+        "groq": {
+            "name": "groq",
+            "url": "https://api.groq.com/openai/v1/chat/completions",
+            "key": os.getenv("GROQ_API_KEY"),
+            "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            "needs_key": True,
+            "timeout": 25,
+        },
+        "huggingface": {
+            "name": "huggingface",
+            "url": "https://router.huggingface.co/v1/chat/completions",
+            "key": os.getenv("HF_TOKEN"),
+            "model": os.getenv("HF_MODEL", "openai/gpt-oss-120b"),
+            "needs_key": True,
+            "timeout": 30,
+        },
+        "custom": {
+            "name": "custom",
+            "url": os.getenv("CUSTOM_API_URL", ""),
+            "key": os.getenv("CUSTOM_API_KEY"),
+            "model": os.getenv("CUSTOM_MODEL", ""),
+            "needs_key": False,
+            "timeout": 30,
+        },
+        "ollama": {
+            "name": "ollama",
+            "url": f"{ollama_url}/v1/chat/completions",
+            "key": None,
+            "model": os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
+            "needs_key": False,
+            "timeout": 120, 
+        },
+    }
+
+
+def enabled_providers() -> list:
+    order = os.getenv(
+        "LLM_PROVIDER_ORDER",
+        "gemini,openrouter,mistral,groq,huggingface,custom,ollama",
+    )
+    allp = _all_providers()
+    result = []
+    for name in [n.strip().lower() for n in order.split(",") if n.strip()]:
+        p = allp.get(name)
+        if not p:
+            continue
+        if name == "ollama" and os.getenv("ENABLE_OLLAMA", "true").lower() == "false":
+            continue
+        if name == "custom" and not (p["url"] and p["model"]):
+            continue
+        if p["needs_key"] and not p["key"]:
+            continue
+        result.append(p)
+    return result
+
+
+def is_configured() -> bool:
+    return len(enabled_providers()) > 0
+
+
+def _call_one(
+    p: Dict[str, Any], messages, max_tokens: int, temperature: float,
+    timeout: Optional[float] = None
+) -> str:
+    headers = {"Content-Type": "application/json"}
+    if p["key"]:
+        headers["Authorization"] = f"Bearer {p['key']}"
+
     try:
-        cerebras_client = OpenAI(
-            api_key=CEREBRAS_API_KEY,
-            base_url=CEREBRAS_BASE_URL,
+        r = requests.post(
+            p["url"],
+            headers=headers,
+            json={
+                "model": p["model"],
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+            timeout=timeout or p["timeout"],
         )
-        print("✅ Cerebras client initialized (primary)")
-    except Exception as e:
-        print(f"❌ Cerebras init failed: {e}")
-        cerebras_client = None
-else:
-    print("⚠️ CEREBRAS_API_KEY not set — Cerebras disabled")
+    except requests.RequestException as e:
+        raise ProviderError(f"cannot reach {p['name']}: {str(e)[:120]}", 60)
+
+    code = r.status_code
+    if code == 429:
+        raise ProviderError("rate limit reached (429)", 60)
+    if code == 402:
+        raise ProviderError("no credits (402)", 1800)
+    if code in (401, 403):
+        raise ProviderError(f"access denied ({code}): {r.text[:150]}", 1800)
+    if code == 404:
+        raise ProviderError(
+            f"model '{p['model']}' not found (404): {r.text[:150]}", 1800
+        )
+    if code == 400:
+        raise ProviderError(f"bad request (400): {r.text[:150]}", 0)
+    if not r.ok:
+        raise ProviderError(f"error {code}: {r.text[:150]}", 30)
+
+    try:
+        text = r.json()["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, ValueError, TypeError):
+        raise ProviderError("unexpected response format", 30)
+    if not text:
+        raise ProviderError("empty response", 30)
+    return text
 
 
-# OLLAMA (FALLBACK)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
+def call_llm(messages, max_tokens: int = 800, temperature: float = 0.7):
+    """Returns (text, provider_name). Raises LLMError only if ALL providers fail."""
+    providers = enabled_providers()
+    if not providers:
+        raise LLMError("no provider configured")
 
-print(f"🦙 Ollama fallback: {OLLAMA_BASE_URL} (model: {OLLAMA_MODEL})")
+    budget = float(os.getenv("LLM_TOTAL_TIMEOUT", "90"))
+    started = time.time()
 
-# USER DATABASE (SQLite)
+    for respect_cooldown in (True, False):
+        tried = 0
+        for p in providers:
+            name = p["name"]
+            remaining = budget - (time.time() - started)
+            if remaining < 3:
+                break
+            if respect_cooldown and _cooldown_until.get(name, 0) > time.time():
+                continue
+            tried += 1
+            try:
+                text = _call_one(
+                    p, messages, max_tokens, temperature,
+                    timeout=min(p["timeout"], remaining),
+                )
+                _last_error.pop(name, None)
+                _cooldown_until.pop(name, None)
+                return text, name
+            except ProviderError as e:
+                _last_error[name] = str(e)[:200]
+                if e.cooldown:
+                    _cooldown_until[name] = time.time() + e.cooldown
+                print(f"⚠️ Provider '{name}' failed: {e} -> trying next")
+        if tried or (budget - (time.time() - started)) < 3:
+            break
+
+    details = "; ".join(f"{k}: {v}" for k, v in _last_error.items())
+    raise LLMError(details or "all providers unavailable")
+
+
+def provider_status(test: bool = False) -> list:
+    out = []
+    now = time.time()
+    for p in enabled_providers():
+        name = p["name"]
+        status = "ready"
+        if test:
+            try:
+                _call_one(
+                    p, [{"role": "user", "content": "Say OK"}], 20, 0.0
+                )
+                status = "connected"
+                _last_error.pop(name, None)
+                _cooldown_until.pop(name, None)
+            except ProviderError as e:
+                status = f"error: {e}"
+        left = int(max(0, _cooldown_until.get(name, 0) - now))
+        out.append({
+            "name": name,
+            "model": p["model"],
+            "status": status,
+            "cooldown_seconds_left": left,
+            "last_error": _last_error.get(name),
+        })
+    return out
+
+_cache: "OrderedDict[str, tuple]" = OrderedDict()
+CACHE_TTL = 3600
+CACHE_MAX = 200
+
+
+def _cache_key(message: str, context: Optional[str]) -> str:
+    raw = message.strip().lower() + "||" + (context or "")[:300]
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def cache_get(key: str) -> Optional[str]:
+    item = _cache.get(key)
+    if item and time.time() - item[0] < CACHE_TTL:
+        return item[1]
+    _cache.pop(key, None)
+    return None
+
+
+def cache_put(key: str, value: str):
+    _cache[key] = (time.time(), value)
+    while len(_cache) > CACHE_MAX:
+        _cache.popitem(last=False)
+
+
+_rate: Dict[str, list] = {}
+
+
+def is_rate_limited(ip: str) -> bool:
+    limit = int(os.getenv("RATE_LIMIT_PER_MIN", "20"))
+    if limit <= 0 or not ip:
+        return False
+    now = time.time()
+    hits = [t for t in _rate.get(ip, []) if now - t < 60]
+    if len(hits) >= limit:
+        _rate[ip] = hits
+        return True
+    hits.append(now)
+    _rate[ip] = hits
+    if len(_rate) > 5000:
+        _rate.clear()
+    return False
+
+
+def get_client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+def offline_answer(message: str, context: Optional[str]) -> str:
+    try:
+        if context and len(context) > 10:
+            return (
+                "The AI engine is temporarily unavailable, but here is the most "
+                "relevant text from your uploaded document:\n\n"
+                + context[:1200]
+                + "\n\nPlease ask again in a minute for a full AI answer."
+            )
+        text = (message or "").strip().lower()
+        if re.match(r"^(hi|hello|hey|hii|helo|good (morning|afternoon|evening))\b", text):
+            return (
+                "Hi! I'm Cortexa. My AI engine is taking a short break, so I "
+                "can only give limited replies right now. Please ask again in "
+                "a minute."
+            )
+        return (
+            "I received your message, but my AI engine is temporarily busy. "
+            "Please try again in a minute. Your chat is saved, and nothing "
+            "was lost."
+        )
+    except Exception:
+        return "Please try again in a minute."
+
+
+LLM_MODEL = ", ".join(p["name"] + ":" + p["model"] for p in enabled_providers())
+print(f"🧠 AI providers (in order): {LLM_MODEL or 'NONE (offline mode only)'}")
+
+
+# USER DATABASE 
 class UserDatabase:
 
     def __init__(self, db_path: str = DB_PATH):
@@ -307,8 +581,6 @@ class UserDatabase:
             deleted = cur.rowcount > 0
         return deleted
 
-    # ---------- CHATS (per-user, isolated by user_email) ----------
-
     def list_chats(self, user_email: str) -> list:
         with self._lock:
             rows = self._conn.execute(
@@ -354,7 +626,6 @@ class UserDatabase:
 
         with self._lock:
             if chat_id:
-                # Only update if this chat belongs to this user
                 existing = self._conn.execute(
                     "SELECT id FROM chats WHERE id = ? AND user_email = ?",
                     (chat_id, user_email)
@@ -370,7 +641,6 @@ class UserDatabase:
                         "id": chat_id, "title": title, "messages": messages,
                         "updated_at": now
                     }
-                # chat_id given but doesn't belong to this user -> create fresh instead
                 chat_id = None
 
             if not chat_id:
@@ -430,7 +700,6 @@ except Exception as e:
 
 print("✅ RAG initialization completed!")
 
-# MODELS / SYSTEM PROMPT
 class Message(BaseModel):
     message: str
     document_content: Optional[str] = None
@@ -495,58 +764,33 @@ IMPORTANT RULES:
 11. For coding questions, provide correct,
     practical code and explain the important parts.
 """
-# AI RESPONSE — FALLBACK CHAIN (Cerebras -> Ollama)
-async def get_ai_response(message: str, context: Optional[str] = None) -> str:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    if context and context != "null" and len(context) > 10:
-        messages.append({
-            "role": "system",
-            "content": "Reference document:\n" + context[:3000]
-        })
 
-    messages.append({"role": "user", "content": message})
-
-    # 1️⃣ Cerebras
-    if cerebras_client:
-        try:
-            completion = cerebras_client.chat.completions.create(
-                model=CEREBRAS_MODEL,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1024,
-            )
-            text = completion.choices[0].message.content
-            if text:
-                print("✅ Response from Cerebras")
-                return text
-        except Exception as e:
-            print(f"⚠️ Cerebras failed: {str(e)[:200]}")
-
-    # 2️⃣ Ollama
+# AI RESPONSE
+async def get_ai_response(message: str, context: Optional[str] = None):
+    """Returns (text, provider_name). Always returns something."""
     try:
-        async with httpx.AsyncClient(timeout=120.0) as hc:
-            r = await hc.post(
-                f"{OLLAMA_BASE_URL}/chat/completions",
-                json={
-                    "model": OLLAMA_MODEL,
-                    "messages": messages,
-                    "temperature": 0.7,
-                },
-            )
-            r.raise_for_status()
-            data = r.json()
-            text = data["choices"][0]["message"]["content"]
-            if text:
-                print("✅ Response from Ollama")
-                return text
-    except Exception as e:
-        print(f"⚠️ Ollama failed: {str(e)[:200]}")
+        key = _cache_key(message, context)
+        cached = cache_get(key)
+        if cached:
+            return cached, "cache"
 
-    return (
-        "⚠️ All AI providers are currently unavailable. "
-        "Check your CEREBRAS_API_KEY and Ollama server."
-    )
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        if context and context != "null" and len(context) > 10:
+            messages.append({
+                "role": "system",
+                "content": "Reference document:\n" + context[:3000]
+            })
+        messages.append({"role": "user", "content": message})
+
+        answer, provider = await run_in_threadpool(call_llm, messages, 800)
+        cache_put(key, answer)
+        print(f"✅ Response from {provider}")
+        return answer, provider
+    except Exception as e:
+        print(f"❌ All providers failed, using offline answer: {str(e)[:300]}")
+        return offline_answer(message, context), "offline"
+
 
 # YOUTUBE HELPERS
 def extract_video_id(url: str) -> Optional[str]:
@@ -657,11 +901,6 @@ async def get_current_user_info(
         }
     }
 
-
-# CHAT PERSISTENCE ROUTES (per-user, auth-required)
-# These replace localStorage chat history so users on a shared browser
-# can never see another account's chats.
-
 @app.get("/api/chats")
 async def api_list_chats(current_user: dict = Depends(get_current_user)):
     chats = db.list_chats(current_user["email"])
@@ -704,13 +943,21 @@ async def api_delete_chat(
     return {"status": "success", "message": f"Chat {chat_id} deleted"}
 
 # CHAT HANDLER
-async def chat_handler(data: Message):
+async def chat_handler(data: Message, client_ip: str = ""):
     try:
         user_msg = data.message.strip()
         print(f"📥 Chat request: {user_msg}")
 
         if not user_msg:
             return {"role": "assistant", "response": "Please enter a message! 💙"}
+
+        if is_rate_limited(client_ip):
+            return {
+                "role": "assistant",
+                "response": "You're sending messages very fast. Please wait a few seconds and try again. 💙",
+                "provider": "rate_limit",
+                "degraded": True,
+            }
 
         context = ""
 
@@ -737,8 +984,13 @@ async def chat_handler(data: Message):
                 except Exception as ke:
                     print(f"⚠️ Keyword search failed: {ke}")
 
-        reply = await get_ai_response(user_msg, context)
-        return {"role": "assistant", "response": reply}
+        reply, provider = await get_ai_response(user_msg, context)
+        return {
+            "role": "assistant",
+            "response": reply,
+            "provider": provider,
+            "degraded": provider == "offline",
+        }
 
     except Exception as e:
         print(f"❌ Chat error: {e}")
@@ -749,13 +1001,13 @@ async def chat_handler(data: Message):
 
 
 @app.post("/api/chat")
-async def api_chat(data: Message):
-    return await chat_handler(data)
+async def api_chat(data: Message, request: Request):
+    return await chat_handler(data, get_client_ip(request))
 
 
 @app.post("/chat")
-async def legacy_chat(data: Message):
-    return await chat_handler(data)
+async def legacy_chat(data: Message, request: Request):
+    return await chat_handler(data, get_client_ip(request))
 
 
 @app.post("/api/predict")
@@ -1036,46 +1288,25 @@ Description:
             }
         ]
 
-        if cerebras_client:
-            try:
-                completion = cerebras_client.chat.completions.create(
-                    model=CEREBRAS_MODEL,
-                    messages=messages,
-                    temperature=0.7,
-                    max_tokens=500,
-                )
-                return {
-                    "summary": completion.choices[0].message.content,
-                    "title": info["title"],
-                    "video_id": video_id
-                }
-            except Exception as e:
-                print(f"⚠️ Cerebras summary failed: {e}")
-
-        # Ollama fallback for summary
         try:
-            async with httpx.AsyncClient(timeout=120.0) as hc:
-                r = await hc.post(
-                    f"{OLLAMA_BASE_URL}/chat/completions",
-                    json={
-                        "model": OLLAMA_MODEL,
-                        "messages": messages,
-                        "temperature": 0.7,
-                    },
-                )
-                r.raise_for_status()
-                rdata = r.json()
-                text = rdata["choices"][0]["message"]["content"]
-                if text:
-                    return {
-                        "summary": text,
-                        "title": info["title"],
-                        "video_id": video_id
-                    }
-        except Exception as e:
-            print(f"⚠️ Ollama summary failed: {str(e)[:200]}")
-
-        return {"error": "No AI provider available for summary"}
+            answer, _provider = await run_in_threadpool(call_llm, messages, 500)
+            return {
+                "summary": answer,
+                "title": info["title"],
+                "video_id": video_id
+            }
+        except LLMError as e:
+            print(f"⚠️ Summary failed: {str(e)[:500]}")
+            desc = (info.get("description") or "").strip()[:800]
+            return {
+                "summary": (
+                    "The AI is temporarily unavailable, so here is the video "
+                    "description instead:\n\n" + (desc or "No description available.")
+                ),
+                "title": info["title"],
+                "video_id": video_id,
+                "provider": "offline",
+            }
     except Exception as e:
         return {"error": str(e)}
 
@@ -1137,7 +1368,6 @@ async def get_audio(filename: str):
 
 # ============================================================
 # CONFIG / HEALTH / MODELS / ROOT
-# ============================================================
 
 @app.get("/api/config")
 async def get_config():
@@ -1145,11 +1375,8 @@ async def get_config():
         "status": "success",
         "config": {
             "api_url": "/api/chat",
-            "version": "2.5",
-            "provider_chain": [
-                "cerebras" if cerebras_client else None,
-                "ollama"
-            ],
+            "version": "3.0",
+            "provider_chain": [p["name"] for p in enabled_providers()] + ["offline"],
             "features": {
                 "audio": True,
                 "video": True,
@@ -1162,27 +1389,8 @@ async def get_config():
 
 
 @app.get("/health")
-async def health():
-    cerebras_status = "not_configured"
-    ollama_status = "unknown"
-
-    if cerebras_client:
-        try:
-            cerebras_client.chat.completions.create(
-                model=CEREBRAS_MODEL,
-                messages=[{"role": "user", "content": "Say OK"}],
-                max_tokens=5,
-            )
-            cerebras_status = "connected"
-        except Exception as e:
-            cerebras_status = f"error: {str(e)[:100]}"
-
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as hc:
-            r = await hc.get(f"{OLLAMA_BASE_URL}/models")
-            ollama_status = "connected" if r.status_code == 200 else f"http {r.status_code}"
-    except Exception as e:
-        ollama_status = f"unreachable: {str(e)[:80]}"
+async def health(test: bool = False):
+    providers = await run_in_threadpool(provider_status, test)
 
     try:
         vector_count = (
@@ -1196,10 +1404,8 @@ async def health():
     return {
         "status": "running",
         "message": "✅ Cortexa Backend Running",
-        "provider_chain": [
-            {"name": "cerebras", "status": cerebras_status, "primary": True},
-            {"name": "ollama", "status": ollama_status, "primary": False},
-        ],
+        "ai_providers": providers,
+        "offline_fallback": "always_on",
         "youtube_api": "configured" if YOUTUBE_API_KEY else "not configured",
         "auth_enabled": True,
         "rag_enabled": True,
@@ -1211,16 +1417,10 @@ async def health():
 @app.get("/models")
 async def list_models():
     return {
-        "cerebras": {
-            "model": CEREBRAS_MODEL,
-            "enabled": cerebras_client is not None,
-            "primary": True,
-        },
-        "ollama": {
-            "model": OLLAMA_MODEL,
-            "base_url": OLLAMA_BASE_URL,
-            "primary": False,
-        }
+        "providers": [
+            {"name": p["name"], "model": p["model"]}
+            for p in enabled_providers()
+        ]
     }
 
 
@@ -1228,9 +1428,9 @@ async def list_models():
 async def root():
     return {
         "message": "🚀 Cortexa Backend Running",
-        "version": "2.5",
+        "version": "3.0",
         "status": "active",
-        "provider_chain": ["cerebras", "ollama"],
+        "provider_chain": [p["name"] for p in enabled_providers()],
         "endpoints": [
             "/api/chat", "/chat",
             "/api/register", "/api/login", "/api/logout", "/api/me",
@@ -1269,8 +1469,7 @@ if __name__ == "__main__":
     print("🚀 CORTEXA BACKEND STARTING")
     print(f"🌐 Port: {port}")
     print(f"💾 DB: {DB_PATH}")
-    print(f"🧠 Cerebras: {'✅ configured' if cerebras_client else '❌ missing'}")
-    print(f"🦙 Ollama:   {OLLAMA_BASE_URL}")
+    print(f"🧠 AI providers: {LLM_MODEL or 'NONE (offline mode only)'}")
     print("================================================")
 
     uvicorn.run(app, host="0.0.0.0", port=port)
