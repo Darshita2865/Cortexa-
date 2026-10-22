@@ -9,10 +9,8 @@
 
 <body class="profile-page">
 
-<!-- ========= PROFILE VIEW ========= -->
 <div id="profileView">
   <div class="profile-container">
-    <!-- PROFILE CARD -->
     <div class="profile-card">
       <label for="uploadImg" style="cursor: pointer;">
         <img id="profileImage" class="avatar" src="avatar.png" alt="Profile Image">
@@ -20,7 +18,6 @@
       <input type="file" id="uploadImg" accept="image/*" style="display: none;">
     </div>
 
-    <!-- DETAILS -->
     <div class="details">
       <div class="detail-item">
         <label>Full Name</label>
@@ -113,14 +110,11 @@
       </div>
     </div>
 
-    <!-- SAVE BUTTON -->
     <button onclick="saveProfile()" class="save-btn">Save Changes</button>
- <!-- BACK TO HOME BUTTON - ADDED HERE -->
     <button class="back-home-btn" onclick="goToHomepage()">
         🏠 Back to Home
     </button>
-   
-<!-- ========= SETTINGS VIEW ========= -->
+
 <div id="settingsView" style="display: none;">
   <div class="page-container">
     <div class="page-header">
@@ -219,18 +213,6 @@
 </div>
 
 <script>
-  // ========================
-  // CORTEXA DYNAMIC PROFILE
-  // ========================
-  // REQUIREMENTS:
-  // - When new user logged in and clicks profile page -> page is NOT already filled; fields are blank.
-  // - User can add their own details.
-  // - Click "Save Changes" -> details saved (persist across reloads).
-  // - Click "Logout" -> all profile details removed, avatar cleared, fields become empty again.
-  // - Also "Back to Home" button navigates to homepage (simulated with alert + redirect attempt)
-  // - This version uses localStorage, but logout DELETES profile data completely.
-  
-  // DOM elements
   const profileImg = document.getElementById('profileImage');
   const uploadInput = document.getElementById('uploadImg');
   const fullNameInput = document.getElementById('fullName');
@@ -241,9 +223,7 @@
   const birthdateInput = document.getElementById('birthdate');
   const countrySelect = document.getElementById('country');
 
-  // Helper: Show toast notification (reuses style from style.css .toast-message)
   function showToast(message, isError = false) {
-    // remove existing toast if any
     const existing = document.querySelector('.toast-message');
     if (existing) existing.remove();
     
@@ -261,19 +241,16 @@
     }, 2800);
   }
 
-  // Clear all profile fields (set to empty / default placeholder)
   function clearAllProfileFields() {
     fullNameInput.value = '';
     phoneInput.value = '';
     emailInput.value = '';
     usernameInput.value = '';
-    genderSelect.value = '';        // selects default disabled option
+    genderSelect.value = '';     
     birthdateInput.value = '';
-    countrySelect.value = '';       // selects disabled first option
+    countrySelect.value = '';     
   }
 
-  // Load profile data from localStorage (if exists)
-  // IMPORTANT: If no data exists -> fields remain BLANK (no static prefilled content)
   function loadProfileData() {
     const savedProfile = localStorage.getItem('cortexa_user_profile');
     if (savedProfile) {
@@ -291,21 +268,18 @@
         clearAllProfileFields();
       }
     } else {
-      // NEW USER scenario: absolutely blank
+   
       clearAllProfileFields();
     }
-    
-    // Load avatar image if exists
+
     const savedAvatar = localStorage.getItem('cortexa_user_avatar');
     if (savedAvatar && savedAvatar.startsWith('data:image')) {
       profileImg.src = savedAvatar;
     } else {
-      // default neutral avatar (blank state)
       profileImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     }
   }
 
-  // Save current profile data to localStorage
   function saveProfile() {
     const profileData = {
       fullName: fullNameInput.value,
@@ -321,47 +295,32 @@
     showToast('✅ Profile details saved successfully!');
   }
 
-  // Save avatar image to localStorage
   function saveAvatar(imageDataUrl) {
     localStorage.setItem('cortexa_user_avatar', imageDataUrl);
   }
 
-  // LOGOUT: removes all user data (profile + avatar). Fields become empty.
   function logoutAndClearData() {
-    // Remove profile data and avatar from localStorage
     localStorage.removeItem('cortexa_user_profile');
     localStorage.removeItem('cortexa_user_avatar');
-    // Also clear any additional session flags if needed
-    localStorage.removeItem('cortexa_settings');  // optional
-    
-    // Reset all fields to blank immediately
+    localStorage.removeItem('cortexa_settings'); 
+
     clearAllProfileFields();
-    // Reset avatar to default blank icon
+
     profileImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     
     showToast('🚪 Logged out successfully. All profile data removed.');
     
-    // Optional: redirect to login page after short delay to mimic full logout flow
-    setTimeout(() => {
-      // In real scenario you'd redirect to login/index. Since we have Back to Home, 
-      // we can optionally redirect to a home/demo page. But spec says "details removed".
-      // For better UX, we stay on profile but everything cleared. But to match "back to home",
-      // we could optionally reload. However we just keep page cleared.
-      // also reset any "logged in" flags
-      sessionStorage.clear(); // extra cleanup
-    }, 500);
+    setTimeout(() => {sessionStorage.clear();}, 500);
   }
 
-  // ----- AVATAR UPLOAD HANDLER -----
+
   function setupAvatarUpload() {
     const avatarContainer = document.querySelector('.profile-card');
     if (avatarContainer) {
       avatarContainer.addEventListener('click', (e) => {
-        // prevent if clicking on image triggers double? but it's fine
         uploadInput.click();
       });
     }
-    // also directly on image if needed
     if (profileImg) {
       profileImg.style.cursor = 'pointer';
       profileImg.addEventListener('click', (e) => {
@@ -387,32 +346,22 @@
       uploadInput.value = '';
     });
   }
-
-  // Back to Home function (navigate to index.html / homepage)
   function goToHomepage() {
-    // In a real app you'd redirect to main dashboard or landing page.
-    // Since the requirement: "when they click to logout the details removed", 
-    // and Back to Home just navigates. We simulate actual redirect.
-    // If you have index.html in same directory, it will work.
+ 
     showToast('🏠 Returning to home page...');
     setTimeout(() => {
-      // Attempt to navigate to homepage (index.html). If file exists it works.
       window.location.href = 'index.html';
     }, 300);
   }
 
-  // ========= ADD LOGOUT BUTTON DYNAMICALLY =========
-  // Since style.css has .profile-buttons but not mandatory, we manually inject a logout button
-  // below the back-home button to match the requirement "logout removes details".
   function injectLogoutButton() {
     const container = document.querySelector('.profile-container');
     if (!container) return;
-    // Check if logout button already exists to avoid duplication
     if (document.getElementById('dynamicLogoutBtn')) return;
     
     const logoutBtn = document.createElement('button');
     logoutBtn.id = 'dynamicLogoutBtn';
-    logoutBtn.className = 'back-home-btn';  // reuse same style, distinct color customization
+    logoutBtn.className = 'back-home-btn';  
     logoutBtn.style.background = "linear-gradient(90deg, #ef4444, #dc2626)";
     logoutBtn.style.marginTop = "12px";
     logoutBtn.innerHTML = '🚪 Logout & Clear My Data';
@@ -421,7 +370,7 @@
         logoutAndClearData();
       }
     };
-    // Append after "Back to Home" button
+   
     const existingHomeBtn = document.querySelector('.back-home-btn');
     if (existingHomeBtn) {
       existingHomeBtn.insertAdjacentElement('afterend', logoutBtn);
@@ -430,25 +379,14 @@
     }
   }
 
-  // Optional: For demonstration, ensure that if there's any leftover fake data from demo it's purged?
-  // Also we make sure that when page loads FIRST TIME, if there is no 'cortexa_user_profile' key,
-  // fields are empty. That's handled by loadProfileData.
-  
-  // Extra safeguard: Ensure any "default static" previous data from other demos is ignored.
-  // We also enforce that the profile loads as blank unless user explicitly saved.
-  // This fully matches: "page is not already filled, user can see blank and add their details".
-  
-  // For overriding any possible prefill from previous cache, we do a hard reset if URL param 'reset' is present? Not needed.
-  
-  // ========= SETTINGS VIEW TOGGLE (unused in profile but kept for consistency) =========
   window.showProfile = function() {
     document.getElementById('profileView').style.display = 'block';
     document.getElementById('settingsView').style.display = 'none';
-    loadProfileData(); // ensure latest profile data visible
+    loadProfileData();
   };
   
   window.saveAllSettings = function() {
-    // dummy function for settings integrity
+  
     const settings = {
       theme: document.getElementById('themeSelect')?.value || 'dark'
     };
@@ -456,29 +394,20 @@
     showToast('⚙️ Settings saved (demo)');
   };
   
-  // Initial load
+
   document.addEventListener('DOMContentLoaded', () => {
-    // Clear any residual full page cache? no. But force load fresh blank state.
-    // Ensure no pre-filled default text from any old localStorage that might have "Darshita Gondaliya" remnants.
-    // Only if we want to guarantee blank for new session, we can optionally remove legacy key for demo.
-    // But the requirement demands: "when new user logged in they click profile page, page is NOT already filled".
-    // We respect that: if there's no stored profile, all fields empty.
-    // Additionally, we also delete any previous "example" data on first load if a special flag? 
-    // Actually we want to simulate fresh experience: If there is any existing 'cortexa_user_profile' it stays,
-    // but we are not pre-filling with static demo content (like Darshita details). So good.
+
     
     loadProfileData();
     setupAvatarUpload();
-    injectLogoutButton();  // Adds visible logout button that removes all details
+    injectLogoutButton();  
     
-    // Small tweak: show visual hint that profile is empty until saved.
     if (!localStorage.getItem('cortexa_user_profile')) {
-      // optional gentle reminder
+
       console.log("Fresh profile: all fields empty, ready for new user input.");
     }
   });
-  
-  // Check if user is logged in
+
   document.addEventListener('DOMContentLoaded', function() {
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     
@@ -487,25 +416,21 @@
       window.location.href = 'login.html';
       return;
     }
-    
-    // Load profile data only if logged in
+  
     loadProfileData();
     setupAvatarUpload();
-    injectLogoutButton();  // Adds visible logout button that removes all details
-    
-    // Small tweak: show visual hint that profile is empty until saved.
+    injectLogoutButton(); 
+   
     if (!localStorage.getItem('cortexa_user_profile')) {
-      // optional gentle reminder
+
       console.log("Fresh profile: all fields empty, ready for new user input.");
     }
   });
   
-  // Expose functions globally for inline onclick usage
   window.saveProfile = saveProfile;
   window.goToHomepage = goToHomepage;
-  window.logoutAndClearData = logoutAndClearData; // for any extra reference
+  window.logoutAndClearData = logoutAndClearData;
   
-  // Also override any previous accidental saved data from other scripts? Not necessary.
 </script>
 </body>
 </html>
