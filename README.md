@@ -4,6 +4,8 @@
 
 > Think of it as: *NotebookLM + Research Assistant + Knowledge Graph + AI Agents*
 
+# DEMO LINK
+https://huggingface.co/spaces/Darshee245/CORTEXA2
 
 
 ## 🚀 Overview
