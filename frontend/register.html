@@ -166,42 +166,36 @@
 <div class="container">
     <form class="register-box" id="registerForm" onsubmit="event.preventDefault(); registerUser();">
 
-        <h2>🧠 Create Account</h2>
+        <h2> Create Account</h2>
         <p class="sub-title">Join Cortexa AI - Your Knowledge Partner</p>
 
-        <!-- Full Name -->
         <input type="text" id="regFullName" placeholder="Full Name" required>
 
-        <!-- Email -->
         <input type="email" id="regEmail" placeholder="Email Address" required>
 
-        <!-- Phone -->
         <input type="tel" id="regPhone" placeholder="Phone Number (e.g., +91XXXXXXXXXX)" required>
 
-        <!-- Date of Birth -->
         <input type="date" id="regDob" required>
 
-        <!-- Password -->
         <input type="password" id="regPassword" placeholder="Password (min 8 characters)" required oninput="checkPasswordStrength()">
         <div class="password-strength">
             <span id="passwordStrengthText">Password strength</span>
             <div class="bar"><div class="fill" id="passwordStrengthBar"></div></div>
         </div>
 
-        <!-- Confirm Password -->
+
         <input type="password" id="regConfirmPassword" placeholder="Confirm Password" required oninput="checkPasswordMatch()">
         <div id="passwordMatchError" style="color: #ef4444; font-size: 13px; display: none;">❌ Passwords do not match</div>
 
-        <!-- Terms -->
+
         <div class="terms-check">
             <input type="checkbox" id="termsCheck" required>
             <label for="termsCheck">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
         </div>
 
-        <!-- Message Area -->
+
         <div id="message" class="message"></div>
 
-        <!-- Submit Button -->
         <button type="submit" id="submitBtn">
             <span id="submitText">Create Account</span>
             <span id="submitLoader" style="display: none;"><span class="loader"></span>Creating...</span>
@@ -212,9 +206,6 @@
 </div>
 
 <script>
-    // ============================================
-    // PASSWORD STRENGTH
-    // ============================================
     function checkPasswordStrength() {
         const password = document.getElementById('regPassword').value;
         const bar = document.getElementById('passwordStrengthBar');
@@ -254,9 +245,6 @@
         }
     }
 
-    // ============================================
-    // SHOW MESSAGE
-    // ============================================
     function showMessage(text, type = 'error') {
         const msg = document.getElementById('message');
         msg.textContent = text;
@@ -271,11 +259,8 @@
         msg.style.display = 'none';
     }
 
-    // ============================================
-    // REGISTER USER
-    // ============================================
     async function registerUser() {
-        // Get form values
+    
         const fullName = document.getElementById('regFullName').value.trim();
         const email = document.getElementById('regEmail').value.trim();
         const phone = document.getElementById('regPhone').value.trim();
@@ -284,61 +269,50 @@
         const confirmPassword = document.getElementById('regConfirmPassword').value;
         const termsChecked = document.getElementById('termsCheck').checked;
 
-        // Reset messages
         hideMessage();
 
-        // ===== VALIDATION =====
-
-        // 1. Basic fields
         if (!fullName || !email || !phone || !dob || !password) {
             showMessage('Please fill in all required fields!', 'error');
             return;
         }
 
-        // 2. Name validation
         if (fullName.length < 2) {
             showMessage('Full name must be at least 2 characters.', 'error');
             return;
         }
 
-        // 3. Email validation
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             showMessage('Please enter a valid email address.', 'error');
             return;
         }
 
-        // 4. Phone validation
         if (!phone.match(/^\+[1-9]\d{1,14}$/)) {
             showMessage('Please enter a valid phone number with country code (e.g., +91XXXXXXXXXX).', 'error');
             return;
         }
 
-        // 5. Password validation
         if (password.length < 8) {
             showMessage('Password must be at least 8 characters long.', 'error');
             return;
         }
 
-        // 6. Password match
         if (password !== confirmPassword) {
             showMessage('Passwords do not match!', 'error');
             return;
         }
 
-        // 7. Terms
         if (!termsChecked) {
             showMessage('Please agree to the Terms of Service and Privacy Policy.', 'error');
             return;
         }
 
-        // ===== SHOW LOADING =====
         document.getElementById('submitText').style.display = 'none';
         document.getElementById('submitLoader').style.display = 'inline';
         document.getElementById('submitBtn').disabled = true;
 
         try {
-            // ===== CALL BACKEND API =====
+
             const response = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -353,22 +327,18 @@
 
             const data = await response.json();
 
-            // ===== HANDLE RESPONSE =====
+
             if (response.ok) {
-                // ✅ Registration successful
                 showMessage('✅ ' + data.message, 'success');
 
-                // Store email for verification
                 localStorage.setItem('pendingVerificationEmail', email);
                 localStorage.setItem('pendingVerificationPhone', phone);
 
-                // Redirect to verification after 2 seconds
                 setTimeout(() => {
                     window.location.href = 'login.html?message=' + encodeURIComponent('Account created! Please login.');
                 }, 2000);
 
             } else {
-                // ❌ Registration failed
                 showMessage('❌ ' + (data.error || 'Registration failed. Please try again.'), 'error');
             }
 
@@ -376,16 +346,13 @@
             console.error('Registration error:', error);
             showMessage('❌ Network error. Please check your connection and try again.', 'error');
         } finally {
-            // ===== HIDE LOADING =====
+
             document.getElementById('submitText').style.display = 'inline';
             document.getElementById('submitLoader').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
         }
     }
 
-    // ============================================
-    // ENTER KEY SUPPORT
-    // ============================================
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             const form = document.getElementById('registerForm');
@@ -397,9 +364,6 @@
         }
     });
 
-    // ============================================
-    // INITIALIZE
-    // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🔐 Registration page loaded');
     });
