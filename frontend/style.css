@@ -1,4 +1,4 @@
-/* ================= GENERAL RESET ================= */
+
 * {
     margin: 0;
     padding: 0;
@@ -12,7 +12,6 @@ body {
     overflow-x: hidden;
 }
 
-/* ================= NAVBAR BUTTON VISIBILITY ================= */
 .nav-right {
     display: flex;
     align-items: center;
@@ -41,7 +40,6 @@ body.logged-in #signinBtn {
     display: none !important;
 }
 
-/* ================= NAVBAR ================= */
 .navbar {
     position: fixed;
     top: 0;
@@ -137,8 +135,6 @@ body.logged-in #signinBtn {
     height: 20px;
     stroke: white;
 }
-
-/* ================= HERO SECTION ================= */
 .hero {
     min-height: 100vh;
     display: flex;
@@ -211,7 +207,6 @@ body.logged-in #signinBtn {
     }
 }
 
-/* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
     html, body {
         overflow-x: hidden !important;
@@ -362,7 +357,6 @@ body.logged-in #signinBtn {
     font-size: 32px;
 }
 
-/* ================= FEATURE CARDS ================= */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -419,8 +413,6 @@ body.logged-in #signinBtn {
 .feature-card:hover p {
     color: #e5e7eb;
 }
-
-/* ================= ABOUT SECTION ================= */
 .about-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -459,7 +451,6 @@ body.logged-in #signinBtn {
     color: #d1d5db;
 }
 
-/* ================= CONTACT SECTION ================= */
 #contact form {
     max-width: 500px;
     margin: auto;
@@ -507,7 +498,6 @@ body.logged-in #signinBtn {
     box-shadow: 0 5px 20px rgba(168,85,247,0.3);
 }
 
-/* ================= BLOG SECTION ================= */
 .blog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -538,7 +528,6 @@ body.logged-in #signinBtn {
     background: linear-gradient(135deg,#1a162b,#2a2445);
 }
 
-/* ================= PROFILE PAGE STYLES ================= */
 .profile-container {
     max-width: 800px;
     margin: 0 auto;
@@ -684,7 +673,6 @@ body.logged-in #signinBtn {
     transform: translateY(0);
 }
 
-/* ================= PAGE CONTAINER ================= */
 .page-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -766,7 +754,6 @@ body.logged-in #signinBtn {
     margin-bottom: 0.5rem;
 }
 
-/* ================= TOAST MESSAGE ================= */
 .toast-message {
     position: fixed;
     bottom: 30px;
@@ -802,7 +789,6 @@ body.logged-in #signinBtn {
     }
 }
 
-/* ================= REGISTER/LOGIN PAGE ================= */
 .register-page {
     background: radial-gradient(circle at center, #1a162b, #0A0717);
 }
@@ -905,7 +891,6 @@ body.logged-in #signinBtn {
     }
 }
 
-/* ================= DASHBOARD LAYOUT ================= */
 .dashboard-page {
     display: flex;
     min-height: 100vh;
@@ -913,7 +898,6 @@ body.logged-in #signinBtn {
     position: relative;
 }
 
-/* ================= LEFT SIDEBAR ================= */
 .sidebar {
     width: 260px;
     height: 100vh;
@@ -930,7 +914,6 @@ body.logged-in #signinBtn {
     overflow-x: hidden;
 }
 
-/* Logo */
 .sidebar .logo {
     padding: 20px;
     text-align: center;
@@ -942,7 +925,6 @@ body.logged-in #signinBtn {
     width: 140px;
 }
 
-/* Sidebar Navigation */
 .sidebar-nav {
     flex: 1;
     padding: 0 12px;
@@ -962,7 +944,6 @@ body.logged-in #signinBtn {
     margin-bottom: 8px;
 }
 
-/* Navigation Items */
 .nav-item {
     display: flex;
     align-items: center;
@@ -997,7 +978,6 @@ body.logged-in #signinBtn {
     flex-shrink: 0;
 }
 
-/* Logout Button */
 .logout-section {
     padding: 20px 12px;
     border-top: 1px solid rgba(168, 85, 247, 0.15);
@@ -1025,7 +1005,6 @@ body.logged-in #signinBtn {
     box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
 }
 
-/* ================= RIGHT SIDEBAR ================= */
 .right-sidebar {
     width: 280px;
     height: 100vh;
@@ -1053,7 +1032,6 @@ body.logged-in #signinBtn {
     margin-top: 0;
 }
 
-/* Chat Items */
 .chat-item {
     display: flex;
     align-items: center;
@@ -1084,7 +1062,6 @@ body.logged-in #signinBtn {
     text-overflow: ellipsis;
 }
 
-/* Project Items */
 .project-item {
     display: flex;
     align-items: center;
@@ -1110,7 +1087,6 @@ body.logged-in #signinBtn {
     text-overflow: ellipsis;
 }
 
-/* Three-dot Menu */
 .chat-menu-container,
 .project-menu-container {
     position: relative;
@@ -1141,7 +1117,6 @@ body.logged-in #signinBtn {
     color: white;
 }
 
-/* Dropdown Menus */
 .chat-dropdown,
 .project-dropdown {
     position: absolute;
@@ -1187,7 +1162,6 @@ body.logged-in #signinBtn {
     color: #ef4444;
 }
 
-/* ================= MAIN CHAT AREA ================= */
 .main {
     margin-left: 260px;
     margin-right: 280px;
@@ -1199,7 +1173,6 @@ body.logged-in #signinBtn {
     overflow: hidden;
 }
 
-/* Chat Messages Container */
 #searchResults {
     flex: 1;
     overflow-y: auto;
@@ -1210,7 +1183,6 @@ body.logged-in #signinBtn {
     gap: 12px;
 }
 
-/* Chat Bubbles */
 .user-bubble {
     align-self: flex-end;
     background: linear-gradient(135deg, #a855f7, #7c3aed);
@@ -1234,7 +1206,6 @@ body.logged-in #signinBtn {
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
-/* Search Box */
 .search-box {
     position: fixed;
     bottom: 20px;
@@ -1290,7 +1261,6 @@ body.logged-in #signinBtn {
     color: white;
 }
 
-/* Plus Button Dropdown */
 .plus-dropdown-container {
     position: relative;
 }
@@ -1345,7 +1315,6 @@ body.logged-in #signinBtn {
     background: linear-gradient(90deg, #a855f7, #6366f1);
 }
 
-/* ================= STUDY NOTES STYLES ================= */
 .study-notes-container {
     background: rgba(20, 16, 32, 0.6);
     backdrop-filter: blur(8px);
@@ -1490,7 +1459,6 @@ body.logged-in #signinBtn {
     color: #ef4444;
 }
 
-/* ================= LEARNING TOOLS STYLES ================= */
 .learning-tabs {
     display: flex;
     gap: 10px;
@@ -1519,8 +1487,6 @@ body.logged-in #signinBtn {
     background: rgba(168, 85, 247, 0.2);
     color: white;
 }
-
-/* Quiz Styles */
 .quiz-container {
     padding: 20px;
 }
@@ -1665,7 +1631,6 @@ body.logged-in #signinBtn {
     cursor: pointer;
 }
 
-/* Score Card */
 .score-card {
     background: linear-gradient(135deg, #1a162b, #0A0717);
     border-radius: 15px;
@@ -1691,7 +1656,6 @@ body.logged-in #signinBtn {
     color: white;
 }
 
-/* Flashcard Styles */
 .flashcard-container {
     padding: 20px;
     text-align: center;
@@ -1825,7 +1789,6 @@ body.logged-in #signinBtn {
     min-width: 300px;
 }
 
-/* Audio Modal */
 .audio-modal-overlay {
     position: fixed;
     top: 0;
@@ -1910,52 +1873,304 @@ body.logged-in #signinBtn {
     cursor: pointer;
 }
 
-/* Video Modal */
-.video-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 30000;
-}
-
 .video-modal {
-    background: linear-gradient(135deg, #1a162b, #0A0717);
-    border-radius: 24px;
-    width: 900px;
-    max-width: 90%;
-    max-height: 85vh;
-    overflow-y: auto;
-    padding: 25px;
-    border: 1px solid rgba(168, 85, 247, 0.3);
+    width: 1100px;
+    max-width: 95%;
 }
 
-.video-tabs {
+.video-modal label {
+    display: block;
+    color: #d8c9f8;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 18px 0 8px;
+}
+
+/* Input + button side by side */
+.youtube-url-input,
+.youtube-search-input {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    align-items: stretch;
 }
 
-.tab-btn {
-    padding: 8px 20px;
+.video-modal .youtube-url-input input,
+.video-modal .youtube-search-input input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
+.video-modal input[type="text"],
+.video-modal input[type="text"]:focus,
+.video-modal input[type="text"]:-webkit-autofill,
+.video-modal input[type="text"]:-webkit-autofill:focus {
+    background-color: #120d25 !important;
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0 1000px #120d25 inset !important;
+    caret-color: white;
+}
+
+.video-modal input[type="text"]:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+}
+
+.video-modal button:not(.tab-btn):not(.close-video-modal):not(.close-video-info) {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+}
+
+.video-modal button:not(.tab-btn):not(.close-video-modal):not(.close-video-info):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(168, 85, 247, 0.5);
+}
+
+.video-modal .watch-btn,
+.video-modal .library-remove-btn {
+    background: rgba(168, 85, 247, 0.15) !important;
+    border: 1px solid rgba(168, 85, 247, 0.4) !important;
+    box-shadow: none !important;
+}
+
+.video-modal .watch-btn:hover {
+    background: rgba(168, 85, 247, 0.3) !important;
+}
+
+.video-modal .library-remove-btn {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+}
+
+.video-modal .tab-btn {
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    padding: 10px 22px;
+}
+
+.video-modal .close-video-info {
     background: rgba(168, 85, 247, 0.2);
     border: none;
-    border-radius: 8px;
     color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     cursor: pointer;
 }
 
-.tab-btn.active {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
+.youtube-action-buttons,
+.video-export-buttons,
+.video-action-buttons,
+.audio-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
 }
 
-/* Report Modal */
+.youtube-results .loading-spinner,
+.youtube-video-info .loading-spinner {
+    width: auto;
+    height: auto;
+    border: none;
+    border-radius: 0;
+    animation: loadingPulse 1.2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px 0;
+    color: #d8c9f8;
+    font-size: 15px;
+}
+
+@keyframes loadingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+.youtube-results .error-message,
+.youtube-results .no-results,
+.youtube-video-info .error-message {
+    text-align: center;
+    padding: 25px;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 14px;
+}
+
+.youtube-results {
+    width: 100%;
+    margin-top: 25px;
+}
+
+.search-header {
+    margin-bottom: 18px;
+}
+
+.search-header h3 {
+    font-size: 20px;
+    color: white;
+    margin-bottom: 4px;
+}
+
+.search-header p {
+    color: #a1a1aa;
+    font-size: 13px;
+}
+
+.youtube-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 22px;
+    width: 100%;
+}
+
+.video-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.video-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(168, 85, 247, 0.55);
+    box-shadow: 0 10px 28px rgba(168, 85, 247, 0.2);
+}
+
+.video-thumbnail {
+    position: relative;
+}
+
+.video-thumbnail img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.video-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    flex: 1;
+}
+
+.video-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: white;
+}
+
+.video-channel {
+    font-size: 13px;
+    color: #c084fc;
+}
+
+.video-stats {
+    font-size: 12px;
+    color: #a1a1aa;
+}
+
+.video-details button {
+    width: 100%;
+    margin-top: 6px !important;
+}
+
+.video-details button:first-of-type {
+    margin-top: auto !important;
+}
+
+.youtube-video-info {
+    margin-top: 25px;
+}
+
+.video-detail-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    border-radius: 18px;
+    padding: 22px;
+}
+
+.video-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 14px;
+}
+
+.video-detail-content p {
+    margin-bottom: 8px;
+    color: #d1d5db;
+}
+
+.ai-summary-section {
+    margin: 18px 0;
+    padding: 18px;
+    background: rgba(168, 85, 247, 0.08);
+    border-left: 3px solid #a855f7;
+    border-radius: 12px;
+    line-height: 1.7;
+}
+
+.ai-summary-section h4 {
+    color: #c084fc;
+    margin-bottom: 10px;
+}
+.library-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.library-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.library-card img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+}
+
+.library-card-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.empty-library {
+    text-align: center;
+    padding: 40px;
+    color: #a1a1aa;
+}
+
 .report-modal-overlay {
     position: fixed;
     top: 0;
@@ -2006,7 +2221,6 @@ body.logged-in #signinBtn {
     cursor: pointer;
 }
 
-/* Learning Tools Modal */
 .learning-modal-overlay {
     position: fixed;
     top: 0;
@@ -2032,7 +2246,6 @@ body.logged-in #signinBtn {
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
-/* Games Modal */
 .games-modal-overlay {
     position: fixed;
     top: 0;
@@ -2058,7 +2271,6 @@ body.logged-in #signinBtn {
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
-/* Games Grid */
 .games-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -2098,7 +2310,6 @@ body.logged-in #signinBtn {
     margin-top: 15px;
 }
 
-/* Game Header */
 .game-header-bar {
     display: flex;
     justify-content: space-between;
@@ -2157,7 +2368,6 @@ body.logged-in #signinBtn {
     cursor: pointer;
 }
 
-/* Memory Game */
 .memory-grid-large {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2208,7 +2418,6 @@ body.logged-in #signinBtn {
     cursor: default;
 }
 
-/* Typing Game */
 .typing-word-large {
     font-size: 56px;
     text-align: center;
@@ -2231,7 +2440,6 @@ body.logged-in #signinBtn {
     text-align: center;
 }
 
-/* Scrambled Word Game */
 .scrambled-word-large {
     font-size: 48px;
     text-align: center;
@@ -2250,7 +2458,6 @@ body.logged-in #signinBtn {
     margin: 15px 0;
 }
 
-/* True/False Game */
 .truefalse-buttons-large {
     display: flex;
     gap: 20px;
@@ -2278,7 +2485,6 @@ body.logged-in #signinBtn {
     color: white;
 }
 
-/* Game Results */
 .game-results-large {
     text-align: center;
     padding: 50px;
@@ -2318,7 +2524,6 @@ body.logged-in #signinBtn {
     cursor: pointer;
 }
 
-/* Toast Message */
 .toast-message {
     position: fixed;
     bottom: 30px;
@@ -2333,7 +2538,6 @@ body.logged-in #signinBtn {
     animation: fadeSlide 3s ease forwards;
 }
 
-/* ================= ANIMATIONS ================= */
 @keyframes dropdownFadeIn {
     from {
         opacity: 0;
@@ -2368,7 +2572,6 @@ body.logged-in #signinBtn {
     to { transform: rotate(360deg); }
 }
 
-/* ================= SCROLLBAR STYLES ================= */
 *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -2388,7 +2591,6 @@ body.logged-in #signinBtn {
     background: rgba(168, 85, 247, 0.8);
 }
 
-/* ================= RESPONSIVE DESIGN ================= */
 @media (max-width: 1024px) {
     .sidebar {
         width: 220px;
@@ -2495,7 +2697,6 @@ body.logged-in #signinBtn {
     }
 }
 
-/* ================= HELPER CLASSES ================= */
 .hidden {
     display: none !important;
 }
@@ -2523,7 +2724,6 @@ body.logged-in #signinBtn {
     animation: spin 0.6s linear infinite;
 }
 
-/* ================= BUTTON STYLES ================= */
 button {
     cursor: pointer;
     transition: all 0.3s ease;
@@ -2533,7 +2733,6 @@ button:active {
     transform: scale(0.98);
 }
 
-/* ================= INPUT STYLES ================= */
 input, textarea, select {
     font-family: 'Poppins', sans-serif;
 }
@@ -2542,7 +2741,6 @@ input:focus, textarea:focus, select:focus {
     outline: none;
 }
 
-/* ================= PROGRESS BAR ================= */
 .progress-bar {
     width: 100%;
     height: 6px;
@@ -2564,9 +2762,6 @@ input:focus, textarea:focus, select:focus {
     color: #a1a1aa;
     text-align: center;
 }
-/* ================= MODAL FIXES - ENSURE PROPER DISPLAY ================= */
-
-/* Fix for all modals - ensure they display correctly */
 .audio-modal-overlay,
 .video-modal-overlay,
 .report-modal-overlay,
@@ -2579,13 +2774,12 @@ input:focus, textarea:focus, select:focus {
     height: 100%;
     background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
-    display: none !important;  /* Hidden by default */
+    display: none !important; 
     justify-content: center;
     align-items: center;
     z-index: 99999;
 }
 
-/* When modal is shown, override display */
 .audio-modal-overlay[style*="display: flex"],
 .video-modal-overlay[style*="display: flex"],
 .report-modal-overlay[style*="display: flex"],
@@ -2594,7 +2788,6 @@ input:focus, textarea:focus, select:focus {
     display: flex !important;
 }
 
-/* Modal containers */
 .audio-modal,
 .video-modal,
 .report-modal,
@@ -2619,7 +2812,6 @@ input:focus, textarea:focus, select:focus {
     }
 }
 
-/* Fix for video modal specifically */
 .video-modal {
     width: 900px;
     max-width: 90%;
@@ -2628,14 +2820,12 @@ input:focus, textarea:focus, select:focus {
     padding: 25px;
 }
 
-/* Fix for audio modal */
 .audio-modal {
     width: 560px;
     max-width: 92%;
     overflow: hidden;
 }
 
-/* Fix for report modal */
 .report-modal {
     width: 900px;
     max-width: 90%;
@@ -2644,7 +2834,6 @@ input:focus, textarea:focus, select:focus {
     padding: 25px;
 }
 
-/* Fix for learning modal */
 .learning-modal {
     width: 900px;
     max-width: 90%;
@@ -2653,7 +2842,6 @@ input:focus, textarea:focus, select:focus {
     padding: 25px;
 }
 
-/* Fix for games modal */
 .games-modal {
     width: 900px;
     max-width: 90%;
@@ -2662,7 +2850,6 @@ input:focus, textarea:focus, select:focus {
     padding: 25px;
 }
 
-/* Ensure modal headers are visible */
 .audio-modal-header,
 .video-modal-header,
 .report-modal-header,
@@ -2714,7 +2901,6 @@ input:focus, textarea:focus, select:focus {
     transform: scale(1.1);
 }
 
-/* Ensure modal body content is visible */
 .audio-modal-body,
 .video-modal-body,
 .report-modal-body,
@@ -2724,25 +2910,185 @@ input:focus, textarea:focus, select:focus {
     color: white;
 }
 
-/* Fix for games container */
 #gameContent {
     min-height: 400px;
     padding: 20px;
 }
 
-/* Ensure games grid shows properly */
 .games-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     padding: 20px;
 }
-
-/* Debug border - remove after fixing */
 .audio-modal-overlay *,
 .video-modal-overlay *,
 .report-modal-overlay *,
 .learning-modal-overlay *,
 .games-modal-overlay * {
-    /* visibility: visible; */
 }
+
+.main {
+    width: auto;
+    max-width: none;
+}
+ 
+#searchResults {
+    width: 100%;
+    max-width: 900px;  
+    margin: 0 auto;     
+    box-sizing: border-box;
+}
+ 
+.user-bubble,
+.ai-bubble {
+    max-width: 85%;
+}
+ 
+@media (max-width: 768px) {
+    #searchResults {
+        max-width: 100%;
+        padding: 12px;
+    }
+}
+ 
+.audio-modal input[type="text"],
+.audio-modal textarea,
+.audio-modal select,
+.report-modal input[type="text"],
+.report-modal textarea,
+.report-modal select,
+.learning-modal input[type="text"],
+.learning-modal textarea,
+.learning-modal select,
+.video-modal input[type="text"],
+.games-modal input[type="text"] {
+    background: #120d25;
+    border: 1px solid #2a2445;
+    border-radius: 12px;
+    color: white;
+    padding: 12px 16px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: 0.25s;
+    width: 100%;
+    box-sizing: border-box;
+}
+ 
+.audio-modal input[type="text"]::placeholder,
+.audio-modal textarea::placeholder,
+.report-modal input[type="text"]::placeholder,
+.report-modal textarea::placeholder,
+.learning-modal input[type="text"]::placeholder,
+.learning-modal textarea::placeholder {
+    color: #7c7a8a;
+}
+ 
+.audio-modal input[type="text"]:focus,
+.audio-modal textarea:focus,
+.audio-modal select:focus,
+.report-modal input[type="text"]:focus,
+.report-modal textarea:focus,
+.report-modal select:focus,
+.learning-modal input[type="text"]:focus,
+.learning-modal textarea:focus,
+.learning-modal select:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+}
+
+.audio-modal select,
+.report-modal select,
+.learning-modal select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a855f7' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 40px;
+    cursor: pointer;
+}
+ 
+.audio-modal select option,
+.report-modal select option,
+.learning-modal select option {
+    background: #1a162b;
+    color: white;
+}
+ 
+.mode-btn {
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #d8c9f8;
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+ 
+.mode-btn:hover {
+    background: rgba(168, 85, 247, 0.25);
+    color: white;
+    transform: translateY(-1px);
+}
+ 
+.mode-btn.active {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4);
+}
+
+.audio-modal-body > div:first-child {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+#reportTopicInput {
+    min-height: 90px;
+    resize: vertical;
+}
+.report-modal input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #a855f7;
+    cursor: pointer;
+}
+ 
+.learning-modal button:not(.learning-tab-btn):not(.close-learning-modal) {
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+ 
+.learning-modal button:not(.learning-tab-btn):not(.close-learning-modal):hover {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border-color: transparent;
+    transform: translateY(-1px);
+}
+ 
+.learning-modal button[onclick^="generateQuiz"],
+.learning-modal button[onclick^="generateStudyNotes"] {
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border: none;
+    font-weight: 600;
+}
+
+.ai-bubble {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+ 
