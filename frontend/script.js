@@ -1,8 +1,6 @@
-console.log("🚀 Cortexa JS Loaded - Production Version");
+console.log(" Cortexa JS Loaded - Production Version");
 
-// ================= API CONFIGURATION - FIXED =================
-// Points to your backend (change this to your actual backend URL)
-const BASE_URL = "https://cortexa-64a6.onrender.com";
+const BASE_URL = "";
 const API_URL = BASE_URL + "/chat";
 
 const ENDPOINTS = {
@@ -12,13 +10,13 @@ const ENDPOINTS = {
     youtubeSearch: BASE_URL + "/youtube-search",
     youtubeVideoInfo: BASE_URL + "/youtube-video-info",
     health: BASE_URL + "/health",
-    models: BASE_URL + "/models"
+    models: BASE_URL + "/models",
+    chats: BASE_URL + "/api/chats"
 };
 
 console.log("✅ Backend URL:", BASE_URL);
 console.log("✅ Chat API:", API_URL);
 
-// ================= GLOBAL VARIABLES =================
 let currentChatId = null;
 let currentProjectId = null;
 let currentDocument = null;
@@ -29,20 +27,88 @@ let isRecording = false;
 let currentAudio = null;
 let currentAudioText = null;
 
-// ================= USER-SPECIFIC STORAGE =================
+let sessionChatsCache = [];
+
+function getAuthToken() {
+    return localStorage.getItem("access_token") || null;
+}
+
+function isLoggedIn() {
+    return !!getAuthToken();
+}
+
+function authHeaders() {
+    const token = getAuthToken();
+    return token ? { "Authorization": "Bearer " + token } : {};
+}
+
 function getCurrentUser() {
     return localStorage.getItem("email") || "guest";
 }
 
-function getChats() {
-    const user = getCurrentUser();
-    return JSON.parse(localStorage.getItem("chats_" + user)) || [];
+async function getChats() {
+    if (isLoggedIn()) {
+        try {
+            const res = await fetch(ENDPOINTS.chats, {
+                method: "GET",
+                headers: { ...authHeaders() }
+            });
+            if (res.status === 401) {
+
+                localStorage.removeItem("access_token");
+                sessionChatsCache = [];
+                return [];
+            }
+            const data = await res.json();
+            sessionChatsCache = data.chats || [];
+            return sessionChatsCache;
+        } catch (err) {
+            console.error("Failed to load chats from server:", err);
+            return sessionChatsCache;
+        }
+    }
+
+    return sessionChatsCache;
 }
 
-function saveChats(chats) {
-    const user = getCurrentUser();
-    localStorage.setItem("chats_" + user, JSON.stringify(chats));
+async function persistChat(chatId, title, messages) {
+    if (isLoggedIn()) {
+        try {
+            const res = await fetch(ENDPOINTS.chats, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...authHeaders() },
+                body: JSON.stringify({ chat_id: chatId, title: title, messages: messages })
+            });
+            const data = await res.json();
+            return data.chat ? data.chat.id : chatId;
+        } catch (err) {
+            console.error("Failed to save chat to server:", err);
+            return chatId;
+        }
+    }
+    return chatId;
 }
+
+async function removeChat(chatId) {
+    if (isLoggedIn()) {
+        try {
+            await fetch(ENDPOINTS.chats + "/" + chatId, {
+                method: "DELETE",
+                headers: { ...authHeaders() }
+            });
+        } catch (err) {
+            console.error("Failed to delete chat on server:", err);
+        }
+    }
+    sessionChatsCache = sessionChatsCache.filter(c => c.id !== chatId);
+}
+
+window.clearLocalSessionOnLogout = function() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("email");
+    sessionChatsCache = [];
+    currentChatId = null;
+};
 
 function getProjects() {
     const user = getCurrentUser();
@@ -54,7 +120,6 @@ function saveProjects(projects) {
     localStorage.setItem("projects_" + user, JSON.stringify(projects));
 }
 
-// ================= HELPER FUNCTIONS =================
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -68,19 +133,17 @@ function showToast(message, type) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'customToast';
-        toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: ' + (type === 'error' ? '#ef4444' : '#10b981') + '; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-size: 14px; max-width: 400px;';
+        toast.className = 'toast-message';
         document.body.appendChild(toast);
     }
-    
-    toast.style.backgroundColor = type === 'error' ? '#ef4444' : '#10b981';
+    toast.style.background = type === 'error'
+        ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+        : 'linear-gradient(90deg, #22c55e, #16a34a)';
     toast.textContent = message;
-    toast.style.opacity = '1';
-    setTimeout(function() {
-        toast.style.opacity = '0';
-    }, 3000);
+    toast.style.animation = 'none';
+    void toast.offsetWidth;
+    toast.style.animation = 'fadeSlide 3s ease forwards';
 }
-
-// ================= FORMAT FUNCTION =================
 function formatContent(content) {
     if (!content) return '';
     var formatted = content.replace(/\n/g, '<br>');
@@ -90,7 +153,6 @@ function formatContent(content) {
     return formatted;
 }
 
-// ================= DISPLAY MESSAGE FUNCTION =================
 function displayMessage(text, sender) {
     var chatBox = document.getElementById("searchResults");
     if (!chatBox) {
@@ -100,17 +162,17 @@ function displayMessage(text, sender) {
 
     var msgDiv = document.createElement("div");
     msgDiv.className = sender === "user" ? "user-bubble" : "ai-bubble";
-    
+
     var formattedText = formatContent(text);
     var senderName = sender === "user" ? "You" : "Cortexa";
-    
+
     msgDiv.innerHTML = '<div class="chat-title">' + senderName + '</div><div class="chat-content">' + formattedText + '</div>';
 
     var id = "msg-" + Date.now() + "-" + Math.random();
     msgDiv.id = id;
 
     chatBox.appendChild(msgDiv);
-    
+
     chatBox.scrollTo({
         top: chatBox.scrollHeight,
         behavior: 'smooth'
@@ -129,132 +191,124 @@ function updateMessage(id, newText) {
     }
 }
 
-// ================= MAIN CHAT FUNCTION =================
 window.performSearch = async function() {
     console.log("🔵 performSearch called");
-    
+
     var queryInput = document.getElementById('searchInput');
     if (!queryInput) {
         console.error("❌ searchInput not found!");
         return;
     }
-    
+
     var query = queryInput.value.trim();
     if (!query) {
         console.log("Empty query");
         return;
     }
-    
+
     displayMessage(query, 'user');
     queryInput.value = '';
-    
+
     var loadingId = displayMessage('<span class="typing-dots">Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>', 'bot');
-    
+
     try {
         var requestBody = {
             message: query,
             document_content: currentDocument && currentDocument.content ? currentDocument.content : null,
             audio: false
         };
-        
+
         console.log("📤 Sending to:", ENDPOINTS.chat);
-        console.log("📦 Request:", requestBody);
-        
+
         var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
             body: JSON.stringify(requestBody)
         });
-        
-        console.log("📥 HTTP Status:", response.status);
-        console.log("📥 Response URL:", response.url);
-        
+
         const rawText = await response.text();
-        console.log("📥 Raw response:", rawText);
-        
+
         if (!response.ok) {
             throw new Error("HTTP " + response.status + ": " + rawText.substring(0, 300));
         }
-        
+
         let data;
         try {
             data = JSON.parse(rawText);
         } catch (jsonError) {
             throw new Error("Backend returned invalid JSON: " + rawText.substring(0, 300));
         }
-        
-        console.log("✅ Backend JSON:", data);
-        
+
         if (data.response) {
             updateMessage(loadingId, data.response);
-            saveCurrentChat(query, data.response);
+            await saveCurrentChat(query, data.response);
         } else {
             updateMessage(loadingId, "⚠️ Backend connected, but no AI response was returned.\n\nResponse: " + JSON.stringify(data));
         }
-        
+
     } catch (error) {
         console.error("❌ Chat error:", error);
         updateMessage(loadingId, "⚠️ Error connecting to AI.\n\nDetails: " + error.message + "\n\nMake sure the backend is running and accessible.");
     }
 }
 
-// ================= SAVE CHAT =================
-function saveCurrentChat(userMessage, aiResponse) {
-    var chats = getChats();
-    
+async function saveCurrentChat(userMessage, aiResponse) {
     if (!currentChatId) {
-        currentChatId = 'chat_' + Date.now();
         var title = userMessage.substring(0, 30);
-        var newChat = {
-            id: currentChatId,
-            title: title,
-            created_at: new Date().toISOString(),
-            messages: [
-                { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
-                { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
-            ]
-        };
-        chats.unshift(newChat);
+        var messages = [
+            { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
+            { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
+        ];
+        var newId = await persistChat(null, title, messages);
+        currentChatId = newId;
+
+        sessionChatsCache.unshift({
+            id: newId, title: title, messages: messages,
+            created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+        });
     } else {
-        var chatIndex = chats.findIndex(function(c) { return c.id === currentChatId; });
+        var chatIndex = sessionChatsCache.findIndex(function(c) { return c.id === currentChatId; });
+        var existingMessages = chatIndex !== -1 ? sessionChatsCache[chatIndex].messages : [];
+        var newMessages = existingMessages.concat([
+            { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
+            { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
+        ]);
+        var title = (chatIndex !== -1 && newMessages.length > 2)
+            ? sessionChatsCache[chatIndex].title
+            : userMessage.substring(0, 30);
+
+        await persistChat(currentChatId, title, newMessages);
+
         if (chatIndex !== -1) {
-            chats[chatIndex].messages.push(
-                { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
-                { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
-            );
-            if (chats[chatIndex].messages.length === 2) {
-                chats[chatIndex].title = userMessage.substring(0, 30);
-            }
+            sessionChatsCache[chatIndex].messages = newMessages;
+            sessionChatsCache[chatIndex].title = title;
         }
     }
-    saveChats(chats);
-    loadChats();
+    await loadChats();
 }
 
-// ================= ADD WELCOME MESSAGE =================
 function addWelcomeMessage() {
     var container = document.getElementById("searchResults");
     if (!container) return;
-    
+
     if (container.children.length === 0) {
         displayMessage("👋 Hi! I'm Cortexa. Ask me anything! 💙", 'bot');
     }
 }
 
-// ================= LOAD CHATS =================
-function loadChats() {
+async function loadChats() {
     var container = document.getElementById("chatList");
     if (!container) return;
-    
-    var chats = getChats();
+
+    var chats = await getChats();
     if (chats.length === 0) {
         container.innerHTML = '<div class="empty-message">No chats yet</div>';
         return;
     }
-    
+
     container.innerHTML = "";
     chats.slice(0, 20).forEach(function(chat) {
         var div = document.createElement("div");
@@ -265,17 +319,16 @@ function loadChats() {
     });
 }
 
-// ================= LOAD PROJECTS =================
 function loadProjects() {
     var container = document.getElementById("projectListRight");
     if (!container) return;
-    
+
     var projects = getProjects();
     if (projects.length === 0) {
         container.innerHTML = '<div class="empty-message">No projects yet</div>';
         return;
     }
-    
+
     container.innerHTML = "";
     projects.slice(0, 10).forEach(function(project) {
         var div = document.createElement("div");
@@ -286,9 +339,8 @@ function loadProjects() {
     });
 }
 
-// ================= CHAT MANAGEMENT =================
-window.loadChatById = function(chatId) {
-    var chats = getChats();
+window.loadChatById = async function(chatId) {
+    var chats = await getChats();
     var chat = chats.find(function(c) { return c.id === chatId; });
     if (chat) {
         currentChatId = chat.id;
@@ -299,16 +351,14 @@ window.loadChatById = function(chatId) {
                 displayMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
             });
         }
-        loadChats();
+        await loadChats();
         showToast("Chat loaded!");
     }
 }
 
-window.deleteChatById = function(chatId) {
+window.deleteChatById = async function(chatId) {
     if (confirm("Delete this chat?")) {
-        var chats = getChats();
-        chats = chats.filter(function(chat) { return chat.id !== chatId; });
-        saveChats(chats);
+        await removeChat(chatId);
         if (currentChatId === chatId) {
             currentChatId = null;
             var container = document.getElementById("searchResults");
@@ -317,7 +367,7 @@ window.deleteChatById = function(chatId) {
                 addWelcomeMessage();
             }
         }
-        loadChats();
+        await loadChats();
         showToast("🗑️ Chat deleted!");
     }
     var dropdown = document.getElementById("chat-dropdown-" + chatId);
@@ -338,18 +388,18 @@ window.startNewChat = function(e) {
 
 window.toggleChatMenu = function(event, chatId) {
     event.stopPropagation();
-    
+
     document.querySelectorAll('.chat-dropdown.show').forEach(function(dropdown) {
         if (dropdown.id !== "chat-dropdown-" + chatId) {
             dropdown.classList.remove('show');
         }
     });
-    
+
     var dropdown = document.getElementById("chat-dropdown-" + chatId);
     if (!dropdown) return;
-    
+
     dropdown.classList.toggle('show');
-    
+
     setTimeout(function() {
         dropdown.classList.remove('show');
     }, 3000);
@@ -360,9 +410,9 @@ window.togglePlusDropdown = function() {
     if (dropdown) dropdown.classList.toggle('show');
 }
 
-window.shareChat = function() {
+window.shareChat = async function() {
     if (currentChatId) {
-        var chats = getChats();
+        var chats = await getChats();
         var chat = chats.find(function(c) { return c.id === currentChatId; });
         if (chat) {
             var shareText = chat.title + '\n\n' + chat.messages.map(function(m) { return (m.role === 'user' ? 'You' : 'Cortexa') + ': ' + m.content; }).join('\n\n');
@@ -374,19 +424,17 @@ window.shareChat = function() {
     }
 }
 
-window.deleteChat = function() {
+window.deleteChat = async function() {
     if (currentChatId) {
         if (confirm("Delete this chat?")) {
-            var chats = getChats();
-            chats = chats.filter(function(chat) { return chat.id !== currentChatId; });
-            saveChats(chats);
+            await removeChat(currentChatId);
             currentChatId = null;
             var container = document.getElementById("searchResults");
             if (container) {
                 container.innerHTML = "";
                 addWelcomeMessage();
             }
-            loadChats();
+            await loadChats();
             showToast("🗑️ Current chat deleted!");
         }
     } else {
@@ -414,7 +462,6 @@ window.createProject = function() {
     }
 }
 
-// ================= DOCUMENT CHAT =================
 window.documentChat = function() {
     var input = document.createElement('input');
     input.type = 'file';
@@ -424,21 +471,20 @@ window.documentChat = function() {
         if (file) {
             var formData = new FormData();
             formData.append('file', file);
-            
+
             showToast("📄 Uploading document...");
-            
+
             try {
                 var response = await fetch(ENDPOINTS.uploadDocument, {
                     method: 'POST',
                     body: formData
                 });
                 var data = await response.json();
-                console.log("📄 Upload response:", data);
-                
+
                 if (!response.ok) {
                     throw new Error(data.error || "Upload failed");
                 }
-                
+
                 currentDocument = data;
                 showToast("✅ Document \"" + file.name + "\" loaded! You can now ask questions about it.");
                 displayMessage("📄 **Document loaded:** " + file.name + "\n\nYou can now ask me questions about this document!", 'bot');
@@ -451,7 +497,6 @@ window.documentChat = function() {
     input.click();
 }
 
-// ================= AUDIO MODE =================
 window.openAudioMode = function() {
     var modal = document.getElementById('audioModal');
     if (modal) modal.style.display = 'flex';
@@ -472,30 +517,30 @@ window.setAudioMode = function(mode, btn) {
 window.toggleMicrophone = async function() {
     var micBtn = document.getElementById('micButton');
     var statusDiv = document.getElementById('micStatus');
-    
+
     if (!isRecording) {
         try {
             var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-            
+
             mediaRecorder.ondataavailable = function(event) {
                 audioChunks.push(event.data);
             };
-            
+
             mediaRecorder.onstop = async function() {
                 var audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 statusDiv.innerHTML = '🎤 Speech detected! Processing...';
                 showToast("🎤 Voice input received! Please type your question for now (voice-to-text coming soon)");
                 statusDiv.innerHTML = 'Click microphone to speak';
                 isRecording = false;
-                micBtn.style.background = '';
+                micBtn.classList.remove('listening');
                 stream.getTracks().forEach(function(track) { return track.stop(); });
             };
-            
+
             mediaRecorder.start();
             isRecording = true;
-            micBtn.style.background = '#ef4444';
+            micBtn.classList.add('listening');
             statusDiv.innerHTML = '🔴 Recording... Click again to stop';
         } catch (err) {
             console.error('Microphone error:', err);
@@ -508,8 +553,6 @@ window.toggleMicrophone = async function() {
         }
     }
 }
-
-// ================= SEND AUDIO QUERY =================
 window.sendAudioQuery = async function() {
     var queryInput = document.getElementById('audioQueryInput');
     var query = queryInput.value.trim();
@@ -517,13 +560,13 @@ window.sendAudioQuery = async function() {
         showToast("Please enter a question", "error");
         return;
     }
-    
+
     var responseArea = document.getElementById('audioResponseArea');
     var responseText = document.getElementById('responseText');
-    
+
     responseArea.style.display = 'block';
     responseText.innerHTML = '<span class="typing-dots">Generating response...</span>';
-    
+
     try {
         var requestBody = { message: query, audio: true };
         var response = await fetch(ENDPOINTS.chat, {
@@ -532,23 +575,23 @@ window.sendAudioQuery = async function() {
             body: JSON.stringify(requestBody)
         });
         var data = await response.json();
-        
+
         currentAudioText = data.response;
         responseText.innerHTML = formatContent(data.response);
-        
+
         var audioResponse = await fetch(ENDPOINTS.generateAudio, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: data.response })
         });
         var audioData = await audioResponse.json();
-        
+
         if (audioData.audio_url) {
             var audioPlayer = document.getElementById('audioPlayer');
             audioPlayer.src = BASE_URL + audioData.audio_url;
             document.getElementById('audioPlayerContainer').style.display = 'block';
         }
-        
+
     } catch (error) {
         console.error("Audio error:", error);
         responseText.innerHTML = '❌ Error generating response';
@@ -591,7 +634,6 @@ window.downloadAudioResponse = function() {
     }
 }
 
-// ================= VIDEO MODE =================
 window.openVideoMode = function() {
     var modal = document.getElementById('videoModal');
     if (modal) modal.style.display = 'flex';
@@ -607,9 +649,9 @@ window.switchVideoTab = function(tab) {
     var youtubeTab = document.getElementById('youtubeTab');
     var libraryTab = document.getElementById('libraryTab');
     var btns = document.querySelectorAll('.tab-btn');
-    
+
     btns.forEach(function(btn) { return btn.classList.remove('active'); });
-    
+
     if (tab === 'youtube') {
         if (youtubeTab) youtubeTab.style.display = 'block';
         if (libraryTab) libraryTab.style.display = 'none';
@@ -622,41 +664,40 @@ window.switchVideoTab = function(tab) {
     }
 }
 
-// ================= YOUTUBE SEARCH =================
 window.searchYouTube = async function() {
     var query = document.getElementById('youtubeSearchQuery').value;
     if (!query) {
         showToast("Please enter a search term", "error");
         return;
     }
-    
+
     showToast("🔍 Searching YouTube...");
     var resultsDiv = document.getElementById('youtubeResults');
     if (!resultsDiv) return;
-    
+
     resultsDiv.innerHTML = '<div class="loading-spinner">🔍 Searching for videos...</div>';
-    
+
     try {
         var response = await fetch(ENDPOINTS.youtubeSearch + "?query=" + encodeURIComponent(query) + "&max_results=12");
         var data = await response.json();
-        
+
         if (data.error) {
             resultsDiv.innerHTML = '<div class="error-message">❌ ' + data.error + '</div>';
             showToast(data.error, "error");
             return;
         }
-        
+
         if (!data.videos || data.videos.length === 0) {
             resultsDiv.innerHTML = '<div class="no-results">😕 No videos found. Try a different search term.</div>';
             return;
         }
-        
+
         resultsDiv.innerHTML = '<div class="search-header"><h3>📹 Search Results (' + data.videos.length + ' videos)</h3><p>Click on any video to get AI summary</p></div><div class="youtube-grid">' + data.videos.map(function(video) {
             return '<div class="video-card"><div class="video-thumbnail"><img src="' + video.thumbnail + '" alt="' + escapeHtml(video.title) + '"><div class="video-duration">' + (video.duration || 'N/A') + '</div></div><div class="video-details"><h4 class="video-title">' + escapeHtml(video.title.substring(0, 70)) + '</h4><p class="video-channel">' + escapeHtml(video.channel) + '</p><p class="video-stats">👁️ ' + (video.views || 'N/A') + ' views</p><button class="play-youtube-btn" onclick="getVideoInfoAndSummary(\'' + video.id + '\', \'' + escapeHtml(video.title) + '\')">🤖 Get AI Summary</button><button class="watch-btn" onclick="openInYouTube(\'' + video.id + '\')">▶️ Watch on YouTube</button></div></div>';
         }).join('') + '</div>';
-        
+
         showToast("Found " + data.videos.length + " videos!");
-        
+
     } catch (error) {
         console.error('Search error:', error);
         resultsDiv.innerHTML = '<div class="error-message">❌ Failed to search YouTube. Make sure backend is running.</div>';
@@ -664,45 +705,44 @@ window.searchYouTube = async function() {
     }
 }
 
-// ================= YOUTUBE VIDEO INFO =================
 window.getVideoInfoAndSummary = async function(videoId, videoTitle) {
     showToast("📹 Getting video information and generating AI summary...");
-    
+
     var infoDiv = document.getElementById('youtubeVideoInfo');
     if (!infoDiv) return;
-    
+
     infoDiv.style.display = 'block';
     infoDiv.innerHTML = '<div class="loading-spinner">🧠 Analyzing video content...</div>';
-    
+
     try {
         var infoResponse = await fetch(ENDPOINTS.youtubeVideoInfo + "?video_id=" + videoId);
         var videoInfo = await infoResponse.json();
-        
+
         if (videoInfo.error) {
             infoDiv.innerHTML = '<div class="error-message">❌ ' + videoInfo.error + '</div>';
             return;
         }
-        
+
         var summaryPrompt = 'Please provide a comprehensive summary of this YouTube video:\n\nTitle: ' + (videoTitle || videoInfo.title) + '\nChannel: ' + (videoInfo.channel || 'Unknown') + '\nDescription: ' + (videoInfo.description || 'No description available') + '\n\nPlease provide:\n1. Main topic/theme of the video\n2. 5-7 key points covered\n3. Important takeaways\n4. Who should watch this video\n5. A brief one-paragraph summary\n\nFormat the response in a clean, organized way with emojis for each section.';
 
         var summaryResponse = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: summaryPrompt,
                 document_content: null,
                 audio: false
             })
         });
-        
+
         var summaryData = await summaryResponse.json();
         var aiSummary = summaryData.response || "Summary generation failed. Please try again.";
-        
+
         infoDiv.innerHTML = '<div class="video-detail-card"><div class="video-detail-header"><h3>✅ ' + escapeHtml(videoInfo.title || videoTitle) + '</h3><button class="close-video-info" onclick="closeVideoInfo()">✖</button></div><div class="video-detail-content"><p><strong>📺 Channel:</strong> ' + escapeHtml(videoInfo.channel || 'N/A') + '</p><p><strong>👁️ Views:</strong> ' + parseInt(videoInfo.views || 0).toLocaleString() + '</p><p><strong>👍 Likes:</strong> ' + parseInt(videoInfo.likes || 0).toLocaleString() + '</p><p><strong>⏱️ Duration:</strong> ' + (videoInfo.duration || 'N/A') + '</p><div class="ai-summary-section"><h4>🤖 AI GENERATED SUMMARY</h4><div class="summary-text">' + formatContent(aiSummary) + '</div></div><details><summary>📝 Video Description</summary><p class="video-description">' + escapeHtml((videoInfo.description || 'No description').substring(0, 1000)) + '</p></details><div class="video-action-buttons"><button class="watch-btn" onclick="openInYouTube(\'' + videoId + '\')">🎬 Watch on YouTube</button><button class="summary-btn" onclick="copySummaryToClipboard()">📋 Copy Summary</button><button class="summary-btn" onclick="downloadSummaryAsFile()">💾 Download Summary</button><button class="summary-btn" onclick="saveVideoToLibrary(\'' + videoId + '\', \'' + escapeHtml(videoInfo.title || videoTitle) + '\')">💾 Save to Library</button></div></div></div>';
-        
+
         document.getElementById('youtubeOptions').style.display = 'block';
         showToast("✅ AI Summary generated successfully!");
-        
+
     } catch (error) {
         console.error('Error:', error);
         infoDiv.innerHTML = '<div class="error-message">❌ Error generating summary. Please try again.</div>';
@@ -750,7 +790,7 @@ window.downloadSummaryAsFile = function() {
 window.saveVideoToLibrary = function(videoId, videoTitle) {
     var user = getCurrentUser();
     var savedVideos = JSON.parse(localStorage.getItem("videos_" + user) || '[]');
-    
+
     if (!savedVideos.some(function(v) { return v.id === videoId; })) {
         var newVideo = {
             id: videoId,
@@ -772,14 +812,14 @@ function loadVideoLibrary() {
     var user = getCurrentUser();
     var libraryDiv = document.getElementById('videoLibraryList');
     if (!libraryDiv) return;
-    
+
     var savedVideos = JSON.parse(localStorage.getItem("videos_" + user) || '[]');
-    
+
     if (savedVideos.length === 0) {
         libraryDiv.innerHTML = '<div class="empty-library">📭 No saved videos. Search and save videos to see them here!</div>';
         return;
     }
-    
+
     libraryDiv.innerHTML = '<div class="library-grid">' + savedVideos.map(function(video) {
         return '<div class="library-card"><img src="' + video.thumbnail + '" alt="' + escapeHtml(video.title) + '"><div class="library-card-info"><h4>' + escapeHtml(video.title.substring(0, 50)) + '</h4><p class="library-date">Saved: ' + video.date + '</p><button class="library-play-btn" onclick="getVideoInfoAndSummary(\'' + video.id + '\', \'' + escapeHtml(video.title) + '\')">🤖 Get AI Summary</button><button class="library-remove-btn" onclick="removeFromLibrary(\'' + video.id + '\')">🗑️ Remove</button></div></div>';
     }).join('') + '</div>';
@@ -794,20 +834,10 @@ window.removeFromLibrary = function(videoId) {
     showToast("🗑️ Video removed from library");
 }
 
-// ================= REPORT MODE =================
 window.openReportMode = function() {
     var modal = document.getElementById('reportModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
-        modal.style.zIndex = '10000';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
     }
 }
 
@@ -822,30 +852,30 @@ window.generateReport = async function() {
         showToast("Please enter a topic", "error");
         return;
     }
-    
+
     var format = document.getElementById('reportFormat')?.value || 'PDF Document';
     var includeCharts = document.getElementById('includeCharts')?.checked || false;
     var includeTables = document.getElementById('includeTables')?.checked || false;
     var includeExecutive = document.getElementById('includeExecutive')?.checked || true;
     var includeRecommendations = document.getElementById('includeRecommendations')?.checked || true;
     var includeAppendix = document.getElementById('includeAppendix')?.checked || false;
-    
+
     var progressDiv = document.getElementById('reportProgress');
     var progressFill = document.getElementById('reportProgressFill');
     var displayDiv = document.getElementById('reportDisplay');
     var contentDiv = document.getElementById('reportContent');
-    
+
     if (progressDiv) {
         progressDiv.style.display = 'block';
         progressDiv.innerHTML = '<div class="progress-bar"><div id="reportProgressFill" class="progress-fill"></div></div><p class="generating-text">📊 Generating comprehensive report on "' + topic.substring(0, 50) + '"...</p>';
     }
-    
+
     var width = 0;
     var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 200);
-    
+
     try {
         var prompt = 'Generate a comprehensive, professional report about "' + topic + '". The report should include:';
 
@@ -867,20 +897,20 @@ window.generateReport = async function() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: prompt, document_content: null, audio: false })
         });
-        
+
         var data = await response.json();
         var reportContent = data.response || "Failed to generate report.";
-        
+
         reportContent = reportContent.replace(/## (.*?)$/gm, '<h2>$1</h2>');
         reportContent = reportContent.replace(/### (.*?)$/gm, '<h3>$1</h3>');
         reportContent = reportContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         reportContent = reportContent.replace(/^- (.*?)$/gm, '<li>$1</li>');
         reportContent = reportContent.replace(/\n/g, '<br>');
-        
+
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
         if (displayDiv) displayDiv.style.display = 'block';
-        
+
         window.currentReport = {
             topic: topic,
             content: reportContent,
@@ -889,13 +919,13 @@ window.generateReport = async function() {
             date: new Date().toLocaleString(),
             options: { includeCharts: includeCharts, includeTables: includeTables, includeExecutive: includeExecutive, includeRecommendations: includeRecommendations, includeAppendix: includeAppendix }
         };
-        
+
         if (contentDiv) {
             contentDiv.innerHTML = '<div class="report-container" id="reportContainer"><div class="report-title-section"><h1>📊 ' + escapeHtml(topic) + '</h1><div class="report-meta"><span>📅 Generated: ' + new Date().toLocaleString() + '</span><span>📄 Format: ' + format + '</span><span>🤖 Generated by Cortexa AI</span></div></div><div class="report-content" id="reportContentText">' + reportContent + '</div><div class="report-footer"><p>© ' + new Date().getFullYear() + ' Cortexa AI Report Generator - All Rights Reserved</p></div></div>';
         }
-        
+
         showToast("✅ Report generated successfully!");
-        
+
     } catch (error) {
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
@@ -910,7 +940,7 @@ window.downloadReportAsPDF = function() {
         showToast("No report to download! Generate a report first.", "error");
         return;
     }
-    
+
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>' + (window.currentReport?.topic || 'Report') + ' - Cortexa AI</title><style>body { font-family: "Segoe UI", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; } .report-title-section { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #667eea; } .report-title-section h1 { color: #667eea; margin-bottom: 10px; } .report-meta { color: #666; font-size: 12px; } .report-content h2 { color: #667eea; margin-top: 30px; border-left: 4px solid #667eea; padding-left: 15px; } .report-content h3 { color: #764ba2; margin-top: 20px; } .report-content li { margin: 8px 0; } .report-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #999; } button { display: none; }</style></head><body>' + reportContainer.outerHTML + '</body></html>');
     printWindow.print();
@@ -923,15 +953,15 @@ window.downloadReportAsDOCX = function() {
         showToast("No report to download! Generate a report first.", "error");
         return;
     }
-    
+
     var reportContent = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
     if (!reportContent) {
         showToast("No content to download", "error");
         return;
     }
-    
+
     var docContent = window.currentReport.topic + '\n' + '='.repeat(50) + '\n\nGenerated on: ' + window.currentReport.date + '\nFormat: ' + window.currentReport.format + '\n\n' + reportContent + '\n\n' + '='.repeat(50) + '\nGenerated by Cortexa AI Report Generator';
-    
+
     var blob = new Blob([docContent], { type: 'application/msword' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -947,7 +977,7 @@ window.copyReportToClipboard = function() {
         showToast("No report to copy! Generate a report first.", "error");
         return;
     }
-    
+
     var reportText = document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent;
     if (reportText) {
         navigator.clipboard.writeText(reportText).then(function() {
@@ -965,9 +995,9 @@ window.shareReport = function() {
         showToast("No report to share! Generate a report first.", "error");
         return;
     }
-    
+
     var shareText = '📊 Report: ' + window.currentReport.topic + '\n\n' + (document.getElementById('reportContentText')?.innerText || window.currentReport.rawContent).substring(0, 500) + '...\n\nGenerated on: ' + window.currentReport.date + '\n\nGenerated by Cortexa AI';
-    
+
     navigator.clipboard.writeText(shareText).then(function() {
         showToast("📤 Report summary copied to clipboard! You can now share it anywhere.");
     }).catch(function() {
@@ -980,10 +1010,10 @@ window.saveReportToLibrary = function() {
         showToast("No report to save! Generate a report first.", "error");
         return;
     }
-    
+
     var user = getCurrentUser();
     var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
-    
+
     var reportToSave = {
         id: 'report_' + Date.now(),
         title: window.currentReport.topic,
@@ -993,10 +1023,10 @@ window.saveReportToLibrary = function() {
         format: window.currentReport.format,
         options: window.currentReport.options
     };
-    
+
     savedReports.unshift(reportToSave);
     localStorage.setItem("reports_" + user, JSON.stringify(savedReports));
-    
+
     showToast("✅ Report \"" + window.currentReport.topic + "\" saved to library!");
 }
 
@@ -1006,7 +1036,7 @@ window.printReport = function() {
         showToast("No report to print! Generate a report first.", "error");
         return;
     }
-    
+
     var printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>' + (window.currentReport?.topic || 'Report') + ' - Cortexa AI</title><style>body { font-family: "Segoe UI", Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; } .report-title-section { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #667eea; } .report-title-section h1 { color: #667eea; } .report-meta { color: #666; font-size: 12px; } .report-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; } button { display: none; }</style></head><body>' + reportContainer.outerHTML + '</body></html>');
     printWindow.print();
@@ -1018,7 +1048,7 @@ window.loadReportFromLibrary = function(reportId) {
     var user = getCurrentUser();
     var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
     var report = savedReports.find(function(r) { return r.id === reportId; });
-    
+
     if (report) {
         window.currentReport = {
             topic: report.title,
@@ -1028,12 +1058,12 @@ window.loadReportFromLibrary = function(reportId) {
             format: report.format,
             options: report.options
         };
-        
+
         var contentDiv = document.getElementById('reportContent');
         if (contentDiv) {
             contentDiv.innerHTML = '<div class="report-container" id="reportContainer"><div class="report-title-section"><h1>📊 ' + escapeHtml(report.title) + '</h1><div class="report-meta"><span>📅 Generated: ' + report.date + '</span><span>📄 Format: ' + report.format + '</span></div></div><div class="report-content" id="reportContentText">' + report.formattedContent + '</div><div class="report-footer"><p>© ' + new Date().getFullYear() + ' Cortexa AI Report Generator</p></div></div>';
         }
-        
+
         document.getElementById('reportDisplay').style.display = 'block';
         showToast("✅ Report \"" + report.title + "\" loaded from library!");
     } else {
@@ -1044,26 +1074,26 @@ window.loadReportFromLibrary = function(reportId) {
 window.openReportLibrary = function() {
     var user = getCurrentUser();
     var savedReports = JSON.parse(localStorage.getItem("reports_" + user) || '[]');
-    
+
     if (savedReports.length === 0) {
         showToast("No saved reports found!", "info");
         return;
     }
-    
+
     var libraryHTML = '<div class="report-library-modal"><h3>📚 Saved Reports</h3><div class="report-list">';
     savedReports.forEach(function(report) {
         libraryHTML += '<div class="report-list-item"><div class="report-info"><strong>' + escapeHtml(report.title) + '</strong><small>' + report.date + '</small></div><button onclick="loadReportFromLibrary(\'' + report.id + '\')">Load</button></div>';
     });
     libraryHTML += '</div><button onclick="closeReportLibrary()">Close</button></div>';
-    
+
     var modal = document.getElementById('reportLibraryModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'reportLibraryModal';
-        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; max-width: 500px; width: 90%; z-index: 10001; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+        modal.className = 'report-library-floating-modal';
         document.body.appendChild(modal);
     }
-    
+
     modal.innerHTML = libraryHTML;
     modal.style.display = 'block';
 }
@@ -1073,9 +1103,6 @@ window.closeReportLibrary = function() {
     if (modal) modal.style.display = 'none';
 }
 
-// ============================================
-// LEARNING TOOLS - QUIZ GENERATOR
-// ============================================
 
 window.openLearningTools = function() {
     var modal = document.getElementById('learningToolsModal');
@@ -1092,9 +1119,9 @@ window.switchLearningTab = function(tab) {
     var quizTab = document.getElementById('quizTab');
     var notesTab = document.getElementById('notesTab');
     var btns = document.querySelectorAll('.learning-tab-btn');
-    
+
     btns.forEach(function(btn) { return btn.classList.remove('active'); });
-    
+
     if (tab === 'quiz') {
         if (quizTab) quizTab.style.display = 'block';
         if (notesTab) notesTab.style.display = 'none';
@@ -1112,39 +1139,39 @@ window.generateQuiz = async function() {
         showToast("Please enter a topic", "error");
         return;
     }
-    
+
     var numQuestions = document.getElementById('quizCount')?.value || 5;
     var difficulty = document.getElementById('quizDifficulty')?.value || 'medium';
     var questionType = document.getElementById('quizType')?.value || 'mixed';
-    
+
     var progressDiv = document.getElementById('quizProgress');
     var progressFill = document.getElementById('quizProgressFill');
     var displayDiv = document.getElementById('quizDisplay');
     var contentDiv = document.getElementById('quizContent');
-    
+
     if (progressDiv) progressDiv.style.display = 'block';
     var width = 0;
     var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 100);
-    
+
     try {
         var prompt = 'Generate a quiz about "' + topic + '" with exactly ' + numQuestions + ' questions. Difficulty: ' + difficulty + '. Type: ' + questionType + '.\n\nReturn ONLY valid JSON with this exact format:\n{\n    "title": "' + topic + ' Quiz",\n    "questions": [\n        {\n            "id": 1,\n            "text": "Question text here",\n            "type": "mcq",\n            "options": ["Option A", "Option B", "Option C", "Option D"],\n            "correctAnswer": "Option A",\n            "explanation": "Brief explanation"\n        }\n    ]\n}\n\nFor true/false, options should be ["True", "False"].\nMake questions educational and appropriate for ' + difficulty + ' difficulty.';
 
         var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: prompt,
                 document_content: null,
                 audio: false
             })
         });
-        
+
         var data = await response.json();
         var quizData;
-        
+
         try {
             var jsonStr = data.response;
             var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
@@ -1165,33 +1192,33 @@ window.generateQuiz = async function() {
                 })
             };
         }
-        
+
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
         if (displayDiv) displayDiv.style.display = 'block';
-        
+
         window.currentQuizData = quizData;
         window.quizAnswers = {};
-        
+
         var quizHTML = '<div class="quiz-header"><h3>📝 ' + escapeHtml(quizData.title) + '</h3><p>Difficulty: ' + difficulty + ' | Questions: ' + quizData.questions.length + '</p></div><div id="quizQuestionsContainer">';
-        
+
         quizData.questions.forEach(function(q, idx) {
             var qNum = idx + 1;
             quizHTML += '<div class="quiz-question-card" data-question-id="' + qNum + '" data-correct="' + escapeHtml(q.correctAnswer) + '"><p class="quiz-question-text"><strong>Question ' + qNum + ':</strong> ' + escapeHtml(q.text) + '</p><div class="quiz-options">';
-            
+
             var options = q.options || (q.type === 'truefalse' ? ['True', 'False'] : ['Option A', 'Option B', 'Option C']);
             options.forEach(function(opt) {
                 quizHTML += '<label class="quiz-option"><input type="radio" name="q' + qNum + '" value="' + escapeHtml(opt) + '" onchange="saveQuizAnswer(' + qNum + ', \'' + escapeHtml(opt) + '\')"><span>' + escapeHtml(opt) + '</span></label>';
             });
-            
+
             quizHTML += '</div><div class="quiz-feedback" id="feedback-' + qNum + '" style="display:none;"></div></div>';
         });
-        
+
         quizHTML += '</div><div class="quiz-actions"><button class="quiz-action-btn submit-quiz-btn" onclick="submitQuizAnswers()">✅ Submit Quiz</button><button class="quiz-action-btn" onclick="resetQuizAnswers()">🔄 Reset All</button><button class="quiz-action-btn" onclick="exportQuizAsPDF()">📄 Export PDF</button><button class="quiz-action-btn" onclick="copyQuizToClipboard()">📋 Copy</button><button class="quiz-action-btn" onclick="saveQuizToLibrary()">💾 Save to Library</button></div><div class="quiz-results-container" id="quizResultsContainer" style="display:none;"></div>';
-        
+
         if (contentDiv) contentDiv.innerHTML = quizHTML;
         showToast("✅ Quiz generated with " + quizData.questions.length + " questions!");
-        
+
     } catch (error) {
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
@@ -1203,7 +1230,7 @@ window.generateQuiz = async function() {
 window.saveQuizAnswer = function(questionNum, answer) {
     if (!window.quizAnswers) window.quizAnswers = {};
     window.quizAnswers[questionNum] = answer;
-    
+
     var questionCard = document.querySelector('.quiz-question-card[data-question-id="' + questionNum + '"]');
     if (questionCard) {
         questionCard.style.borderLeft = '4px solid #10b981';
@@ -1215,20 +1242,20 @@ window.submitQuizAnswers = function() {
         showToast("No quiz loaded!", "error");
         return;
     }
-    
+
     var score = 0;
     var totalQuestions = window.currentQuizData.questions.length;
     var results = [];
-    
+
     window.currentQuizData.questions.forEach(function(q, idx) {
         var qNum = idx + 1;
         var userAnswer = window.quizAnswers ? window.quizAnswers[qNum] : null;
         var isCorrect = userAnswer === q.correctAnswer;
-        
+
         if (isCorrect) {
             score++;
         }
-        
+
         results.push({
             id: qNum,
             question: q.text,
@@ -1237,7 +1264,7 @@ window.submitQuizAnswers = function() {
             isCorrect: isCorrect,
             explanation: q.explanation
         });
-        
+
         var feedbackDiv = document.getElementById('feedback-' + qNum);
         if (feedbackDiv) {
             if (userAnswer) {
@@ -1258,11 +1285,11 @@ window.submitQuizAnswers = function() {
             feedbackDiv.style.marginTop = '10px';
         }
     });
-    
+
     var percentage = Math.round((score / totalQuestions) * 100);
     var gradeMessage = '';
     var gradeIcon = '';
-    
+
     if (percentage >= 90) {
         gradeMessage = 'Excellent! You\'re a master of this topic! 🏆';
         gradeIcon = '🎉';
@@ -1276,7 +1303,7 @@ window.submitQuizAnswers = function() {
         gradeMessage = 'Keep studying! You\'ll get better with practice! 🌟';
         gradeIcon = '⭐';
     }
-    
+
     var resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) {
         resultsContainer.style.display = 'block';
@@ -1284,30 +1311,30 @@ window.submitQuizAnswers = function() {
             return '<div class="result-item ' + (r.isCorrect ? 'correct-result' : 'wrong-result') + '"><p><strong>Q' + r.id + ':</strong> ' + escapeHtml(r.question) + '</p><p>Your answer: ' + escapeHtml(r.userAnswer) + '</p><p>Correct: ' + escapeHtml(r.correctAnswer) + '</p>' + (r.explanation ? '<p>Explanation: ' + escapeHtml(r.explanation) + '</p>' : '') + '</div>';
         }).join('') + '</div></details></div><div class="results-actions"><button class="results-btn" onclick="scrollToWrongAnswers()">📖 Review Wrong Answers</button><button class="results-btn" onclick="resetQuizAnswers()">🔄 Try Again</button><button class="results-btn" onclick="exportQuizResults()">📄 Export Results</button></div></div>';
     }
-    
+
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     showToast("Quiz completed! Score: " + score + "/" + totalQuestions + " (" + percentage + "%)");
 }
 
 window.resetQuizAnswers = function() {
     window.quizAnswers = {};
-    
+
     document.querySelectorAll('#quizQuestionsContainer input[type="radio"]').forEach(function(radio) {
         radio.checked = false;
     });
-    
+
     document.querySelectorAll('.quiz-feedback').forEach(function(feedback) {
         feedback.style.display = 'none';
         feedback.innerHTML = '';
     });
-    
+
     document.querySelectorAll('.quiz-question-card').forEach(function(card) {
         card.style.borderLeft = '';
     });
-    
+
     var resultsContainer = document.getElementById('quizResultsContainer');
     if (resultsContainer) resultsContainer.style.display = 'none';
-    
+
     showToast("Quiz reset! You can try again.");
 }
 
@@ -1326,20 +1353,20 @@ window.exportQuizResults = function() {
         showToast("No quiz results to export!", "error");
         return;
     }
-    
+
     var exportText = '📝 ' + window.currentQuizData.title + '\n';
     exportText += '📅 Date: ' + new Date().toLocaleString() + '\n';
     exportText += '📊 Total Questions: ' + window.currentQuizData.questions.length + '\n';
     exportText += '="\n\n';
-    
+
     var score = 0;
-    
+
     window.currentQuizData.questions.forEach(function(q, idx) {
         var qNum = idx + 1;
         var userAnswer = window.quizAnswers[qNum] || "Not answered";
         var isCorrect = userAnswer === q.correctAnswer;
         if (isCorrect) score++;
-        
+
         exportText += qNum + '. ' + q.text + '\n';
         exportText += '   Your answer: ' + userAnswer + '\n';
         exportText += '   Correct answer: ' + q.correctAnswer + '\n';
@@ -1349,12 +1376,12 @@ window.exportQuizResults = function() {
         }
         exportText += '\n';
     });
-    
+
     var percentage = Math.round((score / window.currentQuizData.questions.length) * 100);
     exportText += '="\n';
     exportText += 'FINAL SCORE: ' + score + '/' + window.currentQuizData.questions.length + ' (' + percentage + '%)\n';
     exportText += 'Grade: ' + (percentage >= 70 ? 'PASSED' : 'NEEDS IMPROVEMENT') + '\n';
-    
+
     var blob = new Blob([exportText], { type: 'text/plain' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -1362,7 +1389,7 @@ window.exportQuizResults = function() {
     a.download = window.currentQuizData.title.replace(/ /g, '_') + '_results.txt';
     a.click();
     URL.revokeObjectURL(url);
-    
+
     showToast("Quiz results exported!");
 }
 
@@ -1399,9 +1426,6 @@ window.saveQuizToLibrary = function() {
     showToast("Quiz saved to library!");
 }
 
-// ============================================
-// STUDY NOTES
-// ============================================
 
 window.generateStudyNotes = async function() {
     var topic = document.getElementById('notesTopicInput').value;
@@ -1409,46 +1433,46 @@ window.generateStudyNotes = async function() {
         showToast("Please enter a topic", "error");
         return;
     }
-    
+
     var progressDiv = document.getElementById('notesProgress');
     var progressFill = document.getElementById('notesProgressFill');
     var displayDiv = document.getElementById('notesDisplay');
     var contentDiv = document.getElementById('notesContent');
-    
+
     if (progressDiv) progressDiv.style.display = 'block';
     var width = 0;
     var interval = setInterval(function() {
         width += 10;
         if (progressFill) progressFill.style.width = width + '%';
     }, 100);
-    
+
     try {
         var prompt = 'Create comprehensive study notes about "' + topic + '".\n\nInclude:\n1. Key Concepts (at least 5)\n2. Important Definitions\n3. Summary Points\n4. Key Takeaways\n5. Study Tips\n\nFormat with clear headings, bullet points, and emojis for easy reading.\nMake it organized and educational.';
 
         var response = await fetch(ENDPOINTS.chat, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: prompt,
                 document_content: null,
                 audio: false
             })
         });
-        
+
         var data = await response.json();
         var notesContent = data.response || "Failed to generate notes.";
-        
+
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
         if (displayDiv) displayDiv.style.display = 'block';
-        
+
         if (contentDiv) {
             contentDiv.innerHTML = '<div class="notes-header"><h2>📚 Study Notes: ' + escapeHtml(topic) + '</h2><p>Generated on: ' + new Date().toLocaleString() + '</p></div><div class="notes-body">' + formatContent(notesContent) + '</div>';
         }
-        
+
         window.currentNotes = { topic: topic, content: notesContent, date: new Date().toLocaleString() };
         showToast("✅ Study notes generated!");
-        
+
     } catch (error) {
         clearInterval(interval);
         if (progressDiv) progressDiv.style.display = 'none';
@@ -1497,18 +1521,18 @@ window.useChatForLearning = async function(type) {
         showToast("No active chat found. Start a chat first!", "error");
         return;
     }
-    
-    var chats = getChats();
+
+    var chats = await getChats();
     var chat = chats.find(function(c) { return c.id === currentChatId; });
-    
+
     if (!chat || !chat.messages || chat.messages.length === 0) {
         showToast("No chat content found!", "error");
         return;
     }
-    
+
     var lastMessages = chat.messages.slice(-5);
     var chatContent = lastMessages.map(function(m) { return m.role + ': ' + m.content; }).join('\n\n');
-    
+
     if (type === 'quiz') {
         document.getElementById('quizTopicInput').value = "Based on this conversation: " + chatContent.substring(0, 200);
         showToast("✅ Chat content loaded! Click Generate Quiz");
@@ -1526,11 +1550,7 @@ window.uploadForLearning = function(type) {
     input.click();
 }
 
-// ============================================
-// GAMES MODULE
-// ============================================
 
-// Game state variables
 var currentGameType = null;
 var currentQuizQuestions = [];
 var currentQuizIndex = 0;
@@ -1567,15 +1587,6 @@ window.openGamesModal = function() {
     var modal = document.getElementById('gamesModal');
     if (modal) {
         modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.95)';
-        modal.style.zIndex = '200000';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
     }
     showGameSelectionScreen();
 }
@@ -1589,7 +1600,7 @@ window.closeGamesModal = function() {
 function showGameSelectionScreen() {
     var gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
-    
+
     gameContent.innerHTML = '<div class="games-grid-container"><div class="game-card-large" onclick="selectGame(\'quiz-race\')"><div class="game-card-icon">🏆</div><h3>Quiz Race</h3><p>Test your knowledge with timed quizzes</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'memory-match\')"><div class="game-card-icon">🎴</div><h3>Memory Match</h3><p>Match terms with definitions</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'typing-speed\')"><div class="game-card-icon">⌨️</div><h3>Typing Speed</h3><p>Improve your typing speed</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'trivia-challenge\')"><div class="game-card-icon">❓</div><h3>Trivia Challenge</h3><p>Answer random knowledge questions</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'word-scramble\')"><div class="game-card-icon">🔤</div><h3>Word Scramble</h3><p>Unscramble the letters to form words</p><button class="play-now-btn">Play Now →</button></div><div class="game-card-large" onclick="selectGame(\'true-false\')"><div class="game-card-icon">✓✗</div><h3>True or False</h3><p>Test your knowledge with true/false questions</p><button class="play-now-btn">Play Now →</button></div></div>';
 }
 
@@ -1597,11 +1608,11 @@ window.selectGame = function(gameType) {
     currentGameType = gameType;
     var gameContent = document.getElementById('gameContent');
     if (!gameContent) return;
-    
+
     gameContent.innerHTML = '<div class="game-header-bar"><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button><h2 class="current-game-title">' + getGameTitle(gameType) + '</h2></div><div id="activeGameContainer" class="active-game-container"></div>';
-    
+
     var activeContainer = document.getElementById('activeGameContainer');
-    
+
     switch(gameType) {
         case 'quiz-race':
             loadQuizRaceGame(activeContainer);
@@ -1638,11 +1649,10 @@ function getGameTitle(gameType) {
     return titles[gameType] || 'Game';
 }
 
-// ================= QUIZ RACE GAME =================
 function loadQuizRaceGame(container) {
     currentQuizIndex = 0;
     quizScore = 0;
-    
+
     currentQuizQuestions = [
         { question: "What is the capital of France?", options: ["London", "Berlin", "Paris", "Madrid"], correct: "Paris" },
         { question: "Which planet is known as the Red Planet?", options: ["Mars", "Jupiter", "Venus", "Saturn"], correct: "Mars" },
@@ -1650,7 +1660,7 @@ function loadQuizRaceGame(container) {
         { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: "Pacific" },
         { question: "What is the fastest land animal?", options: ["Lion", "Cheetah", "Leopard", "Tiger"], correct: "Cheetah" }
     ];
-    
+
     displayQuizQuestion(container);
 }
 
@@ -1659,12 +1669,12 @@ function displayQuizQuestion(container) {
         showQuizResults(container);
         return;
     }
-    
+
     var q = currentQuizQuestions[currentQuizIndex];
     timeLeft = 30;
-    
+
     if (quizTimer) clearInterval(quizTimer);
-    
+
     quizTimer = setInterval(function() {
         timeLeft--;
         var timerEl = document.getElementById('quizTimer');
@@ -1677,18 +1687,18 @@ function displayQuizQuestion(container) {
             }
         }
     }, 1000);
-    
+
     container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (currentQuizIndex + 1) + '/' + currentQuizQuestions.length + '</div><div class="game-score">⭐ Score: ' + quizScore + '</div><div class="game-timer">⏱️ Time: <span id="quizTimer">30</span>s</div></div><div class="game-question-large">' + escapeHtml(q.question) + '</div><div class="game-options-grid">' + q.options.map(function(opt) { return '<button class="game-option-btn" onclick="checkQuizAnswer(\'' + escapeHtml(opt) + '\', this)">' + escapeHtml(opt) + '</button>'; }).join('') + '</div><div class="game-feedback" id="gameFeedback"></div>';
 }
 
 window.checkQuizAnswer = function(selected, btnElement) {
     if (quizTimer) clearInterval(quizTimer);
-    
+
     var q = currentQuizQuestions[currentQuizIndex];
     var feedback = document.getElementById('gameFeedback');
-    
+
     document.querySelectorAll('.game-option-btn').forEach(function(btn) { btn.disabled = true; });
-    
+
     if (selected === q.correct) {
         quizScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
@@ -1697,7 +1707,7 @@ window.checkQuizAnswer = function(selected, btnElement) {
         feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! Correct answer: ' + q.correct + '</div>';
         showToast("❌ Wrong answer!");
     }
-    
+
     setTimeout(function() { moveToNextQuizQuestion(document.getElementById('activeGameContainer')); }, 2000);
 }
 
@@ -1715,7 +1725,6 @@ function showQuizResults(container) {
     container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>Quiz Complete!</h2><div class="final-score-large">Final Score: ' + quizScore + '/' + (currentQuizQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'quiz-race\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
-// ================= MEMORY MATCH GAME =================
 function loadMemoryMatchGame(container) {
     var pairs = [
         { pair1: "HTML", pair2: "Web Page" },
@@ -1725,24 +1734,24 @@ function loadMemoryMatchGame(container) {
         { pair1: "JSON", pair2: "Data Format" },
         { pair1: "DOM", pair2: "Document Object" }
     ];
-    
+
     memoryCards = [];
     pairs.forEach(function(pair, idx) {
         memoryCards.push({ id: idx * 2, value: pair.pair1, matched: false, pairId: idx });
         memoryCards.push({ id: idx * 2 + 1, value: pair.pair2, matched: false, pairId: idx });
     });
-    
+
     for (var i = memoryCards.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
         var temp = memoryCards[i];
         memoryCards[i] = memoryCards[j];
         memoryCards[j] = temp;
     }
-    
+
     memoryFlipped = [];
     memoryLocked = false;
     memoryMatches = 0;
-    
+
     renderMemoryGame(container);
 }
 
@@ -1757,10 +1766,10 @@ window.flipMemoryCard = function(index) {
     if (memoryCards[index].matched) return;
     if (memoryFlipped.includes(index)) return;
     if (memoryFlipped.length === 2) return;
-    
+
     memoryFlipped.push(index);
     renderMemoryGame(document.getElementById('activeGameContainer'));
-    
+
     if (memoryFlipped.length === 2) {
         checkMemoryMatch();
     }
@@ -1769,7 +1778,7 @@ window.flipMemoryCard = function(index) {
 function checkMemoryMatch() {
     var card1 = memoryCards[memoryFlipped[0]];
     var card2 = memoryCards[memoryFlipped[1]];
-    
+
     if (card1.pairId === card2.pairId) {
         card1.matched = true;
         card2.matched = true;
@@ -1777,7 +1786,7 @@ function checkMemoryMatch() {
         memoryFlipped = [];
         renderMemoryGame(document.getElementById('activeGameContainer'));
         showToast("🎉 Match found!");
-        
+
         if (memoryMatches === memoryCards.length / 2) {
             setTimeout(function() { showToast("🏆 Congratulations! You completed the game!"); }, 500);
         }
@@ -1791,7 +1800,6 @@ function checkMemoryMatch() {
     }
 }
 
-// ================= TYPING SPEED GAME =================
 function loadTypingSpeedGame(container) {
     typingWordsList = ["javascript", "programming", "developer", "computer", "keyboard", "website", "application", "database"];
     typingRound = 0;
@@ -1804,11 +1812,11 @@ function loadNextTypingWord(container) {
         showTypingResults(container);
         return;
     }
-    
+
     typingCurrentWord = typingWordsList[typingRound];
-    
+
     container.innerHTML = '<div class="game-header-info"><div class="game-progress">Word ' + (typingRound + 1) + '/' + typingWordsList.length + '</div><div class="game-score">⭐ Score: ' + typingScore + '</div></div><div class="typing-word-large">' + typingCurrentWord + '</div><input type="text" id="typingInput" class="game-input-large" placeholder="Type the word above..." autofocus><div class="game-buttons"><button class="game-submit-btn-large" onclick="checkTypingWord()">Submit</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button></div><div class="game-feedback" id="typingFeedback"></div>';
-    
+
     document.getElementById('typingInput')?.focus();
 }
 
@@ -1817,7 +1825,7 @@ window.checkTypingWord = function() {
     var userInput = input?.value.trim().toLowerCase();
     var feedback = document.getElementById('typingFeedback');
     var container = document.getElementById('activeGameContainer');
-    
+
     if (userInput === typingCurrentWord) {
         typingScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
@@ -1826,7 +1834,7 @@ window.checkTypingWord = function() {
         feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! The word was: ' + typingCurrentWord + '</div>';
         showToast("❌ Wrong!");
     }
-    
+
     setTimeout(function() {
         typingRound++;
         loadNextTypingWord(container);
@@ -1838,11 +1846,10 @@ function showTypingResults(container) {
     container.innerHTML = '<div class="game-results-large"><div class="results-emoji">⌨️</div><h2>Typing Speed Complete!</h2><div class="final-score-large">Score: ' + typingScore + '/' + (typingWordsList.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'typing-speed\')">🔄 Try Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
-// ================= TRIVIA CHALLENGE =================
 function loadTriviaChallengeGame(container) {
     triviaIndex = 0;
     triviaScore = 0;
-    
+
     triviaQuestions = [
         { question: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], correct: "Tokyo", funFact: "Tokyo is the most populous metropolitan area in the world" },
         { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "Jane Austen", "William Shakespeare", "Mark Twain"], correct: "William Shakespeare", funFact: "Written around 1595" },
@@ -1850,7 +1857,7 @@ function loadTriviaChallengeGame(container) {
         { question: "Which country gifted the Statue of Liberty to the USA?", options: ["England", "Spain", "France", "Germany"], correct: "France", funFact: "Gifted in 1886" },
         { question: "What is the world's longest river?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], correct: "Nile", funFact: "The Nile is about 6,650 km long" }
     ];
-    
+
     displayTriviaQuestion(container);
 }
 
@@ -1859,18 +1866,18 @@ function displayTriviaQuestion(container) {
         showTriviaResults(container);
         return;
     }
-    
+
     var q = triviaQuestions[triviaIndex];
-    
+
     container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (triviaIndex + 1) + '/' + triviaQuestions.length + '</div><div class="game-score">⭐ Score: ' + triviaScore + '</div></div><div class="game-question-large">' + escapeHtml(q.question) + '</div><div class="game-options-grid">' + q.options.map(function(opt) { return '<button class="game-option-btn" onclick="checkTriviaAnswer(\'' + escapeHtml(opt) + '\', this)">' + escapeHtml(opt) + '</button>'; }).join('') + '</div><div class="game-feedback" id="triviaFeedback"></div>';
 }
 
 window.checkTriviaAnswer = function(selected, btnElement) {
     var q = triviaQuestions[triviaIndex];
     var feedback = document.getElementById('triviaFeedback');
-    
+
     document.querySelectorAll('.game-option-btn').forEach(function(btn) { btn.disabled = true; });
-    
+
     if (selected === q.correct) {
         triviaScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! ' + (q.funFact || 'Great job!') + '</div>';
@@ -1879,7 +1886,7 @@ window.checkTriviaAnswer = function(selected, btnElement) {
         feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! Correct: ' + q.correct + '. ' + (q.funFact || '') + '</div>';
         showToast("❌ Wrong!");
     }
-    
+
     setTimeout(function() {
         triviaIndex++;
         displayTriviaQuestion(document.getElementById('activeGameContainer'));
@@ -1891,7 +1898,6 @@ function showTriviaResults(container) {
     container.innerHTML = '<div class="game-results-large"><div class="results-emoji">' + (percentage >= 70 ? '🏆' : '📚') + '</div><h2>Trivia Complete!</h2><div class="final-score-large">Score: ' + triviaScore + '/' + (triviaQuestions.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'trivia-challenge\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
-// ================= WORD SCRAMBLE =================
 function loadWordScrambleGame(container) {
     scrambleWordsList = [
         { word: "javascript", hint: "A programming language for web" },
@@ -1900,7 +1906,7 @@ function loadWordScrambleGame(container) {
         { word: "monitor", hint: "Displays output" },
         { word: "internet", hint: "Global network" }
     ];
-    
+
     scrambleRound = 0;
     scrambleScore = 0;
     loadNextScrambleWord(container);
@@ -1911,11 +1917,11 @@ function loadNextScrambleWord(container) {
         showScrambleResults(container);
         return;
     }
-    
+
     var wordObj = scrambleWordsList[scrambleRound];
     scrambleCurrentWord = wordObj.word;
     scrambleCurrentHint = wordObj.hint;
-    
+
     var scrambled = scrambleCurrentWord.split('');
     for (var i = scrambled.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
@@ -1923,9 +1929,9 @@ function loadNextScrambleWord(container) {
         scrambled[i] = scrambled[j];
         scrambled[j] = temp;
     }
-    
+
     container.innerHTML = '<div class="game-header-info"><div class="game-progress">Word ' + (scrambleRound + 1) + '/' + scrambleWordsList.length + '</div><div class="game-score">⭐ Score: ' + scrambleScore + '</div></div><div class="scrambled-word-large">' + scrambled.join(' ').toUpperCase() + '</div><div class="game-hint-large">💡 Hint: ' + escapeHtml(scrambleCurrentHint) + '</div><input type="text" id="scrambleGuess" class="game-input-large" placeholder="Type your guess..." autofocus><div class="game-buttons"><button class="game-submit-btn-large" onclick="checkScrambleGuess()">Submit Guess</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back</button></div><div class="game-feedback" id="scrambleFeedback"></div>';
-    
+
     document.getElementById('scrambleGuess')?.focus();
 }
 
@@ -1934,7 +1940,7 @@ window.checkScrambleGuess = function() {
     var guess = input?.value.trim().toLowerCase();
     var feedback = document.getElementById('scrambleFeedback');
     var container = document.getElementById('activeGameContainer');
-    
+
     if (guess === scrambleCurrentWord.toLowerCase()) {
         scrambleScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! +10 points</div>';
@@ -1943,7 +1949,7 @@ window.checkScrambleGuess = function() {
         feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! The word was: ' + scrambleCurrentWord + '</div>';
         showToast("❌ Wrong!");
     }
-    
+
     setTimeout(function() {
         scrambleRound++;
         loadNextScrambleWord(container);
@@ -1955,11 +1961,10 @@ function showScrambleResults(container) {
     container.innerHTML = '<div class="game-results-large"><div class="results-emoji">🔤</div><h2>Word Scramble Complete!</h2><div class="final-score-large">Score: ' + scrambleScore + '/' + (scrambleWordsList.length * 10) + '</div><div class="score-percentage-large">' + percentage + '%</div><div class="results-buttons"><button class="play-again-btn" onclick="selectGame(\'word-scramble\')">🔄 Play Again</button><button class="back-to-games-btn" onclick="showGameSelectionScreen()">← Back to Games</button></div></div>';
 }
 
-// ================= TRUE OR FALSE GAME =================
 function loadTrueFalseGame(container) {
     tfIndex = 0;
     tfScore = 0;
-    
+
     tfQuestions = [
         { statement: "The sun rises in the east.", answer: true, explanation: "The sun rises in the east and sets in the west" },
         { statement: "Humans have 5 hearts.", answer: false, explanation: "Humans have 1 heart" },
@@ -1967,7 +1972,7 @@ function loadTrueFalseGame(container) {
         { statement: "Mount Everest is the tallest mountain.", answer: true, explanation: "Mount Everest is 8,848 meters tall" },
         { statement: "The Earth is flat.", answer: false, explanation: "The Earth is actually round (an oblate spheroid)" }
     ];
-    
+
     displayTrueFalseQuestion(container);
 }
 
@@ -1976,9 +1981,9 @@ function displayTrueFalseQuestion(container) {
         showTrueFalseResults(container);
         return;
     }
-    
+
     var q = tfQuestions[tfIndex];
-    
+
     container.innerHTML = '<div class="game-header-info"><div class="game-progress">Question ' + (tfIndex + 1) + '/' + tfQuestions.length + '</div><div class="game-score">⭐ Score: ' + tfScore + '</div></div><div class="game-question-large">' + escapeHtml(q.statement) + '</div><div class="truefalse-buttons-large"><button class="true-btn-large" onclick="checkTrueFalseAnswer(true)">✓ True</button><button class="false-btn-large" onclick="checkTrueFalseAnswer(false)">✗ False</button></div><div class="game-feedback" id="tfFeedback"></div>';
 }
 
@@ -1986,9 +1991,9 @@ window.checkTrueFalseAnswer = function(selected) {
     var q = tfQuestions[tfIndex];
     var feedback = document.getElementById('tfFeedback');
     var isCorrect = (selected === q.answer);
-    
+
     document.querySelectorAll('.true-btn-large, .false-btn-large').forEach(function(btn) { btn.disabled = true; });
-    
+
     if (isCorrect) {
         tfScore += 10;
         feedback.innerHTML = '<div class="correct-answer">✅ Correct! ' + q.explanation + '</div>';
@@ -1997,7 +2002,7 @@ window.checkTrueFalseAnswer = function(selected) {
         feedback.innerHTML = '<div class="wrong-answer">❌ Wrong! ' + q.explanation + '</div>';
         showToast("❌ Wrong!");
     }
-    
+
     setTimeout(function() {
         tfIndex++;
         displayTrueFalseQuestion(document.getElementById('activeGameContainer'));
