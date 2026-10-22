@@ -10,7 +10,6 @@
 
 <body class="home-page">
 
-<!-- ===== NAVBAR ===== -->
 <div class="navbar">
     <div class="logo">
         <img src="logo.png" alt="Cortexa Logo">
@@ -23,9 +22,8 @@
         <a href="#blog">Blog</a>
     </nav>
     <div class="nav-right">
-        <!-- Sign Up button - visible when NOT logged in -->
         <button class="nav-btn" id="signupBtn" onclick="goToRegister()">Sign Up</button>
-        <!-- Profile button - visible ONLY when logged in -->
+      
         <div id="homepageProfileBtn" class="profile-icon" onclick="goToProfile()" style="display: none; cursor: pointer;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -35,7 +33,6 @@
     </div>
 </div>
 
-<!-- ===== HERO SECTION ===== -->
 <section class="hero" id="home">
   <div class="hero-content">
     <h1>Understand <span>Anything</span></h1>
@@ -44,7 +41,6 @@
   </div>
 </section>
 
-<!-- ===== FEATURES SECTION ===== -->
 <section id="features" class="section">
   <h2>Features</h2>
   <div class="features-grid">
@@ -67,7 +63,7 @@
   </div>
 </section>
 
-<!-- ===== ABOUT SECTION ===== -->
+
 <section id="about" class="section">
   <h2>About Cortexa</h2>
   <p class="about-intro">
@@ -94,7 +90,6 @@
   </div>
 </section>
 
-<!-- ===== CONTACT SECTION ===== -->
 <section id="contact" class="section">
   <h2>Contact Us</h2>
   <form id="contactForm" onsubmit="handleContactForm(event)">
@@ -105,7 +100,6 @@
   </form>
 </section>
 
-<!-- ===== BLOG SECTION ===== -->
 <section id="blog" class="section">
   <h2>Blog</h2>
   <div class="blog-grid">
@@ -121,9 +115,7 @@
 </section>
 
 <script>
-// ===== HOME PAGE SCRIPT =====
 
-// Make functions globally available for onclick attributes
 window.goToRegister = function() {
     window.location.href = 'register.html';
 }
@@ -149,7 +141,6 @@ window.getStarted = function() {
     }
 }
 
-// Handle Contact Form
 window.handleContactForm = function(event) {
     event.preventDefault();
     const name = document.getElementById('contactName')?.value || '';
@@ -164,26 +155,36 @@ window.handleContactForm = function(event) {
     }
 }
 
-// Check login status and update navbar buttons
+function logout() {
+  
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('rememberMe');
+
+    checkHomepageLoginStatus();
+ 
+    window.location.href = 'index.html';
+}
+
 function checkHomepageLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const signupBtn = document.getElementById('signupBtn');
     const profileBtn = document.getElementById('homepageProfileBtn');
     
     if (isLoggedIn) {
-        // User logged in - hide Sign Up button, show Profile button
+      
         if (signupBtn) signupBtn.style.display = 'none';
         if (profileBtn) profileBtn.style.display = 'flex';
         document.body.classList.add('logged-in');
     } else {
-        // User not logged in - show Sign Up button, hide Profile button
+   
         if (signupBtn) signupBtn.style.display = 'flex';
         if (profileBtn) profileBtn.style.display = 'none';
         document.body.classList.remove('logged-in');
     }
 }
 
-// Smooth scrolling for anchor links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
         e.preventDefault();
@@ -193,8 +194,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         }
     });
 });
-
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Home page loaded");
     checkHomepageLoginStatus();
